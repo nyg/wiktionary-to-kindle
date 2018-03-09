@@ -6,7 +6,7 @@ Converts a set of Wiktionary entries to a .mobi dictionary usable by a Kindle.
 
 1. A Wiktionary [dump](https://dumps.wikimedia.org/backup-index.html) is downloaded.
 2. [JWKTL](https://github.com/dkpro/dkpro-jwktl) is used to parse the downloaded XML and to create a database of the results.
-3. Some Java code iterates of the wanted entries and generates a text file in which each line has the following format: `word<TAB>definition`.
+3. Some Java code iterates on the wanted entries and generates a text file in which each line has the following format: `word<TAB>definition`.
 4. [tab2opf](https://github.com/apeyser/tab2opf) is used to convert the text file into a set of OPF and HTML files.
 5. [KindleGen](https://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000765211) is used to convert the above OPF and HTML files to a MOBI eBook that can be used as a dictionary by a Kindle.
 
@@ -37,7 +37,7 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar download en latest
 java -jar target/wiktionary-to-kindle-1.0.0.jar parse en latest
 ```
 
-5. The time has now come to generate the dictionary text file. As said before, the default language is `en` but here it is possible to select only the entries of a particular language. For example, if I want only the Greek entries (`el`) of the English Wiktionary, the following command is to be used:
+5. Time has now come to generate the dictionary text file. As said before, the default language is `en` but here it is possible to select only the entries of a particular language. For example, if we want only the Greek entries (`el`) of the English Wiktionary, the following command is to be used:
 
 ```
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el
@@ -56,7 +56,7 @@ python ../scripts/tab2opf/tab2opf.py -s el -t en lexicon.txt
 ../scripts/kindlegen_<OS>/kindlegen lexicon.opf
 ```
 
-8. If all went well, you must now have the `lexicon.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
+8. If all went well, you should now have the `lexicon.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
 
 ## What needs working
 
