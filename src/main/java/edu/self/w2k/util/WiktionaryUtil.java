@@ -14,7 +14,6 @@ import de.tudarmstadt.ukp.jwktl.api.IWiktionaryExample;
 import de.tudarmstadt.ukp.jwktl.api.IWiktionarySense;
 import de.tudarmstadt.ukp.jwktl.api.filter.WiktionaryEntryFilter;
 import de.tudarmstadt.ukp.jwktl.api.util.Language;
-import de.tudarmstadt.ukp.jwktl.parser.en.components.template.ENTemplateHandler;
 
 public final class WiktionaryUtil {
 
@@ -38,25 +37,21 @@ public final class WiktionaryUtil {
                 LOG.info(count + " entries.");
             }
 
-            //            String[] words = new String[] { "βασίλειο", "έκπληξη", "πλούτος", "κατάσταση", "μέχρι", "γύρω" };
-            //            if (Arrays.asList(words).contains(entry.getWord())) {
-
-            //System.out.println("* " + entry.getWord());
-
             lexicon.append(entry.getWord()).append("\t<ol>");
             for (IWiktionarySense sense : entry.getSenses()) {
 
-                //System.out.println("  - " + sense.getGloss());
-                lexicon.append("<li><span>").append(sense.getGloss()).append("</span>");
+                lexicon.append("<li><span>").append(sense.getGloss().toString().replaceAll("[\n\r]", "; ")).append("</span>");
 
                 if (sense.getExamples() != null) {
+
                     lexicon.append("<ul>");
+
                     for (IWiktionaryExample example : sense.getExamples()) {
-                        //System.out.println("    + " + example.getExample());
                         if (example.getExample().toString().trim().length() != 0) {
-                            lexicon.append("<li>").append(example.getExample()).append("</li>");
+                            lexicon.append("<li>").append(example.getExample().toString().replaceAll("[\n\r]", "; ")).append("</li>");
                         }
                     }
+
                     lexicon.append("</ul>");
                 }
 
@@ -64,9 +59,6 @@ public final class WiktionaryUtil {
             }
 
             lexicon.append("</ol>\n");
-
-            //System.out.println(entry.getWord() + "\t" + lexicon.toString());
-            //            }
         }
 
         File file = new File("dictionaries/lexicon.txt");
@@ -78,8 +70,8 @@ public final class WiktionaryUtil {
         }
 
         LOG.info("Done.");
-        LOG.info("Unhandled templates:");
-        ENTemplateHandler.UNHANDLED_TEMPLATES.forEach(LOG::info);
+        //LOG.info("Unhandled templates:");
+        //ENTemplateHandler.UNHANDLED_TEMPLATES.forEach(LOG::info);
     }
 
     private WiktionaryUtil() {

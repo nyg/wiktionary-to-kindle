@@ -104,7 +104,7 @@ public class WikiString implements IWikiString {
 
     /*public List<ExternalLink> getExternalLinks() {
         List<ExternalLink> result = new ArrayList<ExternalLink>();
-    
+
         StringBuilder textBuffer = new StringBuilder();
         StringBuilder linkBuffer = new StringBuilder();
         boolean inBlock = false;
@@ -190,7 +190,7 @@ public class WikiString implements IWikiString {
                 matcher.appendReplacement(sb, parser.getPlainText());
             }
             else {
-                matcher.appendReplacement(sb, "");
+                matcher.appendReplacement(sb, "{{" + templateText + "}}");
             }
         }
 
