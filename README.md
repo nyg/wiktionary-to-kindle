@@ -10,6 +10,12 @@ Converts a set of Wiktionary entries to a .mobi dictionary usable by a Kindle.
 4. [tab2opf](https://github.com/apeyser/tab2opf) is used to convert the text file into a set of OPF and HTML files.
 5. [KindleGen](https://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000765211) is used to convert the above OPF and HTML files to a MOBI eBook that can be used as a dictionary by a Kindle.
 
+## Generated dictionary files
+
+* [English-English, 96MB](http://www.mediafire.com/file/uib98cjr19d0ddt/lexicon_en_en.mobi)
+* [French-English, 27MB](http://www.mediafire.com/file/c3v5aijgp4q5ge3/lexicon_fr_en.mobi)
+* [Greek-English, 6MB](http://www.mediafire.com/file/2nccw6ni32k4gmf/lexicon_gr_en.mobi)
+
 ## Getting it to work
 
 1. Clone the repo as well as its submodule.
