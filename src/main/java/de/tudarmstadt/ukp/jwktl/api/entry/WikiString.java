@@ -18,6 +18,8 @@ package de.tudarmstadt.ukp.jwktl.api.entry;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +38,8 @@ import de.tudarmstadt.ukp.jwktl.parser.en.components.template.ITemplateParser;
  */
 @Persistent
 public class WikiString implements IWikiString {
+
+    private final static Logger LOG = Logger.getLogger(WikiString.class.getName());
 
     protected String text;
 
@@ -104,7 +108,7 @@ public class WikiString implements IWikiString {
 
     /*public List<ExternalLink> getExternalLinks() {
         List<ExternalLink> result = new ArrayList<ExternalLink>();
-
+    
         StringBuilder textBuffer = new StringBuilder();
         StringBuilder linkBuffer = new StringBuilder();
         boolean inBlock = false;
@@ -186,11 +190,19 @@ public class WikiString implements IWikiString {
             String templateText = matcher.group(1);
             ITemplateParser parser = ENTemplateHandler.getParser(templateText);
 
+            String plainText;
             if (parser != null) {
-                matcher.appendReplacement(sb, parser.getPlainText());
+                plainText = parser.getPlainText();
             }
             else {
-                matcher.appendReplacement(sb, "{{" + templateText + "}}");
+                plainText = matcher.group(0);
+            }
+
+            try {
+                matcher.appendReplacement(sb, plainText.replace("$", "\\$"));
+            }
+            catch (Exception e) {
+                LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
             }
         }
 
