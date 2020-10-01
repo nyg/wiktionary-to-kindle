@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ public final class DumpUtil {
     public static void download(String lang, String date) {
 
         String url = URL.replace("{date}", date).replace("{lang}", lang);
+        String fileName;
 
         if (date.equals("latest")) {
             String xmlContent = getURLContent(url + "-rss.xml");
@@ -47,18 +49,26 @@ public final class DumpUtil {
             url = url.replace("http:", "https:").replace("/download.", "/dumps.");
         }
 
-        downloadFile(url);
-        extract(Paths.get(url).getFileName().toString());
+        try {
+            fileName = new File(new URL(url).getPath()).getName();
+        }
+        catch (MalformedURLException e) {
+            LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
+            return;
+        }
+
+        downloadFile(url, fileName);
+        extract(fileName);
     }
 
     /**
      * Downloads and saves to disk the file located at the given URL.
      *
      * @param url the URL at which the file is located
+     * @param fileName the on-disk filename to which the file will be downloaded
      */
-    private static void downloadFile(String url) {
+    private static void downloadFile(String url, String fileName) {
 
-        String fileName = Paths.get(url).getFileName().toString();
         Path filePath = Paths.get(RESOURCES_DIRECTORY + fileName);
 
         LOG.info("Downloading " + url + " to " + filePath + ".");
@@ -68,6 +78,7 @@ public final class DumpUtil {
         }
         catch (Exception e) {
             LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
+            return;
         }
     }
 
@@ -119,6 +130,7 @@ public final class DumpUtil {
         }
         catch (Exception e) {
             LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
+            return;
         }
     }
 
