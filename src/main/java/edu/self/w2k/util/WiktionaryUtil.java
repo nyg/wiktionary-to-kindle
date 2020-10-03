@@ -1,5 +1,15 @@
 package edu.self.w2k.util;
 
+import de.tudarmstadt.ukp.jwktl.JWKTL;
+import de.tudarmstadt.ukp.jwktl.api.IWiktionaryEdition;
+import de.tudarmstadt.ukp.jwktl.api.IWiktionaryEntry;
+import de.tudarmstadt.ukp.jwktl.api.IWiktionaryExample;
+import de.tudarmstadt.ukp.jwktl.api.IWiktionarySense;
+import de.tudarmstadt.ukp.jwktl.api.filter.WiktionaryEntryFilter;
+import de.tudarmstadt.ukp.jwktl.api.util.ILanguage;
+import de.tudarmstadt.ukp.jwktl.api.util.IWiktionaryIterator;
+import de.tudarmstadt.ukp.jwktl.api.util.Language;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -8,31 +18,31 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.tudarmstadt.ukp.jwktl.JWKTL;
-import de.tudarmstadt.ukp.jwktl.api.IWiktionaryEdition;
-import de.tudarmstadt.ukp.jwktl.api.IWiktionaryEntry;
-import de.tudarmstadt.ukp.jwktl.api.IWiktionaryExample;
-import de.tudarmstadt.ukp.jwktl.api.IWiktionarySense;
-import de.tudarmstadt.ukp.jwktl.api.filter.WiktionaryEntryFilter;
-import de.tudarmstadt.ukp.jwktl.api.util.Language;
-
 public final class WiktionaryUtil {
 
     private final static Logger LOG = Logger.getLogger(WiktionaryUtil.class.getName());
-    
+
     public static void generateDictionary(String lang) {
-        
+
+        LOG.info("Language selected: " + lang + ".");
+        ILanguage languageCode = Language.get(lang);
+        if (languageCode == null) {
+            LOG.severe(String.format("Error: language code %s does not exists!", lang));
+            return;
+        }
+
+        LOG.info("Opening dictionary file…");
         File wiktionaryDirectory = new File(DumpUtil.DB_DIRECTORY);
         IWiktionaryEdition wkt = JWKTL.openEdition(wiktionaryDirectory);
-        
+
         WiktionaryEntryFilter entryFilter = new WiktionaryEntryFilter();
-        entryFilter.setAllowedWordLanguages(Language.findByCode(lang));
-        
+        entryFilter.setAllowedWordLanguages(languageCode);
+
         int count = 0;
-        
         File file = new File("dictionaries/lexicon.txt");
         try (BufferedWriter lexicon = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
-        
+
+            LOG.info("Generating entries…");
             for (IWiktionaryEntry entry : wkt.getAllEntries(entryFilter)) {
 
                 count++;
