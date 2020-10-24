@@ -7,8 +7,8 @@ import de.tudarmstadt.ukp.jwktl.api.IWiktionaryExample;
 import de.tudarmstadt.ukp.jwktl.api.IWiktionarySense;
 import de.tudarmstadt.ukp.jwktl.api.filter.WiktionaryEntryFilter;
 import de.tudarmstadt.ukp.jwktl.api.util.ILanguage;
-import de.tudarmstadt.ukp.jwktl.api.util.IWiktionaryIterator;
 import de.tudarmstadt.ukp.jwktl.api.util.Language;
+import org.apache.commons.text.StringEscapeUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -55,7 +55,7 @@ public final class WiktionaryUtil {
                 for (IWiktionarySense sense : entry.getSenses()) {
 
                     lexicon.write("<li><span>");
-                    lexicon.write(sense.getGloss().toString().replaceAll("[\n\r]", "; "));
+                    lexicon.write(StringEscapeUtils.escapeXml10(sense.getGloss().toString().replaceAll("[\n\r]", "; ")));
                     lexicon.write("</span>");
 
                     if (sense.getExamples() != null) {
@@ -65,7 +65,7 @@ public final class WiktionaryUtil {
                         for (IWiktionaryExample example : sense.getExamples()) {
                             if (example.getExample().toString().trim().length() != 0) {
                                 lexicon.write("<li>");
-                                lexicon.write(example.getExample().toString().replaceAll("[\n\r]", "; "));
+                                lexicon.write(StringEscapeUtils.escapeXml10(example.getExample().toString().replaceAll("[\n\r]", "; ")));
                                 lexicon.write("</li>");
                             }
                         }
