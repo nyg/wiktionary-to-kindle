@@ -1,9 +1,9 @@
 package edu.self.w2k;
 
-import java.util.logging.Logger;
-
 import edu.self.w2k.util.DumpUtil;
 import edu.self.w2k.util.WiktionaryUtil;
+
+import java.util.logging.Logger;
 
 public class CLI {
 
