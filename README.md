@@ -72,7 +72,7 @@ The dictionary file has been generated in `dictionaries/lexicon.txt`. To convert
 
 ```sh
 cd dictionaries
-python ../scripts/tab2opf/tab2opf.py -s el -t en lexicon.txt
+python ../scripts/tab2opf/tab2opf.py -s el -t en -o "Greek–English Dictionary" lexicon.txt
 ```
 
 ### 7. Convert the OPF into a MOBI eBook
@@ -81,18 +81,18 @@ Convert the OPF file into a MOBI eBook using KindleGen.
 
 ```sh
 # Linux
-../scripts/kindlegen_linux/kindlegen lexicon.opf
+../scripts/kindlegen_linux/kindlegen dictionary-el-en.opf
 
 # macOS
-../scripts/kindlegen_mac/kindlegen lexicon.opf
+../scripts/kindlegen_mac/kindlegen dictionary-el-en.opf
 
 # Windows
-..\scriptgs\kindlegen_windows\kindlegen.exe lexicon.opf
+..\scriptgs\kindlegen_windows\kindlegen.exe dictionary-el-en.opf
 ```
 
 ### 8. Upload the file to your Kindle
 
-If all went well, you should now have the `lexicon.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
+If all went well, you should now have the `dictionary-el-en.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
 
 ## TODO
 
