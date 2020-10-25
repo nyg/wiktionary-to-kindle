@@ -25,7 +25,7 @@ public final class WiktionaryUtil {
     public static void generateDictionary(String lang) {
 
         LOG.info("Language selected: " + lang + ".");
-        ILanguage languageCode = Language.get(lang);
+        ILanguage languageCode = Language.findByCode(lang);
         if (languageCode == null) {
             LOG.severe(String.format("Error: language code %s does not exists!", lang));
             return;
