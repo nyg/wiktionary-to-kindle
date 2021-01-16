@@ -187,6 +187,8 @@ public class WikiString implements IWikiString {
         // for each template found
         while (matcher.find()) {
 
+            //Template template = TemplateParser.parseTemplate(matcher.group(1));
+
             String templateText = matcher.group(1);
             ITemplateParser parser = ENTemplateHandler.getParser(templateText);
 

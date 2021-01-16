@@ -2,6 +2,9 @@ package edu.self.w2k;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import de.tudarmstadt.ukp.jwktl.JWKTL;
 import de.tudarmstadt.ukp.jwktl.api.IWiktionaryEdition;
@@ -14,6 +17,8 @@ import de.tudarmstadt.ukp.jwktl.api.util.Language;
 public class Sandbox {
 
     private static final String DB_DIRECTORY = "db";
+    private static final Logger LOG = Logger.getLogger(Sandbox.class.getName());
+    private static int counter = 0;
 
     public static void main(String[] args) throws Exception {
 
@@ -23,7 +28,40 @@ public class Sandbox {
         WiktionaryEntryFilter entryFilter = new WiktionaryEntryFilter();
         entryFilter.setAllowedWordLanguages(Language.findByName("Greek"));
 
-        wkt.getAllEntries(entryFilter).forEach(Sandbox::run);
+        counter = 0;
+        wkt.getAllEntries(entryFilter).forEach(Sandbox::runEtyl);
+        LOG.info(counter + " entries.");
+    }
+
+    private static final Pattern PATTERN = Pattern.compile("\\{\\{etyl\\|(.*?)\\|(.*?)\\}\\} \\{\\{m\\|.*?\\|(.*?)\\}\\}");
+
+    private static void runEtyl(IWiktionaryEntry entry) {
+
+        if (entry.getWordEtymology() == null) {
+            return;
+        }
+
+        String etymology = entry.getWordEtymology().getText();
+
+        if (etymology.contains("{{etyl")) {
+            counter++;
+
+            LOG.info(entry.getWord());
+            LOG.info(etymology);
+
+            Matcher matcher = PATTERN.matcher(etymology);
+            StringBuffer sb = new StringBuffer();
+
+            if (matcher.find()) {
+                matcher.appendReplacement(sb, "{{inh|$2|$1|$3}}");
+            }
+            else {
+                LOG.info("Not found.");
+            }
+
+            LOG.info(matcher.appendTail(sb).toString());
+            LOG.info("-------------------------------");
+        }
     }
 
     private static void run(IWiktionaryEntry entry) {

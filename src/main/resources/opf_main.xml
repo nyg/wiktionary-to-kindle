@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!DOCTYPE package SYSTEM "oeb1.ent">
+<package unique-identifier="uid" xmlns:dc="Dublin Core">
+    <metadata>
+        <dc-metadata>
+            <dc:Identifier id="uid">{DICT_NAME}</dc:Identifier>
+            <dc:Title><h2>{DICT_NAME}</h2></dc:Title>
+            <dc:Language>{SOURCE_LANG}</dc:Language>
+        </dc-metadata>
+        <x-metadata>
+            <output encoding="utf-8" flatten-dynamic-dir="yes"/>
+            <DictionaryInLanguage>{SOURCE_LANG}</DictionaryInLanguage>
+            <DictionaryOutLanguage>{TARGET_LANG}</DictionaryOutLanguage>
+        </x-metadata>
+    </metadata>
+    
+    <manifest>
+    </manifest>
+    
+    <spine>
+    </spine>
+    
+    <tours/>
+    <guide>
+        <reference type="search" title="Dictionary Search" onclick= "index_search()"/>
+    </guide>
+</package>

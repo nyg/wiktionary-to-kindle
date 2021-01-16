@@ -1,0 +1,6 @@
+<idx:entry name="word" scriptable="yes">
+	<idx:orth value="{LEMMA}">
+		<strong>{LEMMA}</strong>
+		{MEANINGS}
+	</idx:orth>
+</idx:entry>
