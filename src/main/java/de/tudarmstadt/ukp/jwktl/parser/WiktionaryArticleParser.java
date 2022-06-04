@@ -128,8 +128,15 @@ public class WiktionaryArticleParser extends WiktionaryPageParser<WiktionaryPage
 	@Override
 	public void setText(String text) {
 //		long time = System.nanoTime();
-		if (isAllowed(page))
-			entryParser.parse(page, text);
+		if (isAllowed(page)) {
+			try {
+				entryParser.parse(page, text);
+			}
+			catch (StringIndexOutOfBoundsException e) {
+				logger.warning("Exception caught while processing page: " + page + " Skip.");
+			}
+		}
+
 //		time = System.nanoTime() - time;
 //		System.out.println("parse " + (time / 1000) + "ms");
 	}
