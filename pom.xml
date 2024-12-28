@@ -8,27 +8,33 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
 
-        <!-- config for maven-compiler-plugin -->
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <!-- Third-party -->
+        <dkpro-jwktl.version>1.1.0</dkpro-jwktl.version>
+        <commons-compress.version>1.27.1</commons-compress.version>
+        <commons-text.version>1.13.0</commons-text.version>
+
+        <!-- Plugins -->
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.dkpro.jwktl</groupId>
             <artifactId>dkpro-jwktl</artifactId>
-            <version>1.1.0</version>
+            <version>${dkpro-jwktl.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.19</version>
+            <version>${commons-compress.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
-            <version>1.9</version>
+            <version>${commons-text.version}</version>
         </dependency>
     </dependencies>
 
@@ -38,7 +44,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.0.2</version>
+                <version>${maven-jar-plugin.version}</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -52,7 +58,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>${maven-shade-plugin.version}</version>
                 <configuration>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
                 </configuration>
