@@ -5,3 +5,5 @@ target
 .project
 .idea
 wiktionary-to-kindle.iml
+lex
+epub-test
