@@ -1,15 +1,20 @@
 package edu.self.w2k;
 
+import java.util.logging.Logger;
+
 import edu.self.w2k.util.DumpUtil;
 import edu.self.w2k.util.WiktionaryUtil;
 
-import java.util.logging.Logger;
-
 public class CLI {
 
-    private final static Logger LOG = Logger.getLogger(CLI.class.getName());
+    private static final Logger LOG = Logger.getLogger(CLI.class.getName());
 
     public static void main(String[] args) {
+
+        // Remove limit of 50'000'000 when parsing XML
+        System.setProperty("entityExpansionLimit", "0");
+        System.setProperty("totalEntitySizeLimit", "0");
+        System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
 
         if (args == null || args.length == 0) {
             LOG.severe("Arguments required!");
