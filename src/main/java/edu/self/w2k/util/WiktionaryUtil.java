@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 
 public final class WiktionaryUtil {
 
-    private final static Logger LOG = Logger.getLogger(WiktionaryUtil.class.getName());
+    private static final Logger LOG = Logger.getLogger(WiktionaryUtil.class.getName());
 
     public static void generateDictionary(String lang) {
 
