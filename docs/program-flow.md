@@ -39,8 +39,7 @@ sequenceDiagram
         FileSystem-->>KaikkiDumpDownloader: false
         KaikkiDumpDownloader->>kaikki.org: GET /dictionary/raw-wiktextract-data.jsonl.gz
         kaikki.org-->>KaikkiDumpDownloader: 200 OK (stream)
-        KaikkiDumpDownloader->>FileSystem: write to .part file
-        KaikkiDumpDownloader->>FileSystem: rename .part → dumps/raw-wiktextract-data.jsonl.gz
+        KaikkiDumpDownloader->>FileSystem: write to .part, rename to .jsonl.gz
         KaikkiDumpDownloader-->>DownloadCommand: done
     end
 
@@ -53,48 +52,40 @@ sequenceDiagram
     CLI->>GenerateCommand: run()
 
     GenerateCommand->>JsonlDictionaryParser: parse(dumpFile, lang)
-    JsonlDictionaryParser->>FileSystem: open dumps/raw-wiktextract-data.jsonl.gz (GZIPInputStream)
+    JsonlDictionaryParser->>FileSystem: open raw-wiktextract-data.jsonl.gz
     FileSystem-->>JsonlDictionaryParser: JSONL stream
-
-    loop for each JSONL line
-        JsonlDictionaryParser->>JsonlDictionaryParser: parse WiktionaryEntry (Jackson)
-        JsonlDictionaryParser->>JsonlDictionaryParser: filter by lang_code == lang
-    end
-
-    JsonlDictionaryParser-->>GenerateCommand: Stream<WiktionaryEntry>
+    Note over JsonlDictionaryParser: parse each line, filter by lang_code
+    JsonlDictionaryParser-->>GenerateCommand: Stream of WiktionaryEntry
 
     loop for each WiktionaryEntry
         GenerateCommand->>HtmlDefinitionRenderer: render(senses)
-        HtmlDefinitionRenderer-->>GenerateCommand: HTML string (null if form_of-only)
-        GenerateCommand->>GenerateCommand: wrap as LexiconEntry(word, html)
+        HtmlDefinitionRenderer-->>GenerateCommand: HTML definition string
     end
 
-    GenerateCommand->>TsvLexiconWriter: write(lexiconFile, Stream<LexiconEntry>)
+    GenerateCommand->>TsvLexiconWriter: write(lexiconFile, entries)
     TsvLexiconWriter->>FileSystem: write dictionaries/lexicon.txt (word TAB HTML)
     TsvLexiconWriter-->>GenerateCommand: done
 
     GenerateCommand->>TsvLexiconReader: read(lexiconFile)
     TsvLexiconReader->>FileSystem: read dictionaries/lexicon.txt
-    TsvLexiconReader->>TsvLexiconReader: normalise keys (lowercase, " → ', escape < >)
-    TsvLexiconReader->>TsvLexiconReader: group entries by normalised key
-    TsvLexiconReader-->>GenerateCommand: TreeMap<normalisedKey, List<LexiconEntry>>
+    Note over TsvLexiconReader: normalise keys, group by key
+    TsvLexiconReader-->>GenerateCommand: TreeMap of key to entries
 
-    GenerateCommand->>KindleOpfGenerator: generate(defs, lang, lang, title, outputDir)
+    GenerateCommand->>KindleOpfGenerator: generate(defs, lang, title, outputDir)
 
-    loop for each chunk of ≤10 000 entries
-        KindleOpfGenerator->>FileSystem: write dictionary-{lang}-{lang}-N.html
-        Note over KindleOpfGenerator: idx:entry + idx:orth + strong term + definition
+    loop for each chunk of up to 10000 entries
+        KindleOpfGenerator->>FileSystem: write dictionary-lang-N.html
     end
 
-    KindleOpfGenerator->>FileSystem: write dictionary-{lang}-{lang}.opf
-    Note over KindleOpfGenerator: OPF 2.0, UUID dc:identifier,<br/>DictionaryInLanguage / DictionaryOutLanguage,<br/>manifest + spine entries for every HTML file
+    KindleOpfGenerator->>FileSystem: write dictionary-lang.opf
+    Note over KindleOpfGenerator: OPF 2.0, manifest + spine for every HTML file
 
     KindleOpfGenerator-->>GenerateCommand: done
     GenerateCommand-->>CLI: done
     CLI-->>User: exit
 
     %% ── kindlegen (manual step) ───────────────────────────────────────────────
-    Note over User,FileSystem: Optional manual step — run kindlegen externally
-    User->>FileSystem: kindlegen dictionaries/dictionary-{lang}-{lang}.opf
-    FileSystem-->>User: dictionaries/dictionary-{lang}-{lang}.mobi
+    Note over User,FileSystem: Optional manual step
+    User->>FileSystem: kindlegen dictionaries/dictionary-lang.opf
+    FileSystem-->>User: dictionaries/dictionary-lang.mobi
 ```
