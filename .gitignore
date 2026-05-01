@@ -7,3 +7,4 @@ target
 wiktionary-to-kindle.iml
 lex
 epub-test
+.playwright-mcp
