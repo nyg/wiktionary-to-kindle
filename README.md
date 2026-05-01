@@ -4,11 +4,10 @@ Converts a set of Wiktionary entries into a MOBI dictionary usable by a Kindle.
 
 ## How it works
 
-1. A Wiktionary [dump](https://dumps.wikimedia.org/backup-index.html) is downloaded.
-2. [JWKTL](https://github.com/dkpro/dkpro-jwktl) is used to parse the downloaded XML and to create a database of the results.
-3. Some Java code iterates on the wanted entries and generates a text file in which each line has the following format: `word<TAB>definition`.
-4. [tab2opf](https://github.com/nyg/tab2opf) is used to convert the text file into a set of OPF and HTML files.
-5. [KindleGen](https://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000765211) is used to convert the above OPF and HTML files to a MOBI eBook that can be used as a dictionary by a Kindle.
+1. The [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded. It is produced weekly from the English Wiktionary by [wiktextract](https://github.com/tatuylonen/wiktextract) and includes all languages with Lua templates fully expanded.
+2. Some Java code streams the compressed JSONL, filters entries for the chosen language, and generates a text file in which each line has the following format: `word<TAB>definition`.
+3. [tab2opf](https://github.com/nyg/tab2opf) is used to convert the text file into a set of OPF and HTML files.
+4. [KindleGen](https://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000765211) is used to convert the OPF and HTML files to a MOBI eBook that can be used as a dictionary by a Kindle.
 
 ## Examples of generated dictionaries
 
@@ -42,31 +41,23 @@ git submodule update --init --recursive
 mvn package
 ```
 
-### 3. Download the Wiktionary dump
+### 3. Download the kaikki.org dump
 
-Download the latest English Wiktionary dump. In the following command, the `en` and `latest` arguments are the defaults so they are not needed. Note that the specified language should be parsable by JWKTL (currently it only supports `en`, `de`, `ru`). To specify another date use the `YYYYMMDD` format. The dump downloaded is `pages-articles.xml.bz2`.
-
-```sh
-java -jar target/wiktionary-to-kindle-1.0.0.jar download en latest
-```
-
-### 4. Parse the dump
-
-The dump must now be parsed using the following command (as mentioned above, `en` and `latest` are not needed).
+Downloads `raw-wiktextract-data.jsonl.gz` (~1–2 GB compressed) from kaikki.org to `dumps/`. If the file already exists, the download is skipped.
 
 ```sh
-java -jar target/wiktionary-to-kindle-1.0.0.jar parse en latest
+java -jar target/wiktionary-to-kindle-1.0.0.jar download
 ```
 
-### 5. Generate the dictionary file
+### 4. Generate the dictionary file
 
-Time has now come to generate the dictionary text file. As said before, the default language is `en` but here it is possible to select only the entries of a particular language. For example, if we want only the Greek entries (`el`) of the English Wiktionary, the following command is to be used:
+Filter entries for the language of your choice using its [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) code (e.g. `el` for Greek, `fr` for French, `de` for German). The dump is streamed and decompressed on the fly — no extra disk space needed.
 
 ```sh
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el
 ```
 
-### 6. Generate an OPF file from the dictionary file
+### 5. Generate an OPF file from the dictionary file
 
 The dictionary file has been generated in `dictionaries/lexicon.txt`. To convert it into an OPF file, execute the commands below. Python 3 is required. The `-s` and `-t` options are the source and target languages respectively.
 
@@ -75,7 +66,7 @@ cd dictionaries
 python ../scripts/tab2opf/tab2opf.py -s el -t en -o "Greek–English Dictionary" lexicon.txt
 ```
 
-### 7. Convert the OPF into a MOBI eBook
+### 6. Convert the OPF into a MOBI eBook
 
 Convert the OPF file into a MOBI eBook using KindleGen.
 
@@ -90,17 +81,19 @@ Convert the OPF file into a MOBI eBook using KindleGen.
 ..\scriptgs\kindlegen_windows\kindlegen.exe dictionary-el-en.opf
 ```
 
-### 8. Upload the file to your Kindle
+### 7. Upload the file to your Kindle
 
 If all went well, you should now have the `dictionary-el-en.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
+
+## Known limitations
+
+* Entries that are purely `form_of` / `alt_of` references (no `glosses` in the kaikki data) are skipped. Kindle lookups for some inflected forms may therefore not find an entry. Base forms are always included.
 
 ## TODO
 
 1. Rewrite tab2opf in Java (?)
 2. tab2opf should output EPUB v2 or v3 if supported by kindlegen
 	* Finding how to properly structure the OPF entries (inflected terms, etc.).
-3. Convert Wiktionary templates into HTML or find a HTML Wiktionary dump
-4. Improving JWKTL's parsing abilities (template support, etc.).
 
 ## Screenshots
 

@@ -11,35 +11,43 @@
         <maven.compiler.release>21</maven.compiler.release>
 
         <!-- Third-party -->
-        <dkpro-jwktl.version>1.1.0</dkpro-jwktl.version>
-        <commons-compress.version>1.27.1</commons-compress.version>
-        <commons-text.version>1.13.0</commons-text.version>
+        <commons-text.version>1.15.0</commons-text.version>
+        <jackson-databind.version>2.19.0</jackson-databind.version>
 
         <!-- Plugins -->
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.dkpro.jwktl</groupId>
-            <artifactId>dkpro-jwktl</artifactId>
-            <version>${dkpro-jwktl.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>${commons-compress.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
             <version>${commons-text.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-databind.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.12.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Needed to run JUnit 5 tests. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+            </plugin>
+
             <!-- Needed to execute the JAR from the command line. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
