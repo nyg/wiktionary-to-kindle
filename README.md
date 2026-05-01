@@ -26,16 +26,15 @@ Converts a set of Wiktionary entries into a MOBI dictionary usable by a Kindle.
 
 ## How to generate your own dictionary
 
-### 1. Clone the repository & the `tab2opf` submodule
+### 1. Clone the repository
 
 ```sh
 git clone https://github.com/nyg/wiktionary-to-kindle.git
-git submodule update --init --recursive
 ```
 
 ### 2. Build the project
 
-[Apache Maven](https://maven.apache.org) is required.
+[Apache Maven](https://maven.apache.org) and Java 25 are required.
 
 ```sh
 mvn package
@@ -49,28 +48,27 @@ Downloads `raw-wiktextract-data.jsonl.gz` (~1–2 GB compressed) from kaikki.org
 java -jar target/wiktionary-to-kindle-1.0.0.jar download
 ```
 
-### 4. Generate the dictionary file
+### 4. Generate the dictionary files
 
 Filter entries for the language of your choice using its [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) code (e.g. `el` for Greek, `fr` for French, `de` for German). The dump is streamed and decompressed on the fly — no extra disk space needed.
 
+This step writes `dictionaries/lexicon.txt` (one `word<TAB>definition` per line), then generates the Kindle OPF and HTML files directly in `dictionaries/`.
+
 ```sh
+# Source language only — target defaults to English, title is auto-generated
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el
+
+# With explicit target language and custom title
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en "Greek–English Dictionary"
 ```
 
-### 5. Generate an OPF file from the dictionary file
-
-The dictionary file has been generated in `dictionaries/lexicon.txt`. To convert it into an OPF file, execute the commands below. Python 3 is required. The `-s` and `-t` options are the source and target languages respectively.
-
-```sh
-cd dictionaries
-python ../scripts/tab2opf/tab2opf.py -s el -t en -o "Greek–English Dictionary" lexicon.txt
-```
-
-### 6. Convert the OPF into a MOBI eBook
+### 5. Convert the OPF into a MOBI eBook
 
 Convert the OPF file into a MOBI eBook using KindleGen.
 
 ```sh
+cd dictionaries
+
 # Linux
 ../scripts/kindlegen_linux/kindlegen dictionary-el-en.opf
 
@@ -78,10 +76,10 @@ Convert the OPF file into a MOBI eBook using KindleGen.
 ../scripts/kindlegen_mac/kindlegen dictionary-el-en.opf
 
 # Windows
-..\scriptgs\kindlegen_windows\kindlegen.exe dictionary-el-en.opf
+..\scripts\kindlegen_windows\kindlegen.exe dictionary-el-en.opf
 ```
 
-### 7. Upload the file to your Kindle
+### 6. Upload the file to your Kindle
 
 If all went well, you should now have the `dictionary-el-en.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
 
@@ -91,8 +89,7 @@ If all went well, you should now have the `dictionary-el-en.mobi` file in your p
 
 ## TODO
 
-1. Rewrite tab2opf in Java (?)
-2. tab2opf should output EPUB v2 or v3 if supported by kindlegen
+1. tab2opf should output EPUB v2 or v3 if supported by kindlegen
 	* Finding how to properly structure the OPF entries (inflected terms, etc.).
 
 ## Screenshots
