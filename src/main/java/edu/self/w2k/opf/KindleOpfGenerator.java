@@ -50,7 +50,7 @@ public class KindleOpfGenerator implements OpfGenerator {
      * Builds an auto-generated title from the source and target language codes.
      * Example: {@code "el"} + {@code "en"} → {@code "Modern Greek–English Dictionary"}.
      */
-    static String autoTitle(String srcLang, String trgLang) {
+    public static String autoTitle(String srcLang, String trgLang) {
         String src = Locale.forLanguageTag(srcLang).getDisplayLanguage(Locale.ENGLISH);
         String trg = Locale.forLanguageTag(trgLang).getDisplayLanguage(Locale.ENGLISH);
         // Locale returns the bare tag for unknown codes — uppercase it as a readable fallback.
