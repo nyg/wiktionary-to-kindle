@@ -71,8 +71,9 @@ public class OpfUtil {
     public static String autoTitle(String srcLang, String trgLang) {
         String src = Locale.forLanguageTag(srcLang).getDisplayLanguage(Locale.ENGLISH);
         String trg = Locale.forLanguageTag(trgLang).getDisplayLanguage(Locale.ENGLISH);
-        if (src.isBlank()) src = srcLang.toUpperCase(Locale.ROOT);
-        if (trg.isBlank()) trg = trgLang.toUpperCase(Locale.ROOT);
+        // Locale returns the bare tag for unknown codes — uppercase it as a readable fallback.
+        if (src.isBlank() || src.equalsIgnoreCase(srcLang)) src = srcLang.toUpperCase(Locale.ROOT);
+        if (trg.isBlank() || trg.equalsIgnoreCase(trgLang)) trg = trgLang.toUpperCase(Locale.ROOT);
         return src + "\u2013" + trg + " Dictionary";
     }
 
