@@ -11,11 +11,6 @@ public class CLI {
 
     public static void main(String[] args) {
 
-        // Remove limit of 50'000'000 when parsing XML
-        System.setProperty("entityExpansionLimit", "0");
-        System.setProperty("totalEntitySizeLimit", "0");
-        System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
-
         if (args == null || args.length == 0) {
             LOG.severe("Arguments required!");
             return;
@@ -23,36 +18,24 @@ public class CLI {
 
         String action = args[0];
         String lang = "en";
-        String date = "latest";
 
         try {
             lang = args[1];
-            date = args[2];
         }
         catch (ArrayIndexOutOfBoundsException e) {
             // nothing
         }
 
-        LOG.info(String.format("Executing: %s %s %s", action, lang, date));
+        LOG.info(String.format("Executing: %s %s", action, lang));
 
-        // download [lang] [date]
+        // download
         if (action.matches("dl|download")) {
-            DumpUtil.download(lang, date);
-        }
-
-        // parse [lang] [date]
-        if (action.equals("parse")) {
-            DumpUtil.parse(lang, date);
+            DumpUtil.download();
         }
 
         // generate [lang]
         if (action.equals("generate")) {
             WiktionaryUtil.generateDictionary(lang);
-        }
-
-        // clean [lang] [date]
-        if (action.matches("cl|clean")) {
-            DumpUtil.clean(lang, date);
         }
     }
 }
