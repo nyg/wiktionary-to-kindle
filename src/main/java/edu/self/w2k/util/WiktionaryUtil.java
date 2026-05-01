@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionarySense;
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.io.BufferedReader;
@@ -16,18 +18,16 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 
-public final class WiktionaryUtil {
-
-    private static final Logger LOG = Logger.getLogger(WiktionaryUtil.class.getName());
+@Slf4j
+@UtilityClass
+public class WiktionaryUtil {
 
     public static void generateDictionary(String lang) {
 
         if (!Files.exists(DumpUtil.getDumpPath())) {
-            LOG.severe("Dump file not found: " + DumpUtil.getDumpPath() + ". Run 'download' first.");
+            log.error("Dump file not found: {}. Run 'download' first.", DumpUtil.getDumpPath());
             return;
         }
 
@@ -35,7 +35,7 @@ public final class WiktionaryUtil {
             generateDictionaryToFile(DumpUtil.getDumpPath(), lang, Path.of("dictionaries/lexicon.txt"));
         }
         catch (IOException e) {
-            LOG.log(Level.SEVERE, e.getLocalizedMessage(), e);
+            log.error("Failed to generate dictionary: {}", e.getLocalizedMessage(), e);
         }
     }
 
@@ -45,7 +45,7 @@ public final class WiktionaryUtil {
      */
     public static void generateDictionaryToFile(Path dumpFile, String lang, Path outputFile) throws IOException {
 
-        LOG.info("Language selected: " + lang + ".");
+        log.info("Generating dictionary for lang={}", lang);
         ObjectReader reader = new ObjectMapper().readerFor(WiktionaryEntry.class);
         int count = 0;
 
@@ -53,7 +53,6 @@ public final class WiktionaryUtil {
              BufferedReader lines = new BufferedReader(new InputStreamReader(gzip, StandardCharsets.UTF_8));
              BufferedWriter lexicon = new BufferedWriter(new FileWriter(outputFile.toFile(), StandardCharsets.UTF_8))) {
 
-            LOG.info("Generating entries…");
             String line;
             while ((line = lines.readLine()) != null) {
 
@@ -74,13 +73,13 @@ public final class WiktionaryUtil {
                 lexicon.write("\n");
 
                 count++;
-                if (count % 1000 == 0) {
-                    LOG.info(count + " entries written.");
+                if (count % 10_000 == 0) {
+                    log.info("{} entries written…", count);
                 }
             }
         }
 
-        LOG.info("Done. " + count + " entries written.");
+        log.info("Done. {} entries written to {}", count, outputFile);
     }
 
     /**
@@ -94,6 +93,9 @@ public final class WiktionaryUtil {
         boolean hasGloss = false;
 
         for (WiktionarySense sense : senses) {
+            if (sense == null) {
+                continue;
+            }
             List<String> glosses = sense.getGlosses();
             if (glosses.isEmpty()) {
                 continue;
@@ -112,6 +114,9 @@ public final class WiktionaryUtil {
                 boolean hasExample = false;
                 StringBuilder exSb = new StringBuilder("<ul>");
                 for (WiktionaryExample ex : examples) {
+                    if (ex == null) {
+                        continue;
+                    }
                     String text = ex.getText();
                     if (text == null || text.isBlank()) {
                         continue;
@@ -132,10 +137,6 @@ public final class WiktionaryUtil {
 
         sb.append("</ol>");
         return hasGloss ? sb.toString() : null;
-    }
-
-    private WiktionaryUtil() {
-        throw new RuntimeException("Class should not be instantiated.");
     }
 }
 

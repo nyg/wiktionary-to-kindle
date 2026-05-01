@@ -2,9 +2,11 @@ package edu.self.w2k.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
 
 import java.util.List;
 
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class WiktionaryEntry {
 
@@ -14,14 +16,6 @@ public class WiktionaryEntry {
     private String langCode;
 
     private List<WiktionarySense> senses;
-
-    public String getWord() {
-        return word;
-    }
-
-    public String getLangCode() {
-        return langCode;
-    }
 
     public List<WiktionarySense> getSenses() {
         return senses != null ? senses : List.of();

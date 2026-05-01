@@ -1,41 +1,32 @@
 package edu.self.w2k;
 
-import java.util.logging.Logger;
-
 import edu.self.w2k.util.DumpUtil;
 import edu.self.w2k.util.WiktionaryUtil;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class CLI {
-
-    private static final Logger LOG = Logger.getLogger(CLI.class.getName());
 
     public static void main(String[] args) {
 
         if (args == null || args.length == 0) {
-            LOG.severe("Arguments required!");
+            log.error("No arguments provided. Usage: <action> [lang]  (actions: download, generate)");
             return;
         }
 
         String action = args[0];
-        String lang = "en";
+        String lang = args.length > 1 ? args[1] : "en";
 
-        try {
-            lang = args[1];
-        }
-        catch (ArrayIndexOutOfBoundsException e) {
-            // nothing
-        }
+        log.info("Running: action={}, lang={}", action, lang);
 
-        LOG.info(String.format("Executing: %s %s", action, lang));
-
-        // download
         if (action.matches("dl|download")) {
             DumpUtil.download();
         }
-
-        // generate [lang]
-        if (action.equals("generate")) {
+        else if (action.equals("generate")) {
             WiktionaryUtil.generateDictionary(lang);
+        }
+        else {
+            log.error("Unknown action '{}'. Usage: <action> [lang]  (actions: download, generate)", action);
         }
     }
 }
