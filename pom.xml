@@ -12,7 +12,7 @@
 
         <!-- Third-party -->
         <commons-text.version>1.15.0</commons-text.version>
-        <jackson-databind.version>2.21.2</jackson-databind.version>
+        <jackson-databind.version>2.21.3</jackson-databind.version>
         <logback-classic.version>1.5.32</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
         <slf4j-api.version>2.0.17</slf4j-api.version>
