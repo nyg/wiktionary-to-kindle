@@ -16,8 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class KaikkiDumpDownloader implements DumpDownloader {
 
-    private static final String KAIKKI_URL = "https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz";
+    private static final String BASE_URL = "https://kaikki.org";
+    private static final String DUMP_FILENAME = "raw-wiktextract-data.jsonl.gz";
 
+    private final String lang;
     private final Path dumpPath;
 
     @Override
@@ -28,14 +30,15 @@ public class KaikkiDumpDownloader implements DumpDownloader {
             return;
         }
 
-        log.info("Downloading {} → {}", KAIKKI_URL, dumpPath);
+        String url = buildUrl(lang);
+        log.info("Downloading {} → {}", url, dumpPath);
 
         Path partPath = dumpPath.resolveSibling(dumpPath.getFileName() + ".part");
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(KAIKKI_URL))
+                .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(30))
                 .build();
 
@@ -60,5 +63,17 @@ public class KaikkiDumpDownloader implements DumpDownloader {
             catch (Exception ignored) {
             }
         }
+    }
+
+    /**
+     * Builds the kaikki.org download URL for the given language edition.
+     * English maps to the main {@code /dictionary/} path; all other editions use
+     * {@code /{lang}wiktionary/}.
+     */
+    static String buildUrl(String lang) {
+        String path = "en".equals(lang)
+                ? "/dictionary/" + DUMP_FILENAME
+                : "/" + lang + "wiktionary/" + DUMP_FILENAME;
+        return BASE_URL + path;
     }
 }

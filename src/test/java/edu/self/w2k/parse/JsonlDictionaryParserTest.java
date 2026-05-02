@@ -42,8 +42,8 @@ class JsonlDictionaryParserTest {
         List<WiktionaryEntry> result = new JsonlDictionaryParser().parse(dumpFile, "el").collect(Collectors.toList());
 
         assertEquals(1, result.size(), "only the Greek entry should be returned");
-        assertEquals("\u03c3\u03ba\u03cd\u03bb\u03bf\u03c2", result.get(0).getWord());
-        assertEquals("el", result.get(0).getLangCode());
+        assertEquals("\u03c3\u03ba\u03cd\u03bb\u03bf\u03c2", result.get(0).word());
+        assertEquals("el", result.get(0).langCode());
     }
 
     @Test
@@ -57,7 +57,7 @@ class JsonlDictionaryParserTest {
         List<WiktionaryEntry> result = new JsonlDictionaryParser().parse(dumpFile, "el").collect(Collectors.toList());
 
         assertEquals(1, result.size(), "entry with null word should be skipped");
-        assertEquals("\u03c4\u03c1\u03ad\u03c7\u03c9", result.get(0).getWord());
+        assertEquals("\u03c4\u03c1\u03ad\u03c7\u03c9", result.get(0).word());
     }
 
     @Test
@@ -72,6 +72,6 @@ class JsonlDictionaryParserTest {
         List<WiktionaryEntry> result = new JsonlDictionaryParser().parse(dumpFile, "fr").collect(Collectors.toList());
 
         assertEquals(1, result.size(), "only the French entry should be returned");
-        assertEquals("chat", result.get(0).getWord());
+        assertEquals("chat", result.get(0).word());
     }
 }

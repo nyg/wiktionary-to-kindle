@@ -6,8 +6,6 @@ import java.util.concurrent.Callable;
 import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
 import edu.self.w2k.download.KaikkiDumpDownloader;
-import edu.self.w2k.lexicon.TsvLexiconReader;
-import edu.self.w2k.lexicon.TsvLexiconWriter;
 import edu.self.w2k.opf.KindleOpfGenerator;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
@@ -27,8 +25,6 @@ import picocli.CommandLine.Spec;
         subcommands = {CLI.Download.class, CLI.Generate.class, CommandLine.HelpCommand.class})
 public class CLI implements Callable<Integer> {
 
-    static final Path DUMP_FILE = Path.of("dumps/raw-wiktextract-data.jsonl.gz");
-    static final Path LEXICON_FILE = Path.of("dictionaries/lexicon.txt");
     static final Path DICTIONARIES_DIR = Path.of("dictionaries");
 
     @Spec
@@ -36,6 +32,10 @@ public class CLI implements Callable<Integer> {
 
     static void main(String[] args) {
         System.exit(new CommandLine(new CLI()).execute(args));
+    }
+
+    static Path dumpFile(String lang) {
+        return Path.of("dumps/raw-wiktextract-data-" + lang + ".jsonl.gz");
     }
 
     @Override
@@ -49,9 +49,13 @@ public class CLI implements Callable<Integer> {
             mixinStandardHelpOptions = true)
     static class Download implements Callable<Integer> {
 
+        @Parameters(index = "0", arity = "0..1", defaultValue = "en",
+                description = "Wiktionary edition language code (ISO 639-1, default: ${DEFAULT-VALUE})")
+        private String lang;
+
         @Override
         public Integer call() {
-            new DownloadCommand(new KaikkiDumpDownloader(DUMP_FILE)).run();
+            new DownloadCommand(new KaikkiDumpDownloader(lang, dumpFile(lang))).run();
             return 0;
         }
     }
@@ -71,11 +75,8 @@ public class CLI implements Callable<Integer> {
             new GenerateCommand(
                     new JsonlDictionaryParser(),
                     new HtmlDefinitionRenderer(),
-                    new TsvLexiconWriter(),
-                    new TsvLexiconReader(),
                     new KindleOpfGenerator(),
-                    DUMP_FILE,
-                    LEXICON_FILE,
+                    dumpFile(lang),
                     DICTIONARIES_DIR,
                     lang,
                     title

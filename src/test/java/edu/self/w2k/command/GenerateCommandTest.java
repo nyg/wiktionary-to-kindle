@@ -1,7 +1,5 @@
 package edu.self.w2k.command;
 
-import edu.self.w2k.lexicon.TsvLexiconReader;
-import edu.self.w2k.lexicon.TsvLexiconWriter;
 import edu.self.w2k.opf.KindleOpfGenerator;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
@@ -36,23 +34,19 @@ class GenerateCommandTest {
         return gzip;
     }
 
-    private static GenerateCommand buildCommand(Path dumpFile, Path lexiconFile,
-                                                Path outputDir, String lang) {
+    private static GenerateCommand buildCommand(Path dumpFile, Path outputDir, String lang) {
         return new GenerateCommand(
                 new JsonlDictionaryParser(),
                 new HtmlDefinitionRenderer(),
-                new TsvLexiconWriter(),
-                new TsvLexiconReader(),
                 new KindleOpfGenerator(),
                 dumpFile,
-                lexiconFile,
                 outputDir,
                 lang,
                 KindleOpfGenerator.autoTitle(lang, lang)
         );
     }
 
-    // ── tests ─────────────────────────────────────────────────────────────────
+    // ── pipeline tests ────────────────────────────────────────────────────────
 
     @Test
     void run_jsonlDumpToOpf(@TempDir Path tempDir) throws Exception {
@@ -60,9 +54,8 @@ class GenerateCommandTest {
                 "{\"word\":\"hello\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"a greeting\"],\"examples\":[{\"text\":\"Hello, world!\"}]}]}",
                 "{\"word\":\"world\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"the earth\"],\"examples\":[]}]}"
         ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+        buildCommand(dump, tempDir, "en").run();
 
         assertTrue(Files.exists(tempDir.resolve("dictionary-en-en-0.html")), "HTML file must be created");
         assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF file must be created");
@@ -75,9 +68,8 @@ class GenerateCommandTest {
                 "{\"word\":\"Hund\",\"lang_code\":\"de\",\"senses\":[{\"glosses\":[\"dog\"],\"examples\":[]}]}",
                 "{\"word\":\"gato\",\"lang_code\":\"es\",\"senses\":[{\"glosses\":[\"cat\"],\"examples\":[]}]}"
         ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+        buildCommand(dump, tempDir, "en").run();
 
         String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
         assertTrue(html.contains("hello"), "English entry must appear in output");
@@ -90,9 +82,8 @@ class GenerateCommandTest {
         Path dump = writeGzipJsonl(tempDir, List.of(
                 "{\"word\":\"run\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"move at speed\"],\"examples\":[{\"text\":\"She runs every morning.\"}]}]}"
         ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+        buildCommand(dump, tempDir, "en").run();
 
         String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
         assertTrue(html.contains("move at speed"), "gloss must appear in HTML");
@@ -105,9 +96,8 @@ class GenerateCommandTest {
                 "{\"word\":\"ran\",\"lang_code\":\"en\",\"senses\":[{\"form_of\":[{\"word\":\"run\"}]}]}",
                 "{\"word\":\"run\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"to move fast\"],\"examples\":[]}]}"
         ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+        buildCommand(dump, tempDir, "en").run();
 
         String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
         assertTrue(html.contains("value=\"run\""), "base form must appear");
@@ -119,9 +109,8 @@ class GenerateCommandTest {
         Path dump = writeGzipJsonl(tempDir, List.of(
                 "{\"word\":\"ampersand\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"bread & butter\"],\"examples\":[]}]}"
         ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+        buildCommand(dump, tempDir, "en").run();
 
         String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
         assertTrue(html.contains("bread &amp; butter"), "& must be XML-escaped in HTML");
@@ -135,9 +124,8 @@ class GenerateCommandTest {
                 "{\"word\":\"apple\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"fruit\"],\"examples\":[]}]}",
                 "{\"word\":\"mango\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"tropical fruit\"],\"examples\":[]}]}"
         ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+        buildCommand(dump, tempDir, "en").run();
 
         String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
         int applePos = html.indexOf("value=\"apple\"");
@@ -148,17 +136,30 @@ class GenerateCommandTest {
         assertTrue(mangoPos < zebraPos, "mango must precede zebra in output");
     }
 
+    // ── normaliseKey unit tests ───────────────────────────────────────────────
+
     @Test
-    void run_lexiconFileContainsExpectedContent(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"cat\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"a feline animal\"],\"examples\":[]}]}"
-        ));
-        Path lexicon = tempDir.resolve("lexicon.txt");
+    void normaliseKey_lowercasesWord() {
+        assertEquals("hello", GenerateCommand.normaliseKey("Hello"));
+    }
 
-        buildCommand(dump, lexicon, tempDir, "en").run();
+    @Test
+    void normaliseKey_stripsWhitespace() {
+        assertEquals("hello", GenerateCommand.normaliseKey("  hello  "));
+    }
 
-        String content = Files.readString(lexicon, StandardCharsets.UTF_8);
-        assertTrue(content.contains("cat\t"), "lexicon must contain the word");
-        assertTrue(content.contains("a feline animal"), "lexicon must contain the gloss");
+    @Test
+    void normaliseKey_replacesDoubleQuote() {
+        assertEquals("it's", GenerateCommand.normaliseKey("it\"s"));
+    }
+
+    @Test
+    void normaliseKey_escapesAngleBrackets() {
+        assertEquals("\\<b\\>", GenerateCommand.normaliseKey("<b>"));
+    }
+
+    @Test
+    void normaliseKey_emptyStringRemainsEmpty() {
+        assertEquals("", GenerateCommand.normaliseKey("   "));
     }
 }

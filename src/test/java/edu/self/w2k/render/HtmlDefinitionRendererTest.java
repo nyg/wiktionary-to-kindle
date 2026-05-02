@@ -14,74 +14,74 @@ class HtmlDefinitionRendererTest {
     @Test
     void buildDefinition_basicGloss() {
         var senses = List.of(parseSense("{\"glosses\":[\"a dog\"],\"examples\":[]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertTrue(def.contains("<ol>"), "should wrap in <ol>");
-        assertTrue(def.contains("<li><span>a dog</span>"), "should contain gloss");
-        assertFalse(def.contains("<ul>"), "no examples → no <ul>");
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertTrue(def.get().contains("<ol>"), "should wrap in <ol>");
+        assertTrue(def.get().contains("<li><span>a dog</span>"), "should contain gloss");
+        assertFalse(def.get().contains("<ul>"), "no examples → no <ul>");
     }
 
     @Test
     void buildDefinition_xmlEscaping() {
         var senses = List.of(parseSense("{\"glosses\":[\"bread & butter <food>\"],\"examples\":[]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertTrue(def.contains("bread &amp; butter &lt;food&gt;"), "XML characters should be escaped");
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertTrue(def.get().contains("bread &amp; butter &lt;food&gt;"), "XML characters should be escaped");
     }
 
     @Test
     void buildDefinition_withExample() {
         var senses = List.of(parseSense("{\"glosses\":[\"run\"],\"examples\":[{\"text\":\"He runs fast.\"}]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertTrue(def.contains("<ul>"), "examples present → <ul>");
-        assertTrue(def.contains("<li>He runs fast.</li>"));
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertTrue(def.get().contains("<ul>"), "examples present → <ul>");
+        assertTrue(def.get().contains("<li>He runs fast.</li>"));
     }
 
     @Test
     void buildDefinition_stripsNewlines() {
         var senses = List.of(parseSense("{\"glosses\":[\"line1\\nline2\"],\"examples\":[]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertTrue(def.contains("line1; line2"), "newlines should be replaced with '; '");
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertTrue(def.get().contains("line1; line2"), "newlines should be replaced with '; '");
     }
 
     @Test
     void buildDefinition_multipleGlossesInOneSense() {
         var senses = List.of(parseSense("{\"glosses\":[\"first meaning\",\"second meaning\"],\"examples\":[]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertTrue(def.contains("first meaning"));
-        assertTrue(def.contains("second meaning"));
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertTrue(def.get().contains("first meaning"));
+        assertTrue(def.get().contains("second meaning"));
     }
 
     @Test
     void buildDefinition_nullSensesSkipped() {
         var senses = List.of(parseSense("{\"glosses\":[],\"examples\":[]}"));
-        assertNull(renderer.render(senses), "form_of-only entries should return null");
+        assertTrue(renderer.render(senses).isEmpty(), "form_of-only entries should return empty Optional");
     }
 
     @Test
     void buildDefinition_blankGlossSkipped() {
         var senses = List.of(parseSense("{\"glosses\":[\"  \"],\"examples\":[]}"));
-        assertNull(renderer.render(senses), "blank gloss should be skipped → null");
+        assertTrue(renderer.render(senses).isEmpty(), "blank gloss should be skipped → empty Optional");
     }
 
     @Test
     void buildDefinition_blankExampleSkipped() {
         var senses = List.of(parseSense("{\"glosses\":[\"gloss\"],\"examples\":[{\"text\":\"  \"}]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertFalse(def.contains("<ul>"), "blank example should be skipped → no <ul>");
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertFalse(def.get().contains("<ul>"), "blank example should be skipped → no <ul>");
     }
 
     @Test
     void buildDefinition_greekContent() {
         var senses = List.of(parseSense("{\"glosses\":[\"σκύλος (dog)\"],\"examples\":[{\"text\":\"Ο σκύλος τρέχει.\"}]}"));
-        String def = renderer.render(senses);
-        assertNotNull(def);
-        assertTrue(def.contains("σκύλος (dog)"), "Greek gloss should pass through unchanged");
-        assertTrue(def.contains("Ο σκύλος τρέχει."), "Greek example should pass through unchanged");
+        var def = renderer.render(senses);
+        assertTrue(def.isPresent());
+        assertTrue(def.get().contains("σκύλος (dog)"), "Greek gloss should pass through unchanged");
+        assertTrue(def.get().contains("Ο σκύλος τρέχει."), "Greek example should pass through unchanged");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

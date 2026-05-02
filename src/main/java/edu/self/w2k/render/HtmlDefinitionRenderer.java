@@ -6,19 +6,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 public class HtmlDefinitionRenderer implements DefinitionRenderer {
 
     @Override
-    public String render(List<WiktionarySense> senses) {
+    public Optional<String> render(List<WiktionarySense> senses) {
         StringBuilder sb = new StringBuilder();
         sb.append("<ol>");
         boolean hasGloss = false;
 
         for (WiktionarySense sense : senses) {
             if (sense == null) continue;
-            List<String> glosses = sense.getGlosses();
+            List<String> glosses = sense.glosses();
             if (glosses.isEmpty()) continue;
 
             for (String gloss : glosses) {
@@ -28,12 +29,12 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                 sb.append(StringEscapeUtils.escapeXml10(gloss.replaceAll("[\n\r]", "; ")));
                 sb.append("</span>");
 
-                List<WiktionaryExample> examples = sense.getExamples();
+                List<WiktionaryExample> examples = sense.examples();
                 boolean hasExample = false;
                 StringBuilder exSb = new StringBuilder("<ul>");
                 for (WiktionaryExample ex : examples) {
                     if (ex == null) continue;
-                    String text = ex.getText();
+                    String text = ex.text();
                     if (text == null || text.isBlank()) continue;
                     hasExample = true;
                     exSb.append("<li>");
@@ -48,6 +49,6 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         }
 
         sb.append("</ol>");
-        return hasGloss ? sb.toString() : null;
+        return hasGloss ? Optional.of(sb.toString()) : Optional.empty();
     }
 }
