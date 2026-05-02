@@ -1,8 +1,6 @@
 package edu.self.w2k.parse;
 
-import edu.self.w2k.model.WiktionaryEntry;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
@@ -14,7 +12,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import edu.self.w2k.model.WiktionaryEntry;
 
 class JsonlDictionaryParserTest {
 

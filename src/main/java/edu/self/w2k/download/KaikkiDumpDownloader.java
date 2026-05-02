@@ -8,32 +8,38 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 public class KaikkiDumpDownloader implements DumpDownloader {
 
     private static final String BASE_URL = "https://kaikki.org";
     private static final String DUMP_FILENAME = "raw-wiktextract-data.jsonl.gz";
+    private static final Path DUMPS_DIR = Path.of("dumps");
 
     private final String lang;
-    private final Path dumpPath;
+
+    public KaikkiDumpDownloader(String lang) {
+        this.lang = lang;
+    }
 
     @Override
     public void download() {
-
-        if (Files.exists(dumpPath)) {
-            log.info("Dump already exists at {}. Delete it to re-download.", dumpPath);
+        try {
+            Files.createDirectories(DUMPS_DIR);
+        }
+        catch (Exception e) {
+            log.error("Failed to create dump directory: {}", e.getLocalizedMessage(), e);
             return;
         }
 
         String url = buildUrl(lang);
-        log.info("Downloading {} → {}", url, dumpPath);
+        log.info("Downloading {} (checking headers...)", url);
 
-        Path partPath = dumpPath.resolveSibling(dumpPath.getFileName() + ".part");
+        Path partPath = DUMPS_DIR.resolve("raw-wiktextract-data-" + lang + ".jsonl.gz.part");
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
@@ -43,24 +49,42 @@ public class KaikkiDumpDownloader implements DumpDownloader {
                 .build();
 
         try {
-            HttpResponse<Path> response = client.send(
-                    request, HttpResponse.BodyHandlers.ofFile(partPath));
-
+            HttpResponse<Path> response = client.send(request, HttpResponse.BodyHandlers.ofFile(partPath));
             if (response.statusCode() != 200) {
                 log.error("Download failed — HTTP {}", response.statusCode());
                 Files.deleteIfExists(partPath);
                 return;
             }
 
+            String lastModified = response.headers().firstValue("last-modified").orElse(null);
+            String generatedDate = "unknown";
+            if (lastModified != null) {
+                try {
+                    ZonedDateTime parsed = ZonedDateTime.parse(lastModified, DateTimeFormatter.RFC_1123_DATE_TIME);
+                    generatedDate = parsed.format(DateTimeFormatter.ISO_LOCAL_DATE);
+                }
+                catch (Exception e) {
+                    generatedDate = lastModified;
+                }
+            }
+
+            Path dumpPath = DUMPS_DIR.resolve("raw-wiktextract-data-" + lang + "-" + generatedDate + ".jsonl.gz");
+            if (Files.exists(dumpPath)) {
+                log.info("Dump already exists at {}. Delete it to re-download.", dumpPath);
+                Files.deleteIfExists(partPath);
+                return;
+            }
+
             Files.move(partPath, dumpPath, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Download complete: {} ({} MB)", dumpPath, Files.size(dumpPath) / (1024 * 1024));
+            log.info("Download complete: {} ({} MB, generated: {})", dumpPath, Files.size(dumpPath) / (1024 * 1024), generatedDate);
         }
         catch (Exception e) {
             log.error("Download failed: {}", e.getLocalizedMessage(), e);
             try {
                 Files.deleteIfExists(partPath);
             }
-            catch (Exception ignored) {
+            catch (Exception nested) {
+                log.warn("Failed to delete partial file", nested);
             }
         }
     }

@@ -1,13 +1,10 @@
 package edu.self.w2k.opf;
 
-import edu.self.w2k.lexicon.LexiconEntry;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,7 +14,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TreeMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+
+import edu.self.w2k.model.LexiconEntry;
 
 class KindleOpfGeneratorTest {
 
@@ -226,7 +231,9 @@ class KindleOpfGeneratorTest {
         TreeMap<String, List<LexiconEntry>> defs = new TreeMap<>();
         for (String line : lines) {
             int tab = line.indexOf('\t');
-            if (tab < 0) continue;
+            if (tab < 0) {
+                continue;
+            }
             String term = line.substring(0, tab).strip();
             String defn = line.substring(tab + 1);
             String key = term.replace('"', '\'')
@@ -234,7 +241,9 @@ class KindleOpfGeneratorTest {
                     .replace(">", "\\>")
                     .toLowerCase(Locale.ROOT)
                     .strip();
-            if (key.isEmpty()) continue;
+            if (key.isEmpty()) {
+                continue;
+            }
             defs.computeIfAbsent(key, k -> new ArrayList<>()).add(new LexiconEntry(term, defn));
         }
         return defs;
