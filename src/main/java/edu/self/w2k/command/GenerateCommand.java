@@ -1,16 +1,19 @@
 package edu.self.w2k.command;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
+
 import edu.self.w2k.lexicon.LexiconEntry;
-import edu.self.w2k.lexicon.LexiconReader;
-import edu.self.w2k.lexicon.LexiconWriter;
 import edu.self.w2k.opf.OpfGenerator;
 import edu.self.w2k.parse.DictionaryParser;
 import edu.self.w2k.render.DefinitionRenderer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.nio.file.Path;
-import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -18,23 +21,45 @@ public class GenerateCommand implements Command {
 
     private final DictionaryParser parser;
     private final DefinitionRenderer renderer;
-    private final LexiconWriter writer;
-    private final LexiconReader reader;
     private final OpfGenerator generator;
     private final Path dumpFile;
-    private final Path lexiconFile;
     private final Path outputDir;
     private final String lang;
     private final String title;
 
     @Override
     public void run() throws Exception {
-        Stream<LexiconEntry> lexiconEntries = parser.parse(dumpFile, lang)
-                .map(e -> new LexiconEntry(e.getWord(), renderer.render(e.getSenses())))
-                .filter(e -> e.definition() != null);
+        TreeMap<String, List<LexiconEntry>> grouped = new TreeMap<>();
+        AtomicLong count = new AtomicLong();
 
-        writer.write(lexiconFile, lexiconEntries);
+        try (Stream<LexiconEntry> stream = parser.parse(dumpFile, lang)
+                .flatMap(e -> renderer.render(e.senses())
+                        .map(def -> new LexiconEntry(e.word(), def))
+                        .stream())) {
+            stream.forEach(e -> {
+                String key = normaliseKey(e.word());
+                if (!key.isEmpty()) {
+                    grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(e);
+                    count.incrementAndGet();
+                }
+            });
+        }
 
-        generator.generate(reader.read(lexiconFile), lang, lang, title, outputDir);
+        log.info("Done. {} entries grouped into {} unique keys for lang={}", count.get(), grouped.size(), lang);
+
+        generator.generate(grouped, lang, lang, title, outputDir);
+    }
+
+    /**
+     * Normalises a word into a Kindle lookup key: lowercase, strip, replace {@code "} with {@code '},
+     * and escape {@code <}/{@code >} for the Kindle index.
+     */
+    static String normaliseKey(String word) {
+        return word
+                .replace('"', '\'')
+                .replace("<", "\\<")
+                .replace(">", "\\>")
+                .toLowerCase(Locale.ROOT)
+                .strip();
     }
 }
