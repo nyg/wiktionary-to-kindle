@@ -9,54 +9,78 @@ import edu.self.w2k.opf.KindleOpfGenerator;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import lombok.extern.slf4j.Slf4j;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Spec;
 
 import java.nio.file.Path;
+import java.util.concurrent.Callable;
 
 @Slf4j
-public class CLI {
+@Command(
+        name = "wiktionary-to-kindle",
+        mixinStandardHelpOptions = true,
+        version = "1.0.0",
+        description = "Converts Wiktionary data into Kindle-compatible dictionaries.",
+        subcommands = { CLI.Download.class, CLI.Generate.class, CommandLine.HelpCommand.class })
+public class CLI implements Callable<Integer> {
 
-    private static final Path DUMP_FILE    = Path.of("dumps/raw-wiktextract-data.jsonl.gz");
-    private static final Path LEXICON_FILE = Path.of("dictionaries/lexicon.txt");
-    private static final Path DICTIONARIES_DIR = Path.of("dictionaries");
+    static final Path DUMP_FILE        = Path.of("dumps/raw-wiktextract-data.jsonl.gz");
+    static final Path LEXICON_FILE     = Path.of("dictionaries/lexicon.txt");
+    static final Path DICTIONARIES_DIR = Path.of("dictionaries");
+
+    @Spec
+    CommandSpec spec;
 
     public static void main(String[] args) {
+        System.exit(new CommandLine(new CLI()).execute(args));
+    }
 
-        if (args == null || args.length == 0) {
-            log.error("No arguments provided. Usage: <action> [lang]  (actions: download, generate)");
-            return;
+    @Override
+    public Integer call() {
+        spec.commandLine().usage(System.out);
+        return 0;
+    }
+
+    @Command(name = "download", aliases = {"dl"},
+             description = "Download Wiktionary dump from kaikki.org.",
+             mixinStandardHelpOptions = true)
+    static class Download implements Callable<Integer> {
+
+        @Override
+        public Integer call() {
+            new DownloadCommand(new KaikkiDumpDownloader(DUMP_FILE)).run();
+            return 0;
         }
+    }
 
-        String action = args[0];
-        String lang = args.length > 1 ? args[1] : "en";
+    @Command(name = "generate",
+             description = "Generate Kindle dictionary from downloaded dump.",
+             mixinStandardHelpOptions = true)
+    static class Generate implements Callable<Integer> {
 
-        log.info("Running: action={}, lang={}", action, lang);
+        @Parameters(index = "0", arity = "0..1", defaultValue = "en",
+                    description = "Language code (ISO 639-1, default: ${DEFAULT-VALUE})")
+        private String lang;
 
-        try {
-            if (action.matches("dl|download")) {
-                new DownloadCommand(new KaikkiDumpDownloader()).run();
-            }
-            else if (action.equals("generate")) {
-                String title = KindleOpfGenerator.autoTitle(lang, lang);
-                new GenerateCommand(
-                        new JsonlDictionaryParser(),
-                        new HtmlDefinitionRenderer(),
-                        new TsvLexiconWriter(),
-                        new TsvLexiconReader(),
-                        new KindleOpfGenerator(),
-                        DUMP_FILE,
-                        LEXICON_FILE,
-                        DICTIONARIES_DIR,
-                        lang,
-                        title
-                ).run();
-            }
-            else {
-                log.error("Unknown action '{}'. Usage: <action> [lang]  (actions: download, generate)", action);
-            }
-        }
-        catch (Exception e) {
-            log.error("Command failed: {}", e.getLocalizedMessage(), e);
+        @Override
+        public Integer call() throws Exception {
+            String title = KindleOpfGenerator.autoTitle(lang, lang);
+            new GenerateCommand(
+                    new JsonlDictionaryParser(),
+                    new HtmlDefinitionRenderer(),
+                    new TsvLexiconWriter(),
+                    new TsvLexiconReader(),
+                    new KindleOpfGenerator(),
+                    DUMP_FILE,
+                    LEXICON_FILE,
+                    DICTIONARIES_DIR,
+                    lang,
+                    title
+            ).run();
+            return 0;
         }
     }
 }
-
