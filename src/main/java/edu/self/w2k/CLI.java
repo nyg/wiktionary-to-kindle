@@ -8,14 +8,20 @@ import java.util.concurrent.Callable;
 
 import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
+import edu.self.w2k.convert.CalibreEbookConverter;
 import edu.self.w2k.download.KaikkiDumpDownloader;
-import edu.self.w2k.opf.KindleOpfGenerator;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
+import edu.self.w2k.write.DictionaryTitles;
+import edu.self.w2k.write.DictionaryWriter;
+import edu.self.w2k.write.OutputFormat;
+import edu.self.w2k.write.epub.EpubDictionaryWriter;
+import edu.self.w2k.write.mobi.MobiDictionaryWriter;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
@@ -108,6 +114,14 @@ public class CLI implements Callable<Integer> {
                 description = "Language to filter entries by (ISO 639-1)")
         private String wordLang;
 
+        @Option(names = {"-f", "--format"}, defaultValue = "epub",
+                description = "Output format: epub (default) or mobi (requires Calibre)")
+        private OutputFormat format;
+
+        @Option(names = {"--ebook-convert"},
+                description = "Path to ebook-convert binary (Calibre). Only used with --format mobi.")
+        private Path ebookConvertPath;
+
         @Override
         public Integer call() throws Exception {
             Optional<Path> dumpFile = findLatestDump(dumpLang);
@@ -115,11 +129,12 @@ public class CLI implements Callable<Integer> {
                 log.error("No dump found for language {} in {}", dumpLang, DUMPS_DIR);
                 return 1;
             }
-            String title = KindleOpfGenerator.autoTitle(wordLang, dumpLang);
+            String title = DictionaryTitles.autoTitle(wordLang, dumpLang);
+            DictionaryWriter writer = buildWriter();
             new GenerateCommand(
                     new JsonlDictionaryParser(),
                     new HtmlDefinitionRenderer(),
-                    new KindleOpfGenerator(),
+                    writer,
                     dumpFile.get(),
                     DICTIONARIES_DIR,
                     wordLang,
@@ -127,6 +142,15 @@ public class CLI implements Callable<Integer> {
                     title
             ).run();
             return 0;
+        }
+
+        private DictionaryWriter buildWriter() {
+            EpubDictionaryWriter epubWriter = new EpubDictionaryWriter();
+            return switch (format) {
+                case EPUB -> epubWriter;
+                case MOBI -> new MobiDictionaryWriter(epubWriter,
+                        new CalibreEbookConverter(Optional.ofNullable(ebookConvertPath)));
+            };
         }
     }
 }
