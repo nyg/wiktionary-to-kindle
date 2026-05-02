@@ -1,31 +1,24 @@
 package edu.self.w2k.download;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
+@RequiredArgsConstructor
 public class KaikkiDumpDownloader implements DumpDownloader {
 
     private static final String KAIKKI_URL = "https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz";
 
     private final Path dumpPath;
-
-    public KaikkiDumpDownloader() {
-        this(Paths.get("dumps/raw-wiktextract-data.jsonl.gz"));
-    }
-
-    public KaikkiDumpDownloader(Path dumpPath) {
-        this.dumpPath = dumpPath;
-    }
 
     @Override
     public void download() {
@@ -43,7 +36,7 @@ public class KaikkiDumpDownloader implements DumpDownloader {
                 .build();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(KAIKKI_URL))
-                .timeout(Duration.ofMinutes(60))
+                .timeout(Duration.ofSeconds(30))
                 .build();
 
         try {
@@ -61,11 +54,11 @@ public class KaikkiDumpDownloader implements DumpDownloader {
         }
         catch (Exception e) {
             log.error("Download failed: {}", e.getLocalizedMessage(), e);
-            try { Files.deleteIfExists(partPath); } catch (Exception ignored) {}
+            try {
+                Files.deleteIfExists(partPath);
+            }
+            catch (Exception ignored) {
+            }
         }
-    }
-
-    public Path getDumpPath() {
-        return dumpPath;
     }
 }

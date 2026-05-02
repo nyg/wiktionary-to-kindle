@@ -15,6 +15,7 @@
         <jackson-databind.version>2.21.3</jackson-databind.version>
         <logback-classic.version>1.5.32</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
+        <picocli.version>4.7.7</picocli.version>
         <slf4j-api.version>2.0.17</slf4j-api.version>
 
         <!-- Plugins -->
@@ -51,6 +52,11 @@
             <artifactId>logback-classic</artifactId>
             <version>${logback-classic.version}</version>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>${picocli.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

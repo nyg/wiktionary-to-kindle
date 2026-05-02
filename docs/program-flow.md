@@ -11,8 +11,9 @@ sequenceDiagram
     participant kaikkiorg as kaikki.org
     participant FileSystem
 
-    User->>CLI: java -jar ... download
-    CLI->>DownloadCommand: run()
+    User->>CLI: java -jar ... download (or dl)
+    CLI->>Download: call()
+    Download->>DownloadCommand: run()
     DownloadCommand->>KaikkiDumpDownloader: download()
     KaikkiDumpDownloader->>FileSystem: exists(jsonl.gz)?
 
@@ -28,7 +29,8 @@ sequenceDiagram
         KaikkiDumpDownloader-->>DownloadCommand: done
     end
 
-    DownloadCommand-->>CLI: done
+    DownloadCommand-->>Download: done
+    Download-->>CLI: 0 (exit code)
     CLI-->>User: exit
 ```
 
@@ -47,7 +49,8 @@ sequenceDiagram
     participant FileSystem
 
     User->>CLI: java -jar ... generate lang
-    CLI->>GenerateCommand: run()
+    CLI->>Generate: call()
+    Generate->>GenerateCommand: run()
 
     GenerateCommand->>JsonlDictionaryParser: parse(dumpFile, lang)
     JsonlDictionaryParser->>FileSystem: open jsonl.gz
@@ -77,7 +80,8 @@ sequenceDiagram
 
     KindleOpfGenerator->>FileSystem: write dictionary OPF file
     KindleOpfGenerator-->>GenerateCommand: done
-    GenerateCommand-->>CLI: done
+    GenerateCommand-->>Generate: done
+    Generate-->>CLI: 0 (exit code)
     CLI-->>User: exit
 
     Note over User,FileSystem: Manual step

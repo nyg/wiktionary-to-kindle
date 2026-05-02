@@ -46,6 +46,13 @@ Downloads `raw-wiktextract-data.jsonl.gz` (~1–2 GB compressed) from kaikki.org
 
 ```sh
 java -jar target/wiktionary-to-kindle-1.0.0.jar download
+
+# dl is a short alias for download
+java -jar target/wiktionary-to-kindle-1.0.0.jar dl
+
+# Show help
+java -jar target/wiktionary-to-kindle-1.0.0.jar --help
+java -jar target/wiktionary-to-kindle-1.0.0.jar download --help
 ```
 
 ### 4. Generate the dictionary files
@@ -56,6 +63,9 @@ This step writes `dictionaries/lexicon.txt` (one `word<TAB>definition` per line)
 
 ```sh
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el
+
+# Show help
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate --help
 ```
 
 ### 5. Convert the OPF into a MOBI eBook
