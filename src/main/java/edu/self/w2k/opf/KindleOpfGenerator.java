@@ -1,8 +1,5 @@
 package edu.self.w2k.opf;
 
-import edu.self.w2k.lexicon.LexiconEntry;
-import lombok.extern.slf4j.Slf4j;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -16,9 +13,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import edu.self.w2k.lexicon.LexiconEntry;
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Generates Kindle-compatible OPF and HTML dictionary files from a pre-grouped lexicon.
- *
  * <p>Output:
  * <ul>
  *   <li>{@code dictionary-{src}-{trg}-{n}.html} — Kindle MobiPocket HTML entry files (≤10,000 entries each)</li>
@@ -35,7 +34,7 @@ public class KindleOpfGenerator implements OpfGenerator {
 
     @Override
     public void generate(TreeMap<String, List<LexiconEntry>> defs, String srcLang, String trgLang,
-                         String title, Path outputDir) throws IOException {
+            String title, Path outputDir) throws IOException {
 
         log.info("Generating OPF for lang={}->{}, title=\"{}\"", srcLang, trgLang, title);
         log.info("{} unique keys loaded from lexicon", defs.size());
@@ -54,9 +53,13 @@ public class KindleOpfGenerator implements OpfGenerator {
         String src = Locale.forLanguageTag(srcLang).getDisplayLanguage(Locale.ENGLISH);
         String trg = Locale.forLanguageTag(trgLang).getDisplayLanguage(Locale.ENGLISH);
         // Locale returns the bare tag for unknown codes — uppercase it as a readable fallback.
-        if (src.isBlank() || src.equalsIgnoreCase(srcLang)) src = srcLang.toUpperCase(Locale.ROOT);
-        if (trg.isBlank() || trg.equalsIgnoreCase(trgLang)) trg = trgLang.toUpperCase(Locale.ROOT);
-        return src + "\u2013" + trg + " Dictionary";
+        if (src.isBlank() || src.equalsIgnoreCase(srcLang)) {
+            src = srcLang.toUpperCase(Locale.ROOT);
+        }
+        if (trg.isBlank() || trg.equalsIgnoreCase(trgLang)) {
+            trg = trgLang.toUpperCase(Locale.ROOT);
+        }
+        return src + "–" + trg + " Dictionary";
     }
 
     // ── step 1: write HTML files ──────────────────────────────────────────────
@@ -67,7 +70,7 @@ public class KindleOpfGenerator implements OpfGenerator {
      * @return list of HTML file names (base names only, relative to outputDir)
      */
     private List<String> writeHtmlFiles(TreeMap<String, List<LexiconEntry>> defs,
-                                        Path outputDir, String srcLang, String trgLang)
+            Path outputDir, String srcLang, String trgLang)
             throws IOException {
 
         List<String> fileNames = new ArrayList<>();
@@ -133,7 +136,9 @@ public class KindleOpfGenerator implements OpfGenerator {
         String displayTerm = lexiconEntries.getFirst().word();
         StringBuilder combinedDef = new StringBuilder();
         for (int i = 0; i < lexiconEntries.size(); i++) {
-            if (i > 0) combinedDef.append("; ");
+            if (i > 0) {
+                combinedDef.append("; ");
+            }
             combinedDef.append(lexiconEntries.get(i).definition());
         }
 
@@ -148,7 +153,7 @@ public class KindleOpfGenerator implements OpfGenerator {
     // ── step 2: write OPF file ────────────────────────────────────────────────
 
     private static void writeOpfFile(Path outputDir, String srcLang, String trgLang,
-                                     String title, List<String> htmlFileNames) throws IOException {
+            String title, List<String> htmlFileNames) throws IOException {
 
         Path opfFile = outputDir.resolve("dictionary-%s-%s.opf".formatted(srcLang, trgLang).toLowerCase(Locale.ROOT));
 
