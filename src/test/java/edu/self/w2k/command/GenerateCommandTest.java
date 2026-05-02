@@ -1,10 +1,8 @@
 package edu.self.w2k.command;
 
-import edu.self.w2k.opf.KindleOpfGenerator;
-import edu.self.w2k.parse.JsonlDictionaryParser;
-import edu.self.w2k.render.HtmlDefinitionRenderer;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
@@ -16,7 +14,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import edu.self.w2k.opf.KindleOpfGenerator;
+import edu.self.w2k.parse.JsonlDictionaryParser;
+import edu.self.w2k.render.HtmlDefinitionRenderer;
 
 class GenerateCommandTest {
 
@@ -41,6 +44,7 @@ class GenerateCommandTest {
                 new KindleOpfGenerator(),
                 dumpFile,
                 outputDir,
+                lang,
                 lang,
                 KindleOpfGenerator.autoTitle(lang, lang)
         );

@@ -1,6 +1,9 @@
 package edu.self.w2k;
 
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import edu.self.w2k.command.DownloadCommand;
@@ -26,6 +29,7 @@ import picocli.CommandLine.Spec;
 public class CLI implements Callable<Integer> {
 
     static final Path DICTIONARIES_DIR = Path.of("dictionaries");
+    static final Path DUMPS_DIR = Path.of("dumps");
 
     @Spec
     CommandSpec spec;
@@ -34,8 +38,27 @@ public class CLI implements Callable<Integer> {
         System.exit(new CommandLine(new CLI()).execute(args));
     }
 
-    static Path dumpFile(String lang) {
-        return Path.of("dumps/raw-wiktextract-data-" + lang + ".jsonl.gz");
+    /**
+     * Finds the latest dump file for a given language in the dumps directory.
+     * Searches for files matching {@code raw-wiktextract-data-{lang}-*.jsonl.gz} and returns
+     * the lexicographically latest (YYYY-MM-DD format sorts correctly).
+     */
+    static Optional<Path> findLatestDump(String lang) {
+        String prefix = "raw-wiktextract-data-" + lang + "-";
+        String suffix = ".jsonl.gz";
+        Path latest = null;
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(DUMPS_DIR,
+                prefix + "*" + suffix)) {
+            for (Path path : stream) {
+                if (latest == null || path.getFileName().toString().compareTo(latest.getFileName().toString()) > 0) {
+                    latest = path;
+                }
+            }
+        }
+        catch (Exception e) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(latest);
     }
 
     @Override
@@ -44,41 +67,63 @@ public class CLI implements Callable<Integer> {
         return 0;
     }
 
-    @Command(name = "download", aliases = {"d"},
+    @Command(
+            name = "download",
+            aliases = {"dl"},
             description = "Download Wiktionary dump from kaikki.org.",
             mixinStandardHelpOptions = true)
     static class Download implements Callable<Integer> {
 
-        @Parameters(index = "0", arity = "0..1", defaultValue = "en",
+        @Parameters(
+                index = "0",
+                arity = "0..1",
+                defaultValue = "en",
                 description = "Wiktionary edition language code (ISO 639-1, default: ${DEFAULT-VALUE})")
         private String lang;
 
         @Override
         public Integer call() {
-            new DownloadCommand(new KaikkiDumpDownloader(lang, dumpFile(lang))).run();
+            new DownloadCommand(new KaikkiDumpDownloader(lang)).run();
             return 0;
         }
     }
 
-    @Command(name = "generate", aliases = {"g"},
+    @Command(
+            name = "generate",
+            aliases = {"gen"},
             description = "Generate Kindle dictionary from downloaded dump.",
             mixinStandardHelpOptions = true)
     static class Generate implements Callable<Integer> {
 
-        @Parameters(index = "0", arity = "0..1", defaultValue = "en",
-                description = "Language code (ISO 639-1, default: ${DEFAULT-VALUE})")
-        private String lang;
+        @Parameters(
+                index = "0",
+                arity = "1",
+                paramLabel = "DUMP_LANG",
+                description = "Wiktionary edition language code (ISO 639-1)")
+        private String dumpLang;
+
+        @Parameters(
+                index = "1",
+                arity = "1",
+                description = "Language to filter entries by (ISO 639-1)")
+        private String wordLang;
 
         @Override
         public Integer call() throws Exception {
-            String title = KindleOpfGenerator.autoTitle(lang, lang);
+            Optional<Path> dumpFile = findLatestDump(dumpLang);
+            if (dumpFile.isEmpty()) {
+                log.error("No dump found for language {} in {}", dumpLang, DUMPS_DIR);
+                return 1;
+            }
+            String title = KindleOpfGenerator.autoTitle(wordLang, dumpLang);
             new GenerateCommand(
                     new JsonlDictionaryParser(),
                     new HtmlDefinitionRenderer(),
                     new KindleOpfGenerator(),
-                    dumpFile(lang),
+                    dumpFile.get(),
                     DICTIONARIES_DIR,
-                    lang,
+                    wordLang,
+                    dumpLang,
                     title
             ).run();
             return 0;

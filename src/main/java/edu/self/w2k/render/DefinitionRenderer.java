@@ -1,12 +1,11 @@
 package edu.self.w2k.render;
 
-import edu.self.w2k.model.WiktionarySense;
-
 import java.util.List;
 import java.util.Optional;
 
-public interface DefinitionRenderer {
+import edu.self.w2k.model.WiktionarySense;
 
+public interface DefinitionRenderer {
     /**
      * Renders a list of senses into a definition string.
      *

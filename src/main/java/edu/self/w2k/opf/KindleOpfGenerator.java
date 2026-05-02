@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import edu.self.w2k.lexicon.LexiconEntry;
+import edu.self.w2k.model.LexiconEntry;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -27,14 +27,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class KindleOpfGenerator implements OpfGenerator {
 
+    private static final String KINDLE_NS = "https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf";
     private static final int ENTRIES_PER_FILE = 10_000;
-
-    private static final String KINDLE_NS =
-            "https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf";
 
     @Override
     public void generate(TreeMap<String, List<LexiconEntry>> defs, String srcLang, String trgLang,
             String title, Path outputDir) throws IOException {
+
+        Files.createDirectories(outputDir);
 
         log.info("Generating OPF for lang={}->{}, title=\"{}\"", srcLang, trgLang, title);
         log.info("{} unique keys loaded from lexicon", defs.size());

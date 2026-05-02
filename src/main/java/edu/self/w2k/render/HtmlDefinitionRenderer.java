@@ -1,12 +1,13 @@
 package edu.self.w2k.render;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.apache.commons.text.StringEscapeUtils;
+
 import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionarySense;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.text.StringEscapeUtils;
-
-import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 public class HtmlDefinitionRenderer implements DefinitionRenderer {
@@ -18,12 +19,18 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         boolean hasGloss = false;
 
         for (WiktionarySense sense : senses) {
-            if (sense == null) continue;
+            if (sense == null) {
+                continue;
+            }
             List<String> glosses = sense.glosses();
-            if (glosses.isEmpty()) continue;
+            if (glosses.isEmpty()) {
+                continue;
+            }
 
             for (String gloss : glosses) {
-                if (gloss == null || gloss.isBlank()) continue;
+                if (gloss == null || gloss.isBlank()) {
+                    continue;
+                }
                 hasGloss = true;
                 sb.append("<li><span>");
                 sb.append(StringEscapeUtils.escapeXml10(gloss.replaceAll("[\n\r]", "; ")));
@@ -33,16 +40,22 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                 boolean hasExample = false;
                 StringBuilder exSb = new StringBuilder("<ul>");
                 for (WiktionaryExample ex : examples) {
-                    if (ex == null) continue;
+                    if (ex == null) {
+                        continue;
+                    }
                     String text = ex.text();
-                    if (text == null || text.isBlank()) continue;
+                    if (text == null || text.isBlank()) {
+                        continue;
+                    }
                     hasExample = true;
                     exSb.append("<li>");
                     exSb.append(StringEscapeUtils.escapeXml10(text.replaceAll("[\n\r]", "; ")));
                     exSb.append("</li>");
                 }
                 exSb.append("</ul>");
-                if (hasExample) sb.append(exSb);
+                if (hasExample) {
+                    sb.append(exSb);
+                }
 
                 sb.append("</li>");
             }

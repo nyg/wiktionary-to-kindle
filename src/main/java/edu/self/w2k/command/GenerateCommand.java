@@ -8,7 +8,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-import edu.self.w2k.lexicon.LexiconEntry;
+import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.opf.OpfGenerator;
 import edu.self.w2k.parse.DictionaryParser;
 import edu.self.w2k.render.DefinitionRenderer;
@@ -24,15 +24,17 @@ public class GenerateCommand implements Command {
     private final OpfGenerator generator;
     private final Path dumpFile;
     private final Path outputDir;
-    private final String lang;
+    private final String srcLang;
+    private final String trgLang;
     private final String title;
 
     @Override
     public void run() throws Exception {
+        log.info("Using dump: {}", dumpFile);
         TreeMap<String, List<LexiconEntry>> grouped = new TreeMap<>();
         AtomicLong count = new AtomicLong();
 
-        try (Stream<LexiconEntry> stream = parser.parse(dumpFile, lang)
+        try (Stream<LexiconEntry> stream = parser.parse(dumpFile, srcLang)
                 .flatMap(e -> renderer.render(e.senses())
                         .map(def -> new LexiconEntry(e.word(), def))
                         .stream())) {
@@ -45,9 +47,9 @@ public class GenerateCommand implements Command {
             });
         }
 
-        log.info("Done. {} entries grouped into {} unique keys for lang={}", count.get(), grouped.size(), lang);
+        log.info("Done. {} entries grouped into {} unique keys for srcLang={}, trgLang={}", count.get(), grouped.size(), srcLang, trgLang);
 
-        generator.generate(grouped, lang, lang, title, outputDir);
+        generator.generate(grouped, srcLang, trgLang, title, outputDir);
     }
 
     /**
