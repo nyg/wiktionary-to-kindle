@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+  statuses: write
 
 jobs:
   build:
@@ -24,4 +26,7 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - run: mvn --no-transfer-progress verify
+      - run: mvn --no-transfer-progress verify sonar:sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
