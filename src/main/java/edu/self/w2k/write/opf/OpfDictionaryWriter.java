@@ -1,5 +1,8 @@
 package edu.self.w2k.write.opf;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -12,6 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 
 import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.write.DictionaryWriter;
@@ -38,9 +42,20 @@ public class OpfDictionaryWriter implements DictionaryWriter {
             log.debug("Wrote {} ({} entries)", fileName, end - start);
         }
 
+        writeCoverImage(outputDir);
         Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames);
         log.info("OPF generation complete: {} HTML file(s) + 1 OPF", htmlFileNames.size());
         return opfPath;
+    }
+
+    private static void writeCoverImage(Path outputDir) throws IOException {
+        Path cover = outputDir.resolve("cover.jpg");
+        BufferedImage img = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, 100, 100);
+        g.dispose();
+        ImageIO.write(img, "JPEG", cover.toFile());
     }
 
     private static String htmlFileName(String srcLang, String trgLang, int index) {
@@ -62,12 +77,15 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                         <dc:identifier id="uid">%s</dc:identifier>
                         <dc:title>%s</dc:title>
                         <dc:language>%s</dc:language>
+                        <meta name="cover" content="cover-image"/>
                         <x-metadata>
                             <DictionaryInLanguage>%s</DictionaryInLanguage>
                             <DictionaryOutLanguage>%s</DictionaryOutLanguage>
+                            <DefaultLookupIndex>word</DefaultLookupIndex>
                         </x-metadata>
                     </metadata>
                     <manifest>
+                        <item id="cover-image" href="cover.jpg" media-type="image/jpeg"/>
                     """.formatted(UUID.randomUUID(), title, srcLang, srcLang, trgLang));
 
             for (int i = 0; i < htmlFileNames.size(); i++) {
@@ -84,9 +102,10 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                     </spine>
                     <guide>
                         <reference type="search" title="Dictionary Search" onclick="index_search()"/>
+                        <reference type="index" title="Dictionary Index" href="%s"/>
                     </guide>
                     </package>
-                    """);
+                    """.formatted(htmlFileNames.getFirst()));
         }
         return opfPath;
     }
