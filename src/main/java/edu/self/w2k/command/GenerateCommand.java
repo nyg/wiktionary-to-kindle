@@ -1,5 +1,6 @@
 package edu.self.w2k.command;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,7 @@ public class GenerateCommand implements Command {
     private final String title;
 
     @Override
-    public void run() throws Exception {
+    public void run() throws IOException {
         log.info("Using dump: {}", dumpFile);
         TreeMap<String, List<LexiconEntry>> grouped = new TreeMap<>();
         AtomicLong count = new AtomicLong();

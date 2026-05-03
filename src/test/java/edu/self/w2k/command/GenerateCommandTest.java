@@ -1,118 +1,100 @@
 package edu.self.w2k.command;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.zip.GZIPOutputStream;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.stream.Stream;
 
+import edu.self.w2k.model.LexiconEntry;
+import edu.self.w2k.model.WiktionaryEntry;
+import edu.self.w2k.parse.DictionaryParser;
+import edu.self.w2k.render.DefinitionRenderer;
+import edu.self.w2k.write.DictionaryWriter;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import edu.self.w2k.parse.JsonlDictionaryParser;
-import edu.self.w2k.render.HtmlDefinitionRenderer;
-import edu.self.w2k.write.DictionaryTitles;
-import edu.self.w2k.write.opf.OpfDictionaryWriter;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class GenerateCommandTest {
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    @Mock
+    private DictionaryParser parser;
 
-    private static Path writeGzipJsonl(Path dir, List<String> lines) throws IOException {
-        Path gzip = dir.resolve("dump.jsonl.gz");
-        try (GZIPOutputStream gz = new GZIPOutputStream(new FileOutputStream(gzip.toFile()));
-             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(gz, StandardCharsets.UTF_8))) {
-            for (String line : lines) {
-                bw.write(line);
-                bw.newLine();
-            }
-        }
-        return gzip;
-    }
+    @Mock
+    private DefinitionRenderer renderer;
 
-    private static GenerateCommand buildCommand(Path dumpFile, Path outputDir, String lang) {
-        return new GenerateCommand(
-                new JsonlDictionaryParser(),
-                new HtmlDefinitionRenderer(),
-                new OpfDictionaryWriter(),
-                dumpFile,
-                outputDir,
-                lang,
-                lang,
-                DictionaryTitles.autoTitle(lang, lang)
-        );
-    }
+    @Mock
+    private DictionaryWriter writer;
 
-    // ── pipeline tests ────────────────────────────────────────────────────────
+    @TempDir
+    Path tmp;
 
     @Test
-    void run_jsonlDumpToOpf(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"hello\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"a greeting\"],\"examples\":[{\"text\":\"Hello, world!\"}]}]}",
-                "{\"word\":\"world\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"the earth\"],\"examples\":[]}]}"
-        ));
+    void should_group_entries_and_write_dictionary_when_run() throws Exception {
+        // Given
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "en", "Test Title");
+        WiktionaryEntry entry1 = new WiktionaryEntry("Apple", "el", List.of());
+        WiktionaryEntry entry2 = new WiktionaryEntry("apple", "el", List.of());
+        WiktionaryEntry entry3 = new WiktionaryEntry("banana", "el", List.of());
+        when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry1, entry2, entry3));
+        when(renderer.render(any())).thenReturn(Optional.of("<def>"));
 
-        buildCommand(dump, tempDir, "en").run();
+        // When
+        unit.run();
 
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF file must be created");
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("el"), eq("en"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured).containsKeys("apple", "banana");
+        assertThat(captured.get("apple")).hasSize(2);
     }
 
     @Test
-    void run_langFilteringApplied(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"hello\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"a greeting\"],\"examples\":[]}]}",
-                "{\"word\":\"Hund\",\"lang_code\":\"de\",\"senses\":[{\"glosses\":[\"dog\"],\"examples\":[]}]}",
-                "{\"word\":\"gato\",\"lang_code\":\"es\",\"senses\":[{\"glosses\":[\"cat\"],\"examples\":[]}]}"
-        ));
+    void should_skip_entries_when_renderer_returns_empty() throws Exception {
+        // Given
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "en", "Test Title");
+        WiktionaryEntry entry1 = new WiktionaryEntry("apple", "el", List.of());
+        WiktionaryEntry entry2 = new WiktionaryEntry("banana", "el", List.of());
+        when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry1, entry2));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of("<def>"))
+                .thenReturn(Optional.empty());
 
-        buildCommand(dump, tempDir, "en").run();
+        // When
+        unit.run();
 
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF must be created");
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("el"), eq("en"), eq("Test Title"), eq(tmp));
+        assertThat(captor.getValue()).containsOnlyKeys("apple");
     }
 
     @Test
-    void run_formOfEntriesExcluded(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"ran\",\"lang_code\":\"en\",\"senses\":[{\"form_of\":[{\"word\":\"run\"}]}]}",
-                "{\"word\":\"run\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"to move fast\"],\"examples\":[]}]}"
-        ));
+    void should_lowercase_and_strip_when_normalising_key() {
+        // When
+        String result = GenerateCommand.normaliseKey("  Hello  ");
 
-        buildCommand(dump, tempDir, "en").run();
-
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF must be created");
-    }
-
-    // ── normaliseKey unit tests ───────────────────────────────────────────────
-
-    @Test
-    void normaliseKey_lowercasesWord() {
-        assertEquals("hello", GenerateCommand.normaliseKey("Hello"));
+        // Then
+        assertThat(result).isEqualTo("hello");
     }
 
     @Test
-    void normaliseKey_stripsWhitespace() {
-        assertEquals("hello", GenerateCommand.normaliseKey("  hello  "));
-    }
+    void should_replace_quotes_and_escape_angle_brackets_when_normalising_key() {
+        // When
+        String result = GenerateCommand.normaliseKey("\"<a>\"");
 
-    @Test
-    void normaliseKey_replacesDoubleQuote() {
-        assertEquals("it's", GenerateCommand.normaliseKey("it\"s"));
-    }
-
-    @Test
-    void normaliseKey_escapesAngleBrackets() {
-        assertEquals("\\<b\\>", GenerateCommand.normaliseKey("<b>"));
-    }
-
-    @Test
-    void normaliseKey_emptyStringRemainsEmpty() {
-        assertEquals("", GenerateCommand.normaliseKey("   "));
+        // Then
+        assertThat(result).isEqualTo("'\\<a\\>'");
     }
 }

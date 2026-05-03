@@ -15,9 +15,12 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Set;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class KindlingDownloader {
 
     private static final String RELEASE_BASE = "https://github.com/ciscoriordan/kindling/releases/download";
@@ -25,16 +28,16 @@ public class KindlingDownloader {
 
     private final HttpFetcher fetcher;
 
-    public KindlingDownloader(HttpClient httpClient) {
-        this.fetcher = new DefaultHttpFetcher(httpClient);
+    public KindlingDownloader() {
+        this(new DefaultHttpFetcher(HttpClient.newBuilder()
+                                            .followRedirects(HttpClient.Redirect.NORMAL)
+                                            .connectTimeout(Duration.ofSeconds(30))
+                                            .build()));
     }
 
-    KindlingDownloader(HttpFetcher fetcher) {
-        this.fetcher = fetcher;
-    }
-
-    public Path download(String version, KindlingPlatform platform, Path destDir)
-            throws IOException, KindlingException {
+    public Path download(String version,
+                         KindlingPlatform platform,
+                         Path destDir) throws IOException, KindlingException {
         String assetName = platform.assetName();
         String expectedSha256 = resolveDigest(version, platform, assetName);
 
@@ -62,16 +65,15 @@ public class KindlingDownloader {
             markExecutable(finalPath);
             log.info("kindling binary ready at {}", finalPath);
             return finalPath;
-        } catch (KindlingException e) {
-            throw e;
         } catch (IOException e) {
             Files.deleteIfExists(partPath);
             throw e;
         }
     }
 
-    private String resolveDigest(String version, KindlingPlatform platform, String assetName)
-            throws IOException, KindlingException {
+    private String resolveDigest(String version,
+                                 KindlingPlatform platform,
+                                 String assetName) throws IOException, KindlingException {
         if (version.equals(KindlingRelease.DEFAULT_VERSION)
                 && KindlingRelease.DEFAULT_ASSETS.containsKey(platform)) {
             return KindlingRelease.DEFAULT_ASSETS.get(platform).sha256();
