@@ -1,7 +1,9 @@
 package edu.self.w2k.download;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
@@ -61,18 +63,8 @@ public class KaikkiDumpDownloader implements DumpDownloader {
                 return;
             }
 
-            String lastModified = response.headers().firstValue("last-modified").orElse(null);
-            String generatedDate = "unknown";
-            if (lastModified != null) {
-                try {
-                    ZonedDateTime parsed = ZonedDateTime.parse(lastModified, DateTimeFormatter.RFC_1123_DATE_TIME);
-                    generatedDate = parsed.format(DateTimeFormatter.ISO_LOCAL_DATE);
-                } catch (Exception e) {
-                    generatedDate = lastModified;
-                }
-            }
-
-            Path dumpPath = dumpsDir.resolve("raw-wiktextract-data-" + lang + "-" + generatedDate + ".jsonl.gz");
+            String generatedDate = buildGeneratedDate(response.headers());
+            Path dumpPath = dumpsDir.resolve("raw-wiktextract-data-%s-%s.jsonl.gz".formatted(lang, generatedDate));
             if (Files.exists(dumpPath)) {
                 log.info("Dump already exists at {}. Delete it to re-download.", dumpPath);
                 Files.deleteIfExists(partPath);
@@ -81,13 +73,32 @@ public class KaikkiDumpDownloader implements DumpDownloader {
 
             Files.move(partPath, dumpPath, StandardCopyOption.REPLACE_EXISTING);
             log.info("Download complete: {} ({} MB, generated: {})", dumpPath, Files.size(dumpPath) / (1024 * 1024), generatedDate);
-        } catch (Exception e) {
-            log.error("Download failed: {}", e.getLocalizedMessage(), e);
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            log.warn("Download interrupted for lang: {}", lang);
+        } catch (IOException e) {
+            log.error("Download failed", e);
+        } finally {
             try {
                 Files.deleteIfExists(partPath);
-            } catch (Exception nested) {
-                log.warn("Failed to delete partial file", nested);
+            } catch (IOException e) {
+                log.warn("Failed to delete partial file", e);
             }
+        }
+    }
+
+    private String buildGeneratedDate(HttpHeaders headers) {
+        String lastModified = headers.firstValue("last-modified").orElse(null);
+        if (lastModified == null) {
+            return "unknown";
+        }
+
+        try {
+            return ZonedDateTime
+                    .parse(lastModified, DateTimeFormatter.RFC_1123_DATE_TIME)
+                    .format(DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (Exception _) {
+            return lastModified;
         }
     }
 
@@ -98,8 +109,8 @@ public class KaikkiDumpDownloader implements DumpDownloader {
      */
     static String buildUrl(String lang) {
         String path = "en".equals(lang)
-                ? "/dictionary/" + DUMP_FILENAME
-                : "/" + lang + "wiktionary/" + DUMP_FILENAME;
-        return BASE_URL + path;
+                ? "/dictionary/"
+                : "/%swiktionary/".formatted(lang);
+        return BASE_URL + path + DUMP_FILENAME;
     }
 }
