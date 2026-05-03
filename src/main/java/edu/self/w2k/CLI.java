@@ -26,12 +26,11 @@ import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
 @Slf4j
-@Command(
-        name = "wiktionary-to-kindle",
-        mixinStandardHelpOptions = true,
-        version = "1.0.0",
-        description = "Converts Wiktionary data into Kindle-compatible dictionaries.",
-        subcommands = {CLI.Download.class, CLI.Generate.class, CommandLine.HelpCommand.class})
+@Command(name = "wiktionary-to-kindle",
+         mixinStandardHelpOptions = true,
+         version = "1.0.0",
+         description = "Converts Wiktionary data into Kindle-compatible dictionaries.",
+         subcommands = {CLI.Download.class, CLI.Generate.class, CommandLine.HelpCommand.class})
 public class CLI implements Callable<Integer> {
 
     static final Path DICTIONARIES_DIR = Path.of("dictionaries");
@@ -41,7 +40,9 @@ public class CLI implements Callable<Integer> {
     CommandSpec spec;
 
     static void main(String[] args) {
-        System.exit(new CommandLine(new CLI()).execute(args));
+        CommandLine commandLine = new CommandLine(new CLI());
+        commandLine.setCaseInsensitiveEnumValuesAllowed(true);
+        System.exit(commandLine.execute(args));
     }
 
     /**
@@ -73,18 +74,16 @@ public class CLI implements Callable<Integer> {
         return 0;
     }
 
-    @Command(
-            name = "download",
-            aliases = {"dl"},
-            description = "Download Wiktionary dump from kaikki.org.",
-            mixinStandardHelpOptions = true)
+    @Command(name = "download",
+             aliases = {"dl"},
+             description = "Download Wiktionary dump from kaikki.org.",
+             mixinStandardHelpOptions = true)
     static class Download implements Callable<Integer> {
 
-        @Parameters(
-                index = "0",
-                arity = "0..1",
-                defaultValue = "en",
-                description = "Wiktionary edition language code (ISO 639-1, default: ${DEFAULT-VALUE})")
+        @Parameters(index = "0",
+                    arity = "0..1",
+                    defaultValue = "en",
+                    description = "Wiktionary edition language code (ISO 639-1, default: ${DEFAULT-VALUE})")
         private String lang;
 
         @Override
@@ -94,27 +93,25 @@ public class CLI implements Callable<Integer> {
         }
     }
 
-    @Command(
-            name = "generate",
-            aliases = {"gen"},
-            description = "Generate Kindle dictionary from downloaded dump.",
-            mixinStandardHelpOptions = true)
+    @Command(name = "generate",
+             aliases = {"gen"},
+             description = "Generate Kindle dictionary from downloaded dump.",
+             mixinStandardHelpOptions = true)
     static class Generate implements Callable<Integer> {
 
-        @Parameters(
-                index = "0",
-                arity = "1",
-                paramLabel = "DUMP_LANG",
-                description = "Wiktionary edition language code (ISO 639-1)")
+        @Parameters(index = "0",
+                    arity = "1",
+                    paramLabel = "DUMP_LANG",
+                    description = "Wiktionary edition language code (ISO 639-1)")
         private String dumpLang;
 
-        @Parameters(
-                index = "1",
-                arity = "1",
-                description = "Language to filter entries by (ISO 639-1)")
+        @Parameters(index = "1",
+                    arity = "1",
+                    description = "Language to filter entries by (ISO 639-1)")
         private String wordLang;
 
-        @Option(names = {"-f", "--format"}, defaultValue = "epub",
+        @Option(names = {"-f", "--format"},
+                defaultValue = "epub",
                 description = "Output format: epub (default) or mobi (requires Calibre)")
         private OutputFormat format;
 
@@ -148,8 +145,8 @@ public class CLI implements Callable<Integer> {
             EpubDictionaryWriter epubWriter = new EpubDictionaryWriter();
             return switch (format) {
                 case EPUB -> epubWriter;
-                case MOBI -> new MobiDictionaryWriter(epubWriter,
-                        new CalibreEbookConverter(Optional.ofNullable(ebookConvertPath)));
+                case MOBI -> new MobiDictionaryWriter(
+                        epubWriter, new CalibreEbookConverter(Optional.ofNullable(ebookConvertPath)));
             };
         }
     }

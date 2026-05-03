@@ -27,8 +27,11 @@ public class EpubDictionaryWriter implements DictionaryWriter {
     static final int ENTRIES_PER_CHAPTER = 10_000;
 
     @Override
-    public Path write(TreeMap<String, List<LexiconEntry>> defs, String srcLang, String trgLang,
-            String title, Path outputDir) throws IOException {
+    public Path write(TreeMap<String, List<LexiconEntry>> defs,
+                      String srcLang,
+                      String trgLang,
+                      String title,
+                      Path outputDir) throws IOException {
 
         Files.createDirectories(outputDir);
         log.info("Generating EPUB for lang={}->{}, title=\"{}\"", srcLang, trgLang, title);
