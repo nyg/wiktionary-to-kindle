@@ -35,7 +35,7 @@ class HtmlChapterRenderer {
                 """.formatted(KINDLE_NS, KINDLE_NS));
 
         for (var entry : entries) {
-            appendEntry(sb, entry.getKey(), entry.getValue());
+            appendEntry(sb, entry.getValue());
         }
 
         sb.append("""
@@ -46,7 +46,7 @@ class HtmlChapterRenderer {
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    private static void appendEntry(StringBuilder sb, String key, List<LexiconEntry> lexiconEntries) {
+    private static void appendEntry(StringBuilder sb, List<LexiconEntry> lexiconEntries) {
         // value must match the visible display term so kindling can locate entries in the text blob
         String displayTerm = StringEscapeUtils.escapeXml10(lexiconEntries.getFirst().word());
         StringBuilder combinedDef = new StringBuilder();

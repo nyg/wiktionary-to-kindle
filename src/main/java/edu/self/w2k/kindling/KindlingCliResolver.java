@@ -107,7 +107,11 @@ public class KindlingCliResolver {
                 Path found = Path.of(output.lines().findFirst().orElse("").trim());
                 if (Files.isExecutable(found)) return Optional.of(found);
             }
-        } catch (Exception ignored) {}
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception _) {
+            // which/where probe failed — fall through
+        }
         return Optional.empty();
     }
 }

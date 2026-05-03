@@ -97,7 +97,7 @@ class KindlingDownloaderTest {
     // ── tampered file: sha256 mismatch → KindlingException + part file removed
 
     @Test
-    void download_sha256Mismatch_throwsAndCleansUp(@TempDir Path tempDir) throws Exception {
+    void download_sha256Mismatch_throwsAndCleansUp(@TempDir Path tempDir) throws IOException, KindlingException {
         String version = "v9.99.0";
         KindlingPlatform platform = KindlingPlatform.LINUX_X64;
         String assetName = platform.assetName();

@@ -18,6 +18,7 @@ import edu.self.w2k.kindling.KindlingRelease;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import edu.self.w2k.write.DictionaryTitles;
+import edu.self.w2k.write.DictionaryWriter;
 import edu.self.w2k.write.opf.OpfDictionaryWriter;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
@@ -56,7 +57,8 @@ public class CLI implements Callable<Integer> {
                     latest = path;
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception _) {
             return Optional.empty();
         }
         return Optional.ofNullable(latest);
@@ -129,7 +131,7 @@ public class CLI implements Callable<Integer> {
             KindlingDownloader downloader = new KindlingDownloader(httpClient);
             KindlingCliResolver resolver = new KindlingCliResolver(
                     kindlingVersion, Optional.ofNullable(kindlingCliPath), downloader);
-            var writer = new KindlingDictionaryConverter(
+            DictionaryWriter writer = new KindlingDictionaryConverter(
                     new OpfDictionaryWriter(), resolver, KindlingDictionaryConverter.defaultRunner());
 
             new GenerateCommand(

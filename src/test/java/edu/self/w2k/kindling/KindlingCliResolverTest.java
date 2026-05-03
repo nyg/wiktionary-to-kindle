@@ -87,25 +87,7 @@ class KindlingCliResolverTest {
         Files.createFile(cachedBin);
         cachedBin.toFile().setExecutable(true);
 
-        // digestProvider returns null → always treat cached as valid
-        KindlingCliResolver resolver = new KindlingCliResolver(
-                "v9.0.0", Optional.empty(), noOpDownloader(),
-                name -> Optional.empty(),  // PATH probe misses
-                (v, p) -> null);           // no digest check
-
-        // We need to intercept kindlingCacheDir; instead test via the logic:
-        // The resolver looks up XdgCachePaths.kindlingCacheDir() internally.
-        // To avoid depending on actual XDG, we can verify behaviour indirectly
-        // by using a custom subclass / different approach.
-        // For a simpler test: just verify that when cache is valid, downloader is NOT called.
-        // We do this by using a downloader that would throw if called.
-
-        // Since KindlingCliResolver uses XdgCachePaths.kindlingCacheDir() internally
-        // and we can't inject the cache dir, we test the digest-check logic separately
-        // using the package-private 5-arg constructor by mocking everything.
-
-        // Build a resolver that always "finds" the cached binary by pretending PATH probe
-        // returns our pre-created file after passing the digest check (null → valid).
+        // Use PATH probe to return the pre-created file; digest check is skipped (null → valid).
         KindlingCliResolver resolverViaPath = new KindlingCliResolver(
                 "v9.0.0", Optional.empty(), noOpDownloader(),
                 name -> Optional.of(cachedBin),
@@ -136,8 +118,6 @@ class KindlingCliResolverTest {
         byte[] newContent = "new-content".getBytes();
         String newSha256 = KindlingDownloader.sha256(downloadedBin);
         String apiUrl = "https://api.github.com/repos/ciscoriordan/kindling/releases/tags/" + version;
-        String downloadUrl = "https://github.com/ciscoriordan/kindling/releases/download/"
-                + version + "/" + platform.assetName();
 
         HttpFetcher stubFetcher = new HttpFetcher() {
             @Override
@@ -172,7 +152,7 @@ class KindlingCliResolverTest {
                     String actual;
                     try {
                         actual = KindlingDownloader.sha256(cached);
-                    } catch (IOException e) {
+                    } catch (IOException _) {
                         actual = "";
                     }
                     if (!expected.equalsIgnoreCase(actual)) {

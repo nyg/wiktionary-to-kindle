@@ -34,8 +34,8 @@ public enum KindlingPlatform {
         if (os.contains("mac") || os.contains("darwin")) {
             return archLc.equals("aarch64") ? MAC_APPLE_SILICON : MAC_INTEL;
         }
-        if (os.contains("windows")) {
-            if (archLc.equals("amd64") || archLc.equals("x86_64")) return WINDOWS_X64;
+        if (os.contains("windows") && (archLc.equals("amd64") || archLc.equals("x86_64"))) {
+            return WINDOWS_X64;
         }
         throw new KindlingException(
                 "Unsupported platform: " + osName + "/" + arch + "; pass --kindling-cli to use a self-built binary.");

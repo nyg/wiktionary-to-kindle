@@ -73,6 +73,7 @@ class KindlingDictionaryConverterTest {
                 new OpfDictionaryWriter(), fixedBinResolver(fakeBin), runner);
 
         Path result = converter.write(buildDefs("alpha", "beta"), "el", "en", "Title", tempDir);
+        assertTrue(result.toString().endsWith("dictionary-el-en.mobi"), "returned path must be the mobi file");
 
         assertEquals(1, captured.size(), "exactly one command must be run");
         List<String> cmd = captured.getFirst();

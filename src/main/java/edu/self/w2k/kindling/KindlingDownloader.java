@@ -13,6 +13,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -113,10 +114,10 @@ public class KindlingDownloader {
 
     private static void markExecutable(Path path) {
         try {
-            var perms = new java.util.HashSet<>(Files.getPosixFilePermissions(path));
+            Set<PosixFilePermission> perms = new java.util.HashSet<>(Files.getPosixFilePermissions(path));
             perms.add(PosixFilePermission.OWNER_EXECUTE);
             Files.setPosixFilePermissions(path, perms);
-        } catch (UnsupportedOperationException ignored) {
+        } catch (UnsupportedOperationException _) {
             // Windows — no POSIX permissions
         } catch (IOException e) {
             log.warn("Could not mark {} as executable: {}", path, e.getMessage());

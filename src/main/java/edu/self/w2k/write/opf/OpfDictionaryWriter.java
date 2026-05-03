@@ -118,13 +118,13 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                     """.formatted(uid, title, srcLang, srcLang, trgLang));
 
             for (int i = 0; i < htmlFileNames.size(); i++) {
-                w.write("    <item id=\"dictionary%d\" href=\"%s\" media-type=\"application/xhtml+xml\"/>\n"
+                w.write("    <item id=\"dictionary%d\" href=\"%s\" media-type=\"application/xhtml+xml\"/>%n"
                         .formatted(i, htmlFileNames.get(i)));
             }
 
-            w.write("</manifest>\n<spine toc=\"toc\">\n");
+            w.write("</manifest>%n<spine toc=\"toc\">%n".formatted());
             for (int i = 0; i < htmlFileNames.size(); i++) {
-                w.write("    <itemref idref=\"dictionary%d\"/>\n".formatted(i));
+                w.write("    <itemref idref=\"dictionary%d\"/>%n".formatted(i));
             }
 
             w.write("""
