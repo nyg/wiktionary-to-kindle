@@ -1,10 +1,8 @@
 package edu.self.w2k;
 
-import java.net.http.HttpClient;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -57,8 +55,7 @@ public class CLI implements Callable<Integer> {
                     latest = path;
                 }
             }
-        }
-        catch (Exception _) {
+        } catch (Exception _) {
             return Optional.empty();
         }
         return Optional.ofNullable(latest);
@@ -124,11 +121,7 @@ public class CLI implements Callable<Integer> {
             }
 
             String title = DictionaryTitles.autoTitle(wordLang, dumpLang);
-            HttpClient httpClient = HttpClient.newBuilder()
-                    .followRedirects(HttpClient.Redirect.NORMAL)
-                    .connectTimeout(Duration.ofSeconds(60))
-                    .build();
-            KindlingDownloader downloader = new KindlingDownloader(httpClient);
+            KindlingDownloader downloader = new KindlingDownloader();
             KindlingCliResolver resolver = new KindlingCliResolver(
                     kindlingVersion, Optional.ofNullable(kindlingCliPath), downloader);
             DictionaryWriter writer = new KindlingDictionaryConverter(

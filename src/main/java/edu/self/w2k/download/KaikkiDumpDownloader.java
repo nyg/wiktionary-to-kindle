@@ -11,9 +11,12 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class KaikkiDumpDownloader implements DumpDownloader {
 
     private static final String BASE_URL = "https://kaikki.org";
@@ -25,22 +28,18 @@ public class KaikkiDumpDownloader implements DumpDownloader {
 
     public KaikkiDumpDownloader(String lang) {
         this(lang,
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build(),
-                Path.of("dumps"));
-    }
-
-    KaikkiDumpDownloader(String lang, HttpClient httpClient, Path dumpsDir) {
-        this.lang = lang;
-        this.httpClient = httpClient;
-        this.dumpsDir = dumpsDir;
+             HttpClient.newBuilder()
+                     .followRedirects(HttpClient.Redirect.NORMAL)
+                     .connectTimeout(Duration.ofSeconds(30))
+                     .build(),
+             Path.of("dumps"));
     }
 
     @Override
     public void download() {
         try {
             Files.createDirectories(dumpsDir);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Failed to create dump directory: {}", e.getLocalizedMessage(), e);
             return;
         }
@@ -68,8 +67,7 @@ public class KaikkiDumpDownloader implements DumpDownloader {
                 try {
                     ZonedDateTime parsed = ZonedDateTime.parse(lastModified, DateTimeFormatter.RFC_1123_DATE_TIME);
                     generatedDate = parsed.format(DateTimeFormatter.ISO_LOCAL_DATE);
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     generatedDate = lastModified;
                 }
             }
@@ -83,13 +81,11 @@ public class KaikkiDumpDownloader implements DumpDownloader {
 
             Files.move(partPath, dumpPath, StandardCopyOption.REPLACE_EXISTING);
             log.info("Download complete: {} ({} MB, generated: {})", dumpPath, Files.size(dumpPath) / (1024 * 1024), generatedDate);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Download failed: {}", e.getLocalizedMessage(), e);
             try {
                 Files.deleteIfExists(partPath);
-            }
-            catch (Exception nested) {
+            } catch (Exception nested) {
                 log.warn("Failed to delete partial file", nested);
             }
         }

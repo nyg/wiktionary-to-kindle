@@ -1,5 +1,10 @@
 package edu.self.w2k.download;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
+
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;
@@ -8,16 +13,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class KaikkiDumpDownloaderTest {
@@ -30,6 +31,13 @@ class KaikkiDumpDownloaderTest {
 
     @TempDir
     Path tmp;
+
+    private KaikkiDumpDownloader unit;
+
+    @BeforeEach
+    void setUp() {
+        unit = new KaikkiDumpDownloader("en", httpClient, tmp);
+    }
 
     @Test
     void should_save_dump_with_date_when_download_succeeds() throws Exception {
@@ -44,8 +52,6 @@ class KaikkiDumpDownloaderTest {
             Files.write(partPath, new byte[0]);
             return mockResponse;
         }).when(httpClient).send(any(), any());
-
-        KaikkiDumpDownloader unit = new KaikkiDumpDownloader("en", httpClient, tmp);
 
         // When
         unit.download();
@@ -66,8 +72,6 @@ class KaikkiDumpDownloaderTest {
         when(mockResponse.statusCode()).thenReturn(200);
         when(mockResponse.headers()).thenReturn(headers);
         doAnswer(inv -> mockResponse).when(httpClient).send(any(), any());
-
-        KaikkiDumpDownloader unit = new KaikkiDumpDownloader("en", httpClient, tmp);
 
         // When
         unit.download();
