@@ -9,9 +9,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import edu.self.w2k.model.LexiconEntry;
-import edu.self.w2k.opf.OpfGenerator;
 import edu.self.w2k.parse.DictionaryParser;
 import edu.self.w2k.render.DefinitionRenderer;
+import edu.self.w2k.write.DictionaryWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,7 +21,7 @@ public class GenerateCommand implements Command {
 
     private final DictionaryParser parser;
     private final DefinitionRenderer renderer;
-    private final OpfGenerator generator;
+    private final DictionaryWriter writer;
     private final Path dumpFile;
     private final Path outputDir;
     private final String srcLang;
@@ -49,7 +49,7 @@ public class GenerateCommand implements Command {
 
         log.info("Done. {} entries grouped into {} unique keys for srcLang={}, trgLang={}", count.get(), grouped.size(), srcLang, trgLang);
 
-        generator.generate(grouped, srcLang, trgLang, title, outputDir);
+        writer.write(grouped, srcLang, trgLang, title, outputDir);
     }
 
     /**
