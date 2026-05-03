@@ -17,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,19 +25,19 @@ class KaikkiDumpDownloaderTest {
     @Mock
     private HttpClient httpClient;
 
+    @Mock
+    private HttpResponse<Path> mockResponse;
+
     @TempDir
     Path tmp;
 
     @Test
-    @SuppressWarnings("unchecked")
     void should_save_dump_with_date_when_download_succeeds() throws Exception {
         // Given
         Path partPath = tmp.resolve("raw-wiktextract-data-en.jsonl.gz.part");
-
         HttpHeaders headers = HttpHeaders.of(
                 Map.of("last-modified", List.of("Fri, 01 May 2026 10:00:00 GMT")),
                 (k, v) -> true);
-        HttpResponse<Path> mockResponse = mock(HttpResponse.class);
         when(mockResponse.statusCode()).thenReturn(200);
         when(mockResponse.headers()).thenReturn(headers);
         doAnswer(inv -> {
@@ -57,16 +56,13 @@ class KaikkiDumpDownloaderTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void should_keep_existing_dump_when_target_already_exists() throws Exception {
         // Given
         Path existingDump = tmp.resolve("raw-wiktextract-data-en-2026-05-01.jsonl.gz");
         Files.createFile(existingDump);
-
         HttpHeaders headers = HttpHeaders.of(
                 Map.of("last-modified", List.of("Fri, 01 May 2026 10:00:00 GMT")),
                 (k, v) -> true);
-        HttpResponse<Path> mockResponse = mock(HttpResponse.class);
         when(mockResponse.statusCode()).thenReturn(200);
         when(mockResponse.headers()).thenReturn(headers);
         doAnswer(inv -> mockResponse).when(httpClient).send(any(), any());
@@ -83,7 +79,7 @@ class KaikkiDumpDownloaderTest {
 
     @Test
     void should_use_dictionary_path_when_lang_is_english() {
-        // Given / When
+        // When
         String url = KaikkiDumpDownloader.buildUrl("en");
 
         // Then
@@ -92,7 +88,7 @@ class KaikkiDumpDownloaderTest {
 
     @Test
     void should_use_lang_wiktionary_path_when_lang_is_other() {
-        // Given / When
+        // When
         String url = KaikkiDumpDownloader.buildUrl("fr");
 
         // Then

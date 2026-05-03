@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,16 +27,10 @@ class KindlingDownloaderTest {
     @TempDir
     Path destDir;
 
-    private KindlingDownloader unit;
-
-    @BeforeEach
-    void setUp() {
-        unit = new KindlingDownloader(fetcher);
-    }
-
     @Test
     void should_download_and_return_final_path_when_sha256_matches() throws Exception {
         // Given
+        KindlingDownloader unit = new KindlingDownloader(fetcher);
         byte[] payload = "test-payload-content".getBytes(StandardCharsets.UTF_8);
         String sha256 = HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(payload));
@@ -57,14 +50,16 @@ class KindlingDownloaderTest {
         Path result = unit.download(version, platform, destDir);
 
         // Then
-        assertThat(result).isEqualTo(destDir.resolve(assetName));
-        assertThat(result).exists();
+        assertThat(result)
+                .isEqualTo(destDir.resolve(assetName))
+                .exists();
         assertThat(destDir.resolve("." + assetName + ".part")).doesNotExist();
     }
 
     @Test
     void should_throw_when_sha256_mismatch() throws Exception {
         // Given
+        KindlingDownloader unit = new KindlingDownloader(fetcher);
         byte[] correctPayload = "correct-content".getBytes(StandardCharsets.UTF_8);
         String correctSha256 = HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(correctPayload));

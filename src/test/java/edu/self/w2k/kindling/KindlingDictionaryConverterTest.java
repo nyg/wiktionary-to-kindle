@@ -42,7 +42,6 @@ class KindlingDictionaryConverterTest {
     Path outputDir;
 
     @Test
-    @SuppressWarnings("unchecked")
     void should_run_kindling_cli_and_return_mobi_path_when_write() throws Exception {
         // Given
         Path opfPath = outputDir.resolve("dictionary-en-fr.opf");
@@ -57,10 +56,9 @@ class KindlingDictionaryConverterTest {
         // Then
         assertThat(result).isEqualTo(outputDir.resolve("dictionary-en-fr.mobi"));
 
-        ArgumentCaptor<List<String>> commandCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<String>> commandCaptor = ArgumentCaptor.captor();
         verify(runner).run(commandCaptor.capture());
-        List<String> command = commandCaptor.getValue();
-        assertThat(command)
+        assertThat(commandCaptor.getValue())
                 .contains("build")
                 .contains("-o")
                 .anyMatch(s -> s.endsWith("dictionary-en-fr.opf"))

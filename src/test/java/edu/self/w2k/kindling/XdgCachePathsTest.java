@@ -46,9 +46,9 @@ class XdgCachePathsTest {
 
         // Then
         assertThat(result.toString())
+                .startsWith("C:\\local")
                 .contains("wiktionary-to-kindle")
                 .contains("Cache")
                 .contains("kindling");
-        assertThat(result.startsWith(Path.of("C:\\local"))).isTrue();
     }
 }

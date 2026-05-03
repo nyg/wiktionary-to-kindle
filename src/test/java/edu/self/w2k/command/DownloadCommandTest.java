@@ -20,8 +20,6 @@ class DownloadCommandTest {
 
     @Test
     void should_invoke_downloader_when_run_is_called() {
-        // Given (no setup needed)
-
         // When
         unit.run();
 

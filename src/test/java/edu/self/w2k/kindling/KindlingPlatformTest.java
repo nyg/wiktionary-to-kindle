@@ -12,7 +12,7 @@ class KindlingPlatformTest {
 
     @Test
     void should_return_linux_x64_when_os_is_linux_amd64() throws KindlingException {
-        // Given / When
+        // When
         KindlingPlatform result = KindlingPlatform.detect("Linux", "amd64");
 
         // Then
@@ -22,7 +22,7 @@ class KindlingPlatformTest {
 
     @Test
     void should_throw_when_platform_is_unsupported() {
-        // Given / When / Then
+        // When / Then
         assertThatThrownBy(() -> KindlingPlatform.detect("SunOS", "sparc"))
                 .isInstanceOf(KindlingException.class);
     }

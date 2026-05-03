@@ -33,8 +33,9 @@ class OpfDictionaryWriterTest {
         Path result = unit.write(defs, "en", "fr", "English-French Dictionary", tmp);
 
         // Then
-        assertThat(result).isEqualTo(tmp.resolve("dictionary-en-fr.opf"));
-        assertThat(result).exists();
+        assertThat(result)
+                .isEqualTo(tmp.resolve("dictionary-en-fr.opf"))
+                .exists();
         String opfContent = Files.readString(result);
         assertThat(opfContent)
                 .contains("<DictionaryInLanguage>en</DictionaryInLanguage>")

@@ -31,7 +31,13 @@ class JsonlDictionaryParserTest {
         // Given
         String jsonl = "{\"word\":\"γεια\",\"lang_code\":\"el\",\"senses\":[]}\n"
                 + "{\"word\":\"hello\",\"lang_code\":\"en\",\"senses\":[]}\n";
-        Path dump = writeDump(jsonl);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(bos);
+             Writer writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
+            writer.write(jsonl);
+        }
+        Path dump = tmp.resolve("dump.jsonl.gz");
+        Files.write(dump, bos.toByteArray());
 
         // When
         List<WiktionaryEntry> result;
@@ -50,7 +56,13 @@ class JsonlDictionaryParserTest {
         // Given
         String jsonl = "{\"word\":\"\",\"lang_code\":\"el\",\"senses\":[]}\n"
                 + "{\"word\":\"καλή\",\"lang_code\":\"el\",\"senses\":[]}\n";
-        Path dump = writeDump(jsonl);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(bos);
+             Writer writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
+            writer.write(jsonl);
+        }
+        Path dump = tmp.resolve("dump.jsonl.gz");
+        Files.write(dump, bos.toByteArray());
 
         // When
         List<WiktionaryEntry> result;
@@ -62,16 +74,5 @@ class JsonlDictionaryParserTest {
         assertThat(result)
                 .extracting(WiktionaryEntry::word)
                 .containsExactly("καλή");
-    }
-
-    private Path writeDump(String jsonl) throws Exception {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (GZIPOutputStream gzip = new GZIPOutputStream(bos);
-             Writer writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
-            writer.write(jsonl);
-        }
-        Path dump = tmp.resolve("dump.jsonl.gz");
-        Files.write(dump, bos.toByteArray());
-        return dump;
     }
 }
