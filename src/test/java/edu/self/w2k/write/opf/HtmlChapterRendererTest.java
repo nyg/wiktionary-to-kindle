@@ -30,7 +30,7 @@ class HtmlChapterRendererTest {
         assertTrue(html.contains("<idx:entry name=\"word\" scriptable=\"yes\">"),
                 "entry element must have correct attributes");
         assertTrue(html.contains("<idx:orth value=\"hello\">"),
-                "orth value must be the normalised key");
+                "orth value must equal display term");
         assertTrue(html.contains("<strong>hello</strong>"), "display term in <strong>");
         assertTrue(html.contains("<ol><li>a greeting</li></ol>"), "definition passed through");
     }
@@ -52,12 +52,13 @@ class HtmlChapterRendererTest {
     }
 
     @Test
-    void render_keyNormalisationPreserved() {
+    void render_valueMatchesDisplayTerm() {
+        // value attribute must match the visible display term so kindling can locate entries in the text blob
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("hello", List.of(new LexiconEntry("Hello", "<ol><li>greet</li></ol>"))));
         String html = new String(HtmlChapterRenderer.render(entries), StandardCharsets.UTF_8);
-        assertTrue(html.contains("value=\"hello\""), "key must be lowercased");
-        assertTrue(html.contains("<strong>Hello</strong>"), "display term preserves capitalisation");
+        assertTrue(html.contains("value=\"Hello\""), "value must match display term (original case)");
+        assertTrue(html.contains("<strong>Hello</strong>"), "display term in <strong>");
     }
 
     @Test

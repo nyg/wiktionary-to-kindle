@@ -43,19 +43,47 @@ public class OpfDictionaryWriter implements DictionaryWriter {
         }
 
         writeCoverImage(outputDir);
-        Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames);
-        log.info("OPF generation complete: {} HTML file(s) + 1 OPF", htmlFileNames.size());
+        String uid = UUID.randomUUID().toString();
+        writeTocNcx(outputDir, uid, title, htmlFileNames.getFirst());
+        Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames, uid);
+        log.info("OPF generation complete: {} HTML file(s) + 1 OPF + NCX", htmlFileNames.size());
         return opfPath;
     }
 
     private static void writeCoverImage(Path outputDir) throws IOException {
-        Path cover = outputDir.resolve("cover.jpg");
-        BufferedImage img = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB);
+        BufferedImage img = new BufferedImage(600, 800, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = img.createGraphics();
         g.setColor(Color.WHITE);
-        g.fillRect(0, 0, 100, 100);
+        g.fillRect(0, 0, 600, 800);
         g.dispose();
-        ImageIO.write(img, "JPEG", cover.toFile());
+        ImageIO.write(img, "JPEG", outputDir.resolve("cover.jpg").toFile());
+    }
+
+    private static void writeTocNcx(Path outputDir, String uid, String title, String firstHtmlFile)
+            throws IOException {
+        try (BufferedWriter w = new BufferedWriter(
+                new OutputStreamWriter(Files.newOutputStream(outputDir.resolve("toc.ncx")),
+                        StandardCharsets.UTF_8))) {
+            w.write("""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+                    <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+                    <head>
+                        <meta name="dtb:uid" content="%s"/>
+                        <meta name="dtb:depth" content="1"/>
+                        <meta name="dtb:totalPageCount" content="0"/>
+                        <meta name="dtb:maxPageNumber" content="0"/>
+                    </head>
+                    <docTitle><text>%s</text></docTitle>
+                    <navMap>
+                        <navPoint id="entry" playOrder="1">
+                            <navLabel><text>%s</text></navLabel>
+                            <content src="%s"/>
+                        </navPoint>
+                    </navMap>
+                    </ncx>
+                    """.formatted(uid, title, title, firstHtmlFile));
+        }
     }
 
     private static String htmlFileName(String srcLang, String trgLang, int index) {
@@ -63,7 +91,7 @@ public class OpfDictionaryWriter implements DictionaryWriter {
     }
 
     private static Path writeOpfFile(Path outputDir, String srcLang, String trgLang,
-                                     String title, List<String> htmlFileNames) throws IOException {
+                                     String title, List<String> htmlFileNames, String uid) throws IOException {
         Path opfPath = outputDir.resolve(
                 "dictionary-%s-%s.opf".formatted(srcLang, trgLang).toLowerCase(Locale.ROOT));
 
@@ -86,14 +114,15 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                     </metadata>
                     <manifest>
                         <item id="cover-image" href="cover.jpg" media-type="image/jpeg"/>
-                    """.formatted(UUID.randomUUID(), title, srcLang, srcLang, trgLang));
+                        <item id="toc" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+                    """.formatted(uid, title, srcLang, srcLang, trgLang));
 
             for (int i = 0; i < htmlFileNames.size(); i++) {
                 w.write("    <item id=\"dictionary%d\" href=\"%s\" media-type=\"application/xhtml+xml\"/>\n"
                         .formatted(i, htmlFileNames.get(i)));
             }
 
-            w.write("</manifest>\n<spine>\n");
+            w.write("</manifest>\n<spine toc=\"toc\">\n");
             for (int i = 0; i < htmlFileNames.size(); i++) {
                 w.write("    <itemref idref=\"dictionary%d\"/>\n".formatted(i));
             }

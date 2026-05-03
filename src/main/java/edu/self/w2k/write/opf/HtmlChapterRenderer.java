@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.text.StringEscapeUtils;
+
 import edu.self.w2k.model.LexiconEntry;
 
 class HtmlChapterRenderer {
@@ -45,7 +47,8 @@ class HtmlChapterRenderer {
     }
 
     private static void appendEntry(StringBuilder sb, String key, List<LexiconEntry> lexiconEntries) {
-        String displayTerm = lexiconEntries.getFirst().word();
+        // value must match the visible display term so kindling can locate entries in the text blob
+        String displayTerm = StringEscapeUtils.escapeXml10(lexiconEntries.getFirst().word());
         StringBuilder combinedDef = new StringBuilder();
         for (int i = 0; i < lexiconEntries.size(); i++) {
             if (i > 0) combinedDef.append("; ");
@@ -56,6 +59,6 @@ class HtmlChapterRenderer {
                             <idx:orth value="%s"><strong>%s</strong></idx:orth>
                             %s
                         </idx:entry>
-                """.formatted(key, displayTerm, combinedDef));
+                """.formatted(displayTerm, displayTerm, combinedDef));
     }
 }
