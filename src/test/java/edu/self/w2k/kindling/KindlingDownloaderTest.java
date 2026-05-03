@@ -1,5 +1,10 @@
 package edu.self.w2k.kindling;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,13 +15,9 @@ import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class KindlingDownloaderTest {
@@ -24,13 +25,15 @@ class KindlingDownloaderTest {
     @Mock
     private HttpFetcher fetcher;
 
+    @InjectMocks
+    private KindlingDownloader unit;
+
     @TempDir
     Path destDir;
 
     @Test
     void should_download_and_return_final_path_when_sha256_matches() throws Exception {
         // Given
-        KindlingDownloader unit = new KindlingDownloader(fetcher);
         byte[] payload = "test-payload-content".getBytes(StandardCharsets.UTF_8);
         String sha256 = HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(payload));
@@ -59,7 +62,6 @@ class KindlingDownloaderTest {
     @Test
     void should_throw_when_sha256_mismatch() throws Exception {
         // Given
-        KindlingDownloader unit = new KindlingDownloader(fetcher);
         byte[] correctPayload = "correct-content".getBytes(StandardCharsets.UTF_8);
         String correctSha256 = HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(correctPayload));

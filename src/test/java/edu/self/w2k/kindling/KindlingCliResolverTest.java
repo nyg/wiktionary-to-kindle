@@ -1,5 +1,12 @@
 package edu.self.w2k.kindling;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -11,13 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class KindlingCliResolverTest {
@@ -64,6 +64,7 @@ class KindlingCliResolverTest {
 
         // Then
         assertThat(result).isEqualTo(executableOnPath);
+        verify(pathProbe).apply("kindling-cli");
         verify(downloader, never()).download(any(), any(), any());
     }
 
