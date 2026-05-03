@@ -6,8 +6,9 @@ Converts a set of Wiktionary entries into a MOBI dictionary usable by a Kindle.
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the desired language edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
 2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition string and the result is grouped in-memory by normalised key.
-3. Kindle-compatible OPF and HTML chunk files are generated directly in `dictionaries/`.
-4. [KindleGen](https://www.amazon.com/gp/feature.html?ie=UTF8&docId=1000765211) is used to convert the OPF and HTML files to a MOBI eBook that can be used as a dictionary by a Kindle.
+3. Chunked MobiPocket HTML files and an OPF manifest are written to `dictionaries/`.
+4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded automatically and cached under `~/.cache/wiktionary-to-kindle/kindling/` (Linux/macOS) or `%LOCALAPPDATA%\wiktionary-to-kindle\Cache\kindling\` (Windows). The binary is SHA-256 verified before use.
+5. `kindling-cli build` converts the OPF to a `.mobi` Kindle dictionary in `dictionaries/`.
 
 ## Examples of generated dictionaries
 
@@ -42,7 +43,7 @@ mvn package
 
 ### 3. Download the kaikki.org dump
 
-Downloads `raw-wiktextract-data-{lang}.jsonl.gz` (~1–2 GB compressed for English) from kaikki.org to `dumps/`. If the file already exists, the download is skipped. The default language is English (`en`).
+Downloads `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` (~1–2 GB compressed for English) from kaikki.org to `dumps/`. If a dump for that language already exists, the download is skipped. The default language is English (`en`).
 
 ```sh
 # Download English edition (default)
@@ -51,47 +52,37 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar download
 # Download a specific edition (e.g. French)
 java -jar target/wiktionary-to-kindle-1.0.0.jar download fr
 
-# d is a short alias for download
-java -jar target/wiktionary-to-kindle-1.0.0.jar d fr
+# dl is a short alias for download
+java -jar target/wiktionary-to-kindle-1.0.0.jar dl fr
 
 # Show help
 java -jar target/wiktionary-to-kindle-1.0.0.jar --help
 java -jar target/wiktionary-to-kindle-1.0.0.jar download --help
 ```
 
-### 4. Generate the dictionary files
+### 4. Generate the dictionary
 
 Filter entries for the language of your choice using its [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) code (e.g. `el` for Greek, `fr` for French, `de` for German). The dump is streamed and decompressed on the fly — no extra disk space needed.
 
-This step generates the Kindle OPF and HTML files directly in `dictionaries/`.
+On first run, `kindling-cli` is downloaded automatically from GitHub Releases and cached under `~/.cache/wiktionary-to-kindle/kindling/` (Linux/macOS) or `%LOCALAPPDATA%\wiktionary-to-kindle\Cache\kindling\` (Windows). Subsequent runs use the cached binary.
 
 ```sh
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el
+# Produces dictionaries/dictionary-el-en.mobi (plus .opf and .html side-artefacts)
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en
+
+# Pin a specific kindling release (default: v0.14.5)
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.14.5
+
+# Use a pre-installed kindling-cli binary (skips download)
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 
 # Show help
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate --help
 ```
 
-### 5. Convert the OPF into a MOBI eBook
+### 5. Upload the file to your Kindle
 
-Convert the OPF file into a MOBI eBook using KindleGen.
-
-```sh
-cd dictionaries
-
-# Linux
-../scripts/kindlegen_linux/kindlegen dictionary-el-en.opf
-
-# macOS
-../scripts/kindlegen_mac/kindlegen dictionary-el-en.opf
-
-# Windows
-..\scripts\kindlegen_windows\kindlegen.exe dictionary-el-en.opf
-```
-
-### 6. Upload the file to your Kindle
-
-If all went well, you should now have the `dictionary-el-en.mobi` file in your possession. You can either send it to your Kindle via its Kindle email address, or drag and drop it as you would with another eBook.
+Send `dictionaries/dictionary-el-en.mobi` to your device via its Kindle email address, or drag and drop it as you would with any eBook.
 
 ## Screenshots
 

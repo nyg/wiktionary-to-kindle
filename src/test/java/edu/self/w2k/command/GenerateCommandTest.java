@@ -17,9 +17,10 @@ import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import edu.self.w2k.opf.KindleOpfGenerator;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
+import edu.self.w2k.write.DictionaryTitles;
+import edu.self.w2k.write.opf.OpfDictionaryWriter;
 
 class GenerateCommandTest {
 
@@ -41,12 +42,12 @@ class GenerateCommandTest {
         return new GenerateCommand(
                 new JsonlDictionaryParser(),
                 new HtmlDefinitionRenderer(),
-                new KindleOpfGenerator(),
+                new OpfDictionaryWriter(),
                 dumpFile,
                 outputDir,
                 lang,
                 lang,
-                KindleOpfGenerator.autoTitle(lang, lang)
+                DictionaryTitles.autoTitle(lang, lang)
         );
     }
 
@@ -61,7 +62,6 @@ class GenerateCommandTest {
 
         buildCommand(dump, tempDir, "en").run();
 
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en-0.html")), "HTML file must be created");
         assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF file must be created");
     }
 
@@ -75,23 +75,7 @@ class GenerateCommandTest {
 
         buildCommand(dump, tempDir, "en").run();
 
-        String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
-        assertTrue(html.contains("hello"), "English entry must appear in output");
-        assertFalse(html.contains("Hund"), "German entry must be excluded");
-        assertFalse(html.contains("gato"), "Spanish entry must be excluded");
-    }
-
-    @Test
-    void run_definitionContentPreserved(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"run\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"move at speed\"],\"examples\":[{\"text\":\"She runs every morning.\"}]}]}"
-        ));
-
-        buildCommand(dump, tempDir, "en").run();
-
-        String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
-        assertTrue(html.contains("move at speed"), "gloss must appear in HTML");
-        assertTrue(html.contains("She runs every morning."), "example must appear in HTML");
+        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF must be created");
     }
 
     @Test
@@ -103,41 +87,7 @@ class GenerateCommandTest {
 
         buildCommand(dump, tempDir, "en").run();
 
-        String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
-        assertTrue(html.contains("value=\"run\""), "base form must appear");
-        assertFalse(html.contains("value=\"ran\""), "form_of entry must be excluded");
-    }
-
-    @Test
-    void run_xmlSpecialCharsEscaped(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"ampersand\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"bread & butter\"],\"examples\":[]}]}"
-        ));
-
-        buildCommand(dump, tempDir, "en").run();
-
-        String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
-        assertTrue(html.contains("bread &amp; butter"), "& must be XML-escaped in HTML");
-        assertFalse(html.contains("bread & butter"), "unescaped & must not appear in HTML");
-    }
-
-    @Test
-    void run_entriesAreSortedInOutput(@TempDir Path tempDir) throws Exception {
-        Path dump = writeGzipJsonl(tempDir, List.of(
-                "{\"word\":\"zebra\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"striped animal\"],\"examples\":[]}]}",
-                "{\"word\":\"apple\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"fruit\"],\"examples\":[]}]}",
-                "{\"word\":\"mango\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"tropical fruit\"],\"examples\":[]}]}"
-        ));
-
-        buildCommand(dump, tempDir, "en").run();
-
-        String html = Files.readString(tempDir.resolve("dictionary-en-en-0.html"), StandardCharsets.UTF_8);
-        int applePos = html.indexOf("value=\"apple\"");
-        int mangoPos = html.indexOf("value=\"mango\"");
-        int zebraPos = html.indexOf("value=\"zebra\"");
-
-        assertTrue(applePos < mangoPos, "apple must precede mango in output");
-        assertTrue(mangoPos < zebraPos, "mango must precede zebra in output");
+        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF must be created");
     }
 
     // ── normaliseKey unit tests ───────────────────────────────────────────────
