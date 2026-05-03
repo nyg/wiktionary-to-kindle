@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`wiktionary-to-kindle` is a Java CLI tool that converts Wiktionary data into Kindle-compatible EPUB (and optionally MOBI) dictionaries. The pipeline is: **download** → **generate** (→ **ebook-convert** for MOBI, optional).
+`wiktionary-to-kindle` is a Java CLI tool that converts Wiktionary data into Kindle-compatible MOBI dictionaries. The pipeline is: **download** → **generate** (fetches `kindling-cli` on first run, then runs `kindling-cli build`).
 
 Data source: [kaikki.org](https://kaikki.org) pre-extracted JSONL dumps, produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) with all Lua templates fully expanded. One dump per Wiktionary language edition.
 
@@ -31,9 +31,9 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar download fr     # French edition
 # DUMP_LANG = which Wiktionary edition to read; WORD_LANG = ISO 639-1 filter.
 # The latest dump matching DUMP_LANG in dumps/ is auto-discovered.
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate <DUMP_LANG> <WORD_LANG>
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --format mobi   # requires Calibre
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --format mobi \
-  --ebook-convert /Applications/calibre.app/Contents/MacOS/ebook-convert
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en                        # auto-downloads kindling-cli on first run
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.14.5
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 # gen is a short alias for generate
 
 # Help / version
@@ -48,10 +48,9 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar --version
 - **`edu.self.w2k`** — `CLI` — picocli root command + inner `Download` / `Generate` subcommand wiring classes
 - **`edu.self.w2k.command`** — `DownloadCommand`, `GenerateCommand` — service orchestrators; `Command` interface
 - **`edu.self.w2k.download`** — `KaikkiDumpDownloader` (HttpClient-based), `DumpDownloader` interface
-- **`edu.self.w2k.write`** — `DictionaryWriter` interface, `OutputFormat` enum (`EPUB`, `MOBI`), `DictionaryTitles` utility
-- **`edu.self.w2k.write.epub`** — `EpubDictionaryWriter`, `XhtmlChapterRenderer`, `OpfPostProcessor`
-- **`edu.self.w2k.write.mobi`** — `MobiDictionaryWriter` (composes `EpubDictionaryWriter` + `EbookConverter`)
-- **`edu.self.w2k.convert`** — `EbookConverter` interface, `CalibreEbookConverter`, `EbookConverterNotFoundException`
+- **`edu.self.w2k.write`** — `DictionaryWriter` interface, `DictionaryTitles` utility
+- **`edu.self.w2k.write.opf`** — `OpfDictionaryWriter` (emits chunked `.html` + `.opf`), `HtmlChapterRenderer`
+- **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (pinned version + per-platform digests), `XdgCachePaths`, `KindlingException`
 - **`edu.self.w2k.parse`** — `JsonlDictionaryParser`, `DictionaryParser` interface
 - **`edu.self.w2k.render`** — `HtmlDefinitionRenderer`, `DefinitionRenderer` interface
 - **`edu.self.w2k.model`** — `LexiconEntry` plus Jackson-annotated records: `WiktionaryEntry`, `WiktionarySense`, `WiktionaryExample`
@@ -61,7 +60,7 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar --version
 | Directory | Purpose |
 |-----------|---------|
 | `dumps/`  | Downloaded `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` from kaikki.org |
-| `dictionaries/` | Final `.epub` (and `.mobi`) dictionary files |
+| `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf` and `-N.html` |
 
 ### Dictionary Output Format
 
@@ -75,13 +74,13 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 
 `GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then passes the map to the `DictionaryWriter`.
 
-`XhtmlChapterRenderer` builds one XHTML chapter document (≤ 10 000 entries per chunk) preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and `xmlns:mbp`/`xmlns:idx` namespace declarations, so the EPUB chapters work as Kindle lookup dictionary entries.
+`HtmlChapterRenderer` builds one MobiPocket HTML document (≤ 10 000 entries per chunk) preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and `xmlns:mbp`/`xmlns:idx` namespace declarations.
 
-`EpubDictionaryWriter` assembles chapters into an EPUB via `epub4j-core`, then `OpfPostProcessor` injects the `<x-metadata><DictionaryInLanguage>/<DictionaryOutLanguage>` block into the OPF (required for Kindle dictionary mode). Output: `dictionaries/dictionary-{src}-{trg}.epub`.
+`OpfDictionaryWriter` chunks the entry map, writes `dictionary-{src}-{trg}-N.html` files, then writes a `dictionary-{src}-{trg}.opf` OPF 2.0 manifest (with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`). Returns the OPF path.
 
-`MobiDictionaryWriter` wraps `EpubDictionaryWriter` and pipes its output through `CalibreEbookConverter` (`ebook-convert`). Both `.epub` and `.mobi` are kept in `dictionaries/`.
+`KindlingDictionaryConverter` composes `OpfDictionaryWriter` with a `kindling-cli` binary. It calls `KindlingCliResolver.resolve()` to obtain the binary, then runs `kindling-cli build <opf> -o <mobi>`. Output: `dictionaries/dictionary-{src}-{trg}.mobi` (plus `.opf` and `.html` side-artefacts).
 
-`CalibreEbookConverter.findEbookConvert(Optional<Path>)` resolves the `ebook-convert` binary: explicit override → `which`/`where` on PATH → OS-specific common install paths (`/Applications/calibre.app/…`, `/usr/bin/…`, `C:\Program Files\Calibre2\…`). Throws `EbookConverterNotFoundException` if not found.
+`KindlingCliResolver.resolve()` tries in order: explicit `--kindling-cli` override → PATH probe (`which`/`where`) → cached binary at `<XdgCachePaths.kindlingCacheDir()>/<version>/<assetName>` (SHA-256 verified) → download via `KindlingDownloader`. `KindlingDownloader` fetches from GitHub Releases, verifies SHA-256 against `KindlingRelease.DEFAULT_ASSETS` (or the GitHub API `digest` field for non-default versions), renames atomically, and marks the file executable.
 
 ## Key Conventions
 

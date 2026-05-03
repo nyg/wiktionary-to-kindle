@@ -15,7 +15,6 @@
         <jackson-databind.version>2.21.3</jackson-databind.version>
         <logback-classic.version>1.5.32</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
-        <epub4j-core.version>4.2.2</epub4j-core.version>
         <picocli.version>4.7.7</picocli.version>
         <slf4j-api.version>2.0.17</slf4j-api.version>
         <junit-jupiter.version>6.0.3</junit-jupiter.version>
@@ -66,17 +65,6 @@
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.documentnode</groupId>
-            <artifactId>epub4j-core</artifactId>
-            <version>${epub4j-core.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-simple</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

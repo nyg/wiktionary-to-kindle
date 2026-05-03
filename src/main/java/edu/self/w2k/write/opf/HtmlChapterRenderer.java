@@ -1,4 +1,4 @@
-package edu.self.w2k.write.epub;
+package edu.self.w2k.write.opf;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -6,21 +6,20 @@ import java.util.Map;
 
 import edu.self.w2k.model.LexiconEntry;
 
-class XhtmlChapterRenderer {
+class HtmlChapterRenderer {
 
     static final String KINDLE_NS = "https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf";
+    static final int ENTRIES_PER_CHAPTER = 10_000;
 
-    private XhtmlChapterRenderer() {}
+    private HtmlChapterRenderer() {}
 
     static byte[] render(List<Map.Entry<String, List<LexiconEntry>>> entries) {
         StringBuilder sb = new StringBuilder();
         sb.append("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <html xmlns="http://www.w3.org/1999/xhtml"\
-                 xmlns:mbp="%s"\
-                 xmlns:idx="%s">
+                <html xmlns:mbp="%s"
+                      xmlns:idx="%s">
                 <head>
-                    <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8"/>
+                    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
                 </head>
                 <body>
                     <mbp:pagebreak/>
@@ -49,12 +48,9 @@ class XhtmlChapterRenderer {
         String displayTerm = lexiconEntries.getFirst().word();
         StringBuilder combinedDef = new StringBuilder();
         for (int i = 0; i < lexiconEntries.size(); i++) {
-            if (i > 0) {
-                combinedDef.append("; ");
-            }
+            if (i > 0) combinedDef.append("; ");
             combinedDef.append(lexiconEntries.get(i).definition());
         }
-
         sb.append("""
                         <idx:entry name="word" scriptable="yes">
                             <idx:orth value="%s"><strong>%s</strong></idx:orth>

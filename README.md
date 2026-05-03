@@ -1,13 +1,14 @@
 # wiktionary-to-kindle
 
-Converts a set of Wiktionary entries into an EPUB dictionary (or MOBI via Calibre) usable by a Kindle.
+Converts a set of Wiktionary entries into a MOBI dictionary usable by a Kindle.
 
 ## How it works
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the desired language edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
 2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition string and the result is grouped in-memory by normalised key.
-3. By default, a single `.epub` file is generated in `dictionaries/`. The EPUB embeds Amazon's `<idx:entry>`/`<idx:orth>` markup and an `<x-metadata>` block, so it is both a valid EPUB and a real Kindle lookup dictionary when converted to MOBI.
-4. Optionally, pass `--format mobi` to also produce a `.mobi` via [Calibre's](https://calibre-ebook.com) `ebook-convert`. Both `.epub` and `.mobi` are kept in `dictionaries/`.
+3. Chunked MobiPocket HTML files and an OPF manifest are written to `dictionaries/`.
+4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded automatically and cached under `~/.cache/wiktionary-to-kindle/kindling/` (Linux/macOS) or `%LOCALAPPDATA%\wiktionary-to-kindle\Cache\kindling\` (Windows). The binary is SHA-256 verified before use.
+5. `kindling-cli build` converts the OPF to a `.mobi` Kindle dictionary in `dictionaries/`.
 
 ## Examples of generated dictionaries
 
@@ -63,29 +64,25 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar download --help
 
 Filter entries for the language of your choice using its [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) code (e.g. `el` for Greek, `fr` for French, `de` for German). The dump is streamed and decompressed on the fly — no extra disk space needed.
 
+On first run, `kindling-cli` is downloaded automatically from GitHub Releases and cached under `~/.cache/wiktionary-to-kindle/kindling/` (Linux/macOS) or `%LOCALAPPDATA%\wiktionary-to-kindle\Cache\kindling\` (Windows). Subsequent runs use the cached binary.
+
 ```sh
-# Default: produces dictionaries/dictionary-el-en.epub
+# Produces dictionaries/dictionary-el-en.mobi (plus .opf and .html side-artefacts)
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en
+
+# Pin a specific kindling release (default: v0.14.5)
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.14.5
+
+# Use a pre-installed kindling-cli binary (skips download)
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 
 # Show help
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate --help
 ```
 
-### 5. (Optional) Convert to MOBI via Calibre
+### 5. Upload the file to your Kindle
 
-Install [Calibre](https://calibre-ebook.com/download) and pass `--format mobi`. Both `.epub` and `.mobi` are written to `dictionaries/`.
-
-```sh
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --format mobi
-
-# Explicit path to ebook-convert if it is not on your PATH
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --format mobi \
-  --ebook-convert /Applications/calibre.app/Contents/MacOS/ebook-convert
-```
-
-### 6. Upload the file to your Kindle
-
-Send `dictionary-el-en.mobi` (or `.epub` for newer Kindles) to your device via its Kindle email address, or drag and drop it as you would with any eBook.
+Send `dictionaries/dictionary-el-en.mobi` to your device via its Kindle email address, or drag and drop it as you would with any eBook.
 
 ## Screenshots
 

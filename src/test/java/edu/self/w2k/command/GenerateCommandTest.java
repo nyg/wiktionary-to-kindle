@@ -20,7 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import edu.self.w2k.write.DictionaryTitles;
-import edu.self.w2k.write.epub.EpubDictionaryWriter;
+import edu.self.w2k.write.opf.OpfDictionaryWriter;
 
 class GenerateCommandTest {
 
@@ -42,7 +42,7 @@ class GenerateCommandTest {
         return new GenerateCommand(
                 new JsonlDictionaryParser(),
                 new HtmlDefinitionRenderer(),
-                new EpubDictionaryWriter(),
+                new OpfDictionaryWriter(),
                 dumpFile,
                 outputDir,
                 lang,
@@ -54,7 +54,7 @@ class GenerateCommandTest {
     // ── pipeline tests ────────────────────────────────────────────────────────
 
     @Test
-    void run_jsonlDumpToEpub(@TempDir Path tempDir) throws Exception {
+    void run_jsonlDumpToOpf(@TempDir Path tempDir) throws Exception {
         Path dump = writeGzipJsonl(tempDir, List.of(
                 "{\"word\":\"hello\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"a greeting\"],\"examples\":[{\"text\":\"Hello, world!\"}]}]}",
                 "{\"word\":\"world\",\"lang_code\":\"en\",\"senses\":[{\"glosses\":[\"the earth\"],\"examples\":[]}]}"
@@ -62,7 +62,7 @@ class GenerateCommandTest {
 
         buildCommand(dump, tempDir, "en").run();
 
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.epub")), "EPUB file must be created");
+        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF file must be created");
     }
 
     @Test
@@ -75,7 +75,7 @@ class GenerateCommandTest {
 
         buildCommand(dump, tempDir, "en").run();
 
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.epub")), "EPUB must be created");
+        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF must be created");
     }
 
     @Test
@@ -87,7 +87,7 @@ class GenerateCommandTest {
 
         buildCommand(dump, tempDir, "en").run();
 
-        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.epub")), "EPUB must be created");
+        assertTrue(Files.exists(tempDir.resolve("dictionary-en-en.opf")), "OPF must be created");
     }
 
     // ── normaliseKey unit tests ───────────────────────────────────────────────

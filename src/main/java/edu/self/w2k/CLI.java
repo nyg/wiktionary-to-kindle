@@ -1,22 +1,24 @@
 package edu.self.w2k;
 
+import java.net.http.HttpClient;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
 import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
-import edu.self.w2k.convert.CalibreEbookConverter;
 import edu.self.w2k.download.KaikkiDumpDownloader;
+import edu.self.w2k.kindling.KindlingCliResolver;
+import edu.self.w2k.kindling.KindlingDictionaryConverter;
+import edu.self.w2k.kindling.KindlingDownloader;
+import edu.self.w2k.kindling.KindlingRelease;
 import edu.self.w2k.parse.JsonlDictionaryParser;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import edu.self.w2k.write.DictionaryTitles;
-import edu.self.w2k.write.DictionaryWriter;
-import edu.self.w2k.write.OutputFormat;
-import edu.self.w2k.write.epub.EpubDictionaryWriter;
-import edu.self.w2k.write.mobi.MobiDictionaryWriter;
+import edu.self.w2k.write.opf.OpfDictionaryWriter;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -40,29 +42,21 @@ public class CLI implements Callable<Integer> {
     CommandSpec spec;
 
     static void main(String[] args) {
-        CommandLine commandLine = new CommandLine(new CLI());
-        commandLine.setCaseInsensitiveEnumValuesAllowed(true);
-        System.exit(commandLine.execute(args));
+        System.exit(new CommandLine(new CLI()).execute(args));
     }
 
-    /**
-     * Finds the latest dump file for a given language in the dumps directory.
-     * Searches for files matching {@code raw-wiktextract-data-{lang}-*.jsonl.gz} and returns
-     * the lexicographically latest (YYYY-MM-DD format sorts correctly).
-     */
     static Optional<Path> findLatestDump(String lang) {
         String prefix = "raw-wiktextract-data-" + lang + "-";
         String suffix = ".jsonl.gz";
         Path latest = null;
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(DUMPS_DIR,
-                prefix + "*" + suffix)) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(DUMPS_DIR, prefix + "*" + suffix)) {
             for (Path path : stream) {
-                if (latest == null || path.getFileName().toString().compareTo(latest.getFileName().toString()) > 0) {
+                if (latest == null || path.getFileName().toString()
+                        .compareTo(latest.getFileName().toString()) > 0) {
                     latest = path;
                 }
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return Optional.empty();
         }
         return Optional.ofNullable(latest);
@@ -110,14 +104,14 @@ public class CLI implements Callable<Integer> {
                     description = "Language to filter entries by (ISO 639-1)")
         private String wordLang;
 
-        @Option(names = {"-f", "--format"},
-                defaultValue = "epub",
-                description = "Output format: epub (default) or mobi (requires Calibre)")
-        private OutputFormat format;
+        @Option(names = "--kindling-cli",
+                description = "Path to a pre-installed kindling-cli binary. Skips download.")
+        private Path kindlingCliPath;
 
-        @Option(names = {"--ebook-convert"},
-                description = "Path to ebook-convert binary (Calibre). Only used with --format mobi.")
-        private Path ebookConvertPath;
+        @Option(names = "--kindling-version",
+                defaultValue = KindlingRelease.DEFAULT_VERSION,
+                description = "Kindling release tag to download (default: ${DEFAULT-VALUE})")
+        private String kindlingVersion;
 
         @Override
         public Integer call() throws Exception {
@@ -126,28 +120,27 @@ public class CLI implements Callable<Integer> {
                 log.error("No dump found for language {} in {}", dumpLang, DUMPS_DIR);
                 return 1;
             }
+
             String title = DictionaryTitles.autoTitle(wordLang, dumpLang);
-            DictionaryWriter writer = buildWriter();
+            HttpClient httpClient = HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .connectTimeout(Duration.ofSeconds(60))
+                    .build();
+            KindlingDownloader downloader = new KindlingDownloader(httpClient);
+            KindlingCliResolver resolver = new KindlingCliResolver(
+                    kindlingVersion, Optional.ofNullable(kindlingCliPath), downloader);
+            var writer = new KindlingDictionaryConverter(
+                    new OpfDictionaryWriter(), resolver, KindlingDictionaryConverter.defaultRunner());
+
             new GenerateCommand(
                     new JsonlDictionaryParser(),
                     new HtmlDefinitionRenderer(),
                     writer,
                     dumpFile.get(),
                     DICTIONARIES_DIR,
-                    wordLang,
-                    dumpLang,
-                    title
+                    wordLang, dumpLang, title
             ).run();
             return 0;
-        }
-
-        private DictionaryWriter buildWriter() {
-            EpubDictionaryWriter epubWriter = new EpubDictionaryWriter();
-            return switch (format) {
-                case EPUB -> epubWriter;
-                case MOBI -> new MobiDictionaryWriter(
-                        epubWriter, new CalibreEbookConverter(Optional.ofNullable(ebookConvertPath)));
-            };
         }
     }
 }

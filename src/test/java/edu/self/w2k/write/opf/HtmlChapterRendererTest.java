@@ -1,4 +1,4 @@
-package edu.self.w2k.write.epub;
+package edu.self.w2k.write.opf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,14 +13,14 @@ import org.junit.jupiter.api.Test;
 
 import edu.self.w2k.model.LexiconEntry;
 
-class XhtmlChapterRendererTest {
+class HtmlChapterRendererTest {
 
     @Test
     void render_containsKindleNamespaces() {
         String html = render(entry("word", "def"));
-        assertTrue(html.contains("xmlns:mbp=\"" + XhtmlChapterRenderer.KINDLE_NS + "\""),
+        assertTrue(html.contains("xmlns:mbp=\"" + HtmlChapterRenderer.KINDLE_NS + "\""),
                 "mbp namespace must be present");
-        assertTrue(html.contains("xmlns:idx=\"" + XhtmlChapterRenderer.KINDLE_NS + "\""),
+        assertTrue(html.contains("xmlns:idx=\"" + HtmlChapterRenderer.KINDLE_NS + "\""),
                 "idx namespace must be present");
     }
 
@@ -55,7 +55,7 @@ class XhtmlChapterRendererTest {
     void render_keyNormalisationPreserved() {
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("hello", List.of(new LexiconEntry("Hello", "<ol><li>greet</li></ol>"))));
-        String html = new String(XhtmlChapterRenderer.render(entries), StandardCharsets.UTF_8);
+        String html = new String(HtmlChapterRenderer.render(entries), StandardCharsets.UTF_8);
         assertTrue(html.contains("value=\"hello\""), "key must be lowercased");
         assertTrue(html.contains("<strong>Hello</strong>"), "display term preserves capitalisation");
     }
@@ -93,9 +93,9 @@ class XhtmlChapterRendererTest {
         }
         List<Map.Entry<String, List<LexiconEntry>>> all = new ArrayList<>(defs.entrySet());
         // First chunk: 10_000 entries
-        String first = new String(XhtmlChapterRenderer.render(all.subList(0, 10_000)), StandardCharsets.UTF_8);
+        String first = new String(HtmlChapterRenderer.render(all.subList(0, 10_000)), StandardCharsets.UTF_8);
         // Second chunk: 1 entry
-        String second = new String(XhtmlChapterRenderer.render(all.subList(10_000, 10_001)), StandardCharsets.UTF_8);
+        String second = new String(HtmlChapterRenderer.render(all.subList(10_000, 10_001)), StandardCharsets.UTF_8);
 
         long firstCount = first.lines().filter(l -> l.contains("<idx:entry name=\"word\"")).count();
         long secondCount = second.lines().filter(l -> l.contains("<idx:entry name=\"word\"")).count();
@@ -106,11 +106,11 @@ class XhtmlChapterRendererTest {
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static String render(Map.Entry<String, List<LexiconEntry>> entry) {
-        return new String(XhtmlChapterRenderer.render(List.of(entry)), StandardCharsets.UTF_8);
+        return new String(HtmlChapterRenderer.render(List.of(entry)), StandardCharsets.UTF_8);
     }
 
     private static String renderDefs(TreeMap<String, List<LexiconEntry>> defs) {
-        return new String(XhtmlChapterRenderer.render(new ArrayList<>(defs.entrySet())),
+        return new String(HtmlChapterRenderer.render(new ArrayList<>(defs.entrySet())),
                 StandardCharsets.UTF_8);
     }
 
