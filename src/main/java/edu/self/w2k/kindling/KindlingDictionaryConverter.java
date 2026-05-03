@@ -9,9 +9,11 @@ import java.util.TreeMap;
 import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.write.DictionaryWriter;
 import edu.self.w2k.write.opf.OpfDictionaryWriter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 public class KindlingDictionaryConverter implements DictionaryWriter {
 
     @FunctionalInterface
@@ -36,16 +38,12 @@ public class KindlingDictionaryConverter implements DictionaryWriter {
     private final KindlingCliResolver resolver;
     private final ProcessRunner runner;
 
-    public KindlingDictionaryConverter(OpfDictionaryWriter opfWriter, KindlingCliResolver resolver,
-                                       ProcessRunner runner) {
-        this.opfWriter = opfWriter;
-        this.resolver = resolver;
-        this.runner = runner;
-    }
-
     @Override
-    public Path write(TreeMap<String, List<LexiconEntry>> defs, String srcLang, String trgLang,
-                      String title, Path outputDir) throws IOException {
+    public Path write(TreeMap<String, List<LexiconEntry>> defs,
+                      String srcLang,
+                      String trgLang,
+                      String title,
+                      Path outputDir) throws IOException {
         Path opfPath = opfWriter.write(defs, srcLang, trgLang, title, outputDir);
         Path mobiPath = outputDir.resolve(
                 "dictionary-%s-%s.mobi".formatted(srcLang, trgLang).toLowerCase(Locale.ROOT));
