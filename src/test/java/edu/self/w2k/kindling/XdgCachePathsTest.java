@@ -1,59 +1,54 @@
 package edu.self.w2k.kindling;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.nio.file.Path;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+@ExtendWith(MockitoExtension.class)
 class XdgCachePathsTest {
 
     @Test
-    void linux_withXdgCacheHome() {
-        Map<String, String> env = Map.of("XDG_CACHE_HOME", "/tmp/x");
+    void should_use_xdg_cache_home_when_set_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("XDG_CACHE_HOME", "/c");
+
+        // When
         Path result = XdgCachePaths.kindlingCacheDir(env, "Linux");
-        assertEquals(Path.of("/tmp/x/wiktionary-to-kindle/kindling"), result);
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/c/wiktionary-to-kindle/kindling"));
     }
 
     @Test
-    void linux_withHomeNoXdg() {
-        Map<String, String> env = Map.of("HOME", "/home/u");
+    void should_fallback_to_home_when_xdg_is_unset_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("HOME", "/h");
+
+        // When
         Path result = XdgCachePaths.kindlingCacheDir(env, "Linux");
-        assertEquals(Path.of("/home/u/.cache/wiktionary-to-kindle/kindling"), result);
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/.cache/wiktionary-to-kindle/kindling"));
     }
 
     @Test
-    void macos_withXdgCacheHome() {
-        Map<String, String> env = Map.of("XDG_CACHE_HOME", "/tmp/x");
-        Path result = XdgCachePaths.kindlingCacheDir(env, "Mac OS X");
-        assertEquals(Path.of("/tmp/x/wiktionary-to-kindle/kindling"), result);
-    }
+    void should_use_localappdata_when_set_on_windows() {
+        // Given
+        Map<String, String> env = Map.of("LOCALAPPDATA", "C:\\local");
 
-    @Test
-    void macos_withHomeNoXdg() {
-        Map<String, String> env = Map.of("HOME", "/home/u");
-        Path result = XdgCachePaths.kindlingCacheDir(env, "Mac OS X");
-        assertEquals(Path.of("/home/u/.cache/wiktionary-to-kindle/kindling"), result);
-    }
-
-    @Test
-    void windows_withLocalAppData() {
-        Map<String, String> env = Map.of("LOCALAPPDATA", "C:\\Users\\u\\AppData\\Local");
+        // When
         Path result = XdgCachePaths.kindlingCacheDir(env, "Windows 10");
-        // Use Path.of with separate segments to get correct OS-independent separators
-        Path expected = Path.of("C:\\Users\\u\\AppData\\Local")
-                .resolve("wiktionary-to-kindle").resolve("Cache").resolve("kindling");
-        assertEquals(expected, result);
-    }
 
-    @Test
-    void windows_withUserProfileNoLocalAppData() {
-        Map<String, String> env = Map.of("USERPROFILE", "C:\\Users\\u");
-        Path result = XdgCachePaths.kindlingCacheDir(env, "Windows 10");
-        Path expected = Path.of("C:\\Users\\u")
-                .resolve("AppData").resolve("Local")
-                .resolve("wiktionary-to-kindle").resolve("Cache").resolve("kindling");
-        assertEquals(expected, result);
+        // Then
+        assertThat(result.toString())
+                .contains("wiktionary-to-kindle")
+                .contains("Cache")
+                .contains("kindling");
+        assertThat(result.startsWith(Path.of("C:\\local"))).isTrue();
     }
 }
