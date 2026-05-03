@@ -31,7 +31,7 @@ class HtmlChapterRendererTest {
                 "entry element must have correct attributes");
         assertTrue(html.contains("<idx:orth value=\"hello\">"),
                 "orth value must equal display term");
-        assertTrue(html.contains("<strong>hello</strong>"), "display term in <strong>");
+        assertTrue(html.contains("<b>hello</b>"), "display term in <b>");
         assertTrue(html.contains("<ol><li>a greeting</li></ol>"), "definition passed through");
     }
 
@@ -58,7 +58,7 @@ class HtmlChapterRendererTest {
                 Map.entry("hello", List.of(new LexiconEntry("Hello", "<ol><li>greet</li></ol>"))));
         String html = new String(HtmlChapterRenderer.render(entries), StandardCharsets.UTF_8);
         assertTrue(html.contains("value=\"Hello\""), "value must match display term (original case)");
-        assertTrue(html.contains("<strong>Hello</strong>"), "display term in <strong>");
+        assertTrue(html.contains("<b>Hello</b>"), "display term in <b>");
     }
 
     @Test
