@@ -10,9 +10,12 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class KindlingCliResolver {
 
     private final String version;
@@ -22,23 +25,17 @@ public class KindlingCliResolver {
     private final BiFunction<String, KindlingPlatform, String> digestProvider;
 
     public KindlingCliResolver(String version, Optional<Path> overrideBinary, KindlingDownloader downloader) {
-        this(version, overrideBinary, downloader,
-                KindlingCliResolver::probePath,
-                (v, p) -> {
-                    if (!v.equals(KindlingRelease.DEFAULT_VERSION)) return null;
-                    KindlingRelease.Asset asset = KindlingRelease.DEFAULT_ASSETS.get(p);
-                    return asset != null ? asset.sha256() : null;
-                });
-    }
-
-    KindlingCliResolver(String version, Optional<Path> overrideBinary, KindlingDownloader downloader,
-                        Function<String, Optional<Path>> pathProbe,
-                        BiFunction<String, KindlingPlatform, String> digestProvider) {
-        this.version = version;
-        this.overrideBinary = overrideBinary;
-        this.downloader = downloader;
-        this.pathProbe = pathProbe;
-        this.digestProvider = digestProvider;
+        this(version,
+             overrideBinary,
+             downloader,
+             KindlingCliResolver::probePath,
+             (v, p) -> {
+                 if (!v.equals(KindlingRelease.DEFAULT_VERSION)) {
+                     return null;
+                 }
+                 KindlingRelease.Asset asset = KindlingRelease.DEFAULT_ASSETS.get(p);
+                 return asset != null ? asset.sha256() : null;
+             });
     }
 
     public Path resolve() throws IOException, KindlingException {
@@ -82,7 +79,9 @@ public class KindlingCliResolver {
 
     private boolean cachedBinaryValid(Path cached, KindlingPlatform platform) {
         String expected = digestProvider.apply(version, platform);
-        if (expected == null) return true;
+        if (expected == null) {
+            return true;
+        }
         try {
             return expected.equalsIgnoreCase(KindlingDownloader.sha256(cached));
         } catch (IOException e) {
@@ -105,9 +104,11 @@ public class KindlingCliResolver {
             p.waitFor();
             if (!output.isBlank()) {
                 Path found = Path.of(output.lines().findFirst().orElse("").trim());
-                if (Files.isExecutable(found)) return Optional.of(found);
+                if (Files.isExecutable(found)) {
+                    return Optional.of(found);
+                }
             }
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         } catch (Exception _) {
             // which/where probe failed — fall through
