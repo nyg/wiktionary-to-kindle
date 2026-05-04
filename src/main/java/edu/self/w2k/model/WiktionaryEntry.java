@@ -8,4 +8,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record WiktionaryEntry(String word,
                               @JsonProperty("lang_code") String langCode,
-                              List<WiktionarySense> senses) {}
+                              String pos,
+                              List<WiktionarySense> senses,
+                              List<WiktionaryForm> forms) {}

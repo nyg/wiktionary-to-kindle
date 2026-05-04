@@ -1,15 +1,15 @@
 package edu.self.w2k.render;
 
-import java.util.List;
 import java.util.Optional;
 
-import edu.self.w2k.model.WiktionarySense;
+import edu.self.w2k.model.WiktionaryEntry;
 
 public interface DefinitionRenderer {
     /**
-     * Renders a list of senses into a definition string.
+     * Renders a Wiktionary entry into a definition HTML string and an ordered list
+     * of inflected forms to expose for tap-to-lookup.
      *
-     * @return the rendered definition, or an empty Optional if the entry has no renderable glosses
+     * @return the rendered entry, or an empty Optional if the entry has no renderable glosses
      */
-    Optional<String> render(List<WiktionarySense> senses);
+    Optional<RenderedEntry> render(WiktionaryEntry entry);
 }

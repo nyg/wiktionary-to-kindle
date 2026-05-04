@@ -10,6 +10,7 @@ import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.parse.DictionaryParser;
 import edu.self.w2k.render.DefinitionRenderer;
+import edu.self.w2k.render.RenderedEntry;
 import edu.self.w2k.write.DictionaryWriter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,11 +44,11 @@ class GenerateCommandTest {
     void should_group_entries_and_write_dictionary_when_run() throws Exception {
         // Given
         GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "en", "Test Title");
-        WiktionaryEntry entry1 = new WiktionaryEntry("Apple", "el", List.of());
-        WiktionaryEntry entry2 = new WiktionaryEntry("apple", "el", List.of());
-        WiktionaryEntry entry3 = new WiktionaryEntry("banana", "el", List.of());
+        WiktionaryEntry entry1 = new WiktionaryEntry("Apple", "el", "noun", List.of(), List.of());
+        WiktionaryEntry entry2 = new WiktionaryEntry("apple", "el", "noun", List.of(), List.of());
+        WiktionaryEntry entry3 = new WiktionaryEntry("banana", "el", "noun", List.of(), List.of());
         when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry1, entry2, entry3));
-        when(renderer.render(any())).thenReturn(Optional.of("<def>"));
+        when(renderer.render(any())).thenReturn(Optional.of(new RenderedEntry("<def>", List.of())));
 
         // When
         unit.run();
@@ -64,11 +65,11 @@ class GenerateCommandTest {
     void should_skip_entries_when_renderer_returns_empty() throws Exception {
         // Given
         GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "en", "Test Title");
-        WiktionaryEntry entry1 = new WiktionaryEntry("apple", "el", List.of());
-        WiktionaryEntry entry2 = new WiktionaryEntry("banana", "el", List.of());
+        WiktionaryEntry entry1 = new WiktionaryEntry("apple", "el", "noun", List.of(), List.of());
+        WiktionaryEntry entry2 = new WiktionaryEntry("banana", "el", "noun", List.of(), List.of());
         when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry1, entry2));
         when(renderer.render(any()))
-                .thenReturn(Optional.of("<def>"))
+                .thenReturn(Optional.of(new RenderedEntry("<def>", List.of())))
                 .thenReturn(Optional.empty());
 
         // When
@@ -78,6 +79,25 @@ class GenerateCommandTest {
         ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
         verify(writer).write(captor.capture(), eq("el"), eq("en"), eq("Test Title"), eq(tmp));
         assertThat(captor.getValue()).containsOnlyKeys("apple");
+    }
+
+    @Test
+    void should_thread_inflection_forms_into_lexicon_entry_when_renderer_returns_them() throws Exception {
+        // Given
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "fr", "Test Title");
+        WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>", List.of("σύντροφοι", "συντρόφου"))));
+
+        // When
+        unit.run();
+
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("el"), eq("fr"), eq("Test Title"), eq(tmp));
+        LexiconEntry lex = captor.getValue().get("σύντροφος").getFirst();
+        assertThat(lex.inflectionForms()).containsExactly("σύντροφοι", "συντρόφου");
     }
 
     @Test

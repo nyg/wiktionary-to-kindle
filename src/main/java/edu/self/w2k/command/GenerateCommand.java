@@ -36,8 +36,8 @@ public class GenerateCommand implements Command {
         AtomicLong count = new AtomicLong();
 
         try (Stream<LexiconEntry> stream = parser.parse(dumpFile, srcLang)
-                .flatMap(e -> renderer.render(e.senses())
-                        .map(def -> new LexiconEntry(e.word(), def))
+                .flatMap(e -> renderer.render(e)
+                        .map(r -> new LexiconEntry(e.word(), r.html(), r.inflectionForms()))
                         .stream())) {
             stream.forEach(e -> {
                 String key = normaliseKey(e.word());

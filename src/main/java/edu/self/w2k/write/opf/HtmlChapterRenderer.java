@@ -1,8 +1,10 @@
 package edu.self.w2k.write.opf;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
 
@@ -54,11 +56,40 @@ class HtmlChapterRenderer {
             if (i > 0) combinedDef.append("; ");
             combinedDef.append(lexiconEntries.get(i).definition());
         }
+
+        String inflectionMarkup = renderInflections(lexiconEntries);
+
         sb.append("""
                         <idx:entry name="word" scriptable="yes">
-                            <idx:orth value="%s"><b>%s</b></idx:orth>
+                            <idx:orth value="%s"><b>%s</b>%s</idx:orth>
                             %s
                         </idx:entry>
-                """.formatted(displayTerm, displayTerm, combinedDef));
+                """.formatted(displayTerm, displayTerm, inflectionMarkup, combinedDef));
+    }
+
+    private static String renderInflections(List<LexiconEntry> lexiconEntries) {
+        Set<String> unioned = new LinkedHashSet<>();
+        for (LexiconEntry entry : lexiconEntries) {
+            List<String> forms = entry.inflectionForms();
+            if (forms == null) {
+                continue;
+            }
+            for (String form : forms) {
+                if (form != null && !form.isBlank()) {
+                    unioned.add(form);
+                }
+            }
+        }
+        if (unioned.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder("<idx:infl>");
+        for (String form : unioned) {
+            sb.append("<idx:iform value=\"")
+                    .append(StringEscapeUtils.escapeXml10(form))
+                    .append("\"/>");
+        }
+        sb.append("</idx:infl>");
+        return sb.toString();
     }
 }
