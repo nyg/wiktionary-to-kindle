@@ -20,6 +20,14 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
     private static final String EQUIV_POUR_MARKER = "équiv-pour";
     private static final int VISIBLE_FORMS_THRESHOLD = 30;
 
+    // wiktextract emits Greek article-cells (η, οι, του, …) as standalone forms rows
+    // alongside real inflections; indexing them as iforms ties common tokens to
+    // hundreds of headwords and crashes the Kindle popup on long-press.
+    private static final Set<String> NON_LOOKUP_FORMS = Set.of(
+            "ο", "η", "το", "οι", "τα",
+            "του", "της", "των",
+            "τον", "την", "τη", "τους", "τις");
+
     @Override
     public Optional<RenderedEntry> render(WiktionaryEntry entry) {
         StringBuilder sb = new StringBuilder();
@@ -118,11 +126,28 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         Set<String> seen = new LinkedHashSet<>(filtered.size());
         for (WiktionaryForm form : filtered) {
             String text = form.form().strip();
-            if (!text.isEmpty()) {
+            if (isUsableLookupKey(text)) {
                 seen.add(text);
             }
         }
         return List.copyOf(seen);
+    }
+
+    private static boolean isUsableLookupKey(String text) {
+        if (text.isEmpty() || NON_LOOKUP_FORMS.contains(text)) {
+            return false;
+        }
+        boolean hasLetter = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (Character.isWhitespace(c) || c == '(' || c == ')') {
+                return false;
+            }
+            if (Character.isLetter(c)) {
+                hasLetter = true;
+            }
+        }
+        return hasLetter;
     }
 
     private static boolean shouldRenderVisibleTable(String pos, List<WiktionaryForm> filtered) {

@@ -11,10 +11,10 @@ got nothing back.
 
 ## What changed
 
-1. **Lookup index for every form.** Each entry's `<idx:orth>` now carries an
-   `<idx:infl>` block listing every form found in the dump as `<idx:iform>` children.
-   Kindling indexes both the headword and every iform into a single orthographic
-   index, so any form resolves to the lemma at lookup time. No 255-form cap (kindling
+1. **Lookup index for every form.** Each entry now sits next to an `<idx:infl>`
+   block listing every form found in the dump as `<idx:iform>` children. Kindling
+   indexes both the headword and every iform into a single orthographic index,
+   so any form resolves to the lemma at lookup time. No 255-form cap (kindling
    removed kindlegen's old limit).
 2. **Visible paradigm table for non-verb entries.** After the definitions, the entry
    HTML renders a small `<ul>` listing each form with its abbreviated grammatical
@@ -28,6 +28,13 @@ got nothing back.
    `équiv-pour` are dropped entirely. These are gender-equivalent **separate lemmas**
    (e.g. `συντρόφισσα` is its own noun, not an inflection of `σύντροφος`); they have
    their own standalone Wiktionary entries already.
+6. **Article-cell and noise forms filtered from the iform index.** wiktextract emits
+   inflection-table article cells (η, οι, του, της, των, τη(ν), …) as standalone
+   `forms` rows alongside real inflections. Indexing them as `<idx:iform>` would tie
+   common Greek tokens to hundreds of headwords and crash the Kindle popup renderer
+   on long-press. The collector drops bare articles, parenthesised variants like
+   `τη(ν)`, multi-word phrases, and pure-punctuation rows. Real inflections still
+   pass through; the visible paradigm table is unaffected.
 
 ## Markup produced
 
@@ -44,17 +51,15 @@ After (noun, with visible forms table):
 
 ```xml
 <idx:entry name="word" scriptable="yes">
-    <idx:orth value="σύντροφος">
-        <b>σύντροφος</b>
-        <idx:infl>
-            <idx:iform value="σύντροφοι"/>
-            <idx:iform value="συντρόφου"/>
-            <idx:iform value="συντρόφων"/>
-            <idx:iform value="σύντροφο"/>
-            <idx:iform value="συντρόφους"/>
-            <idx:iform value="σύντροφε"/>
-        </idx:infl>
-    </idx:orth>
+    <idx:orth value="σύντροφος"><b>σύντροφος</b></idx:orth>
+    <idx:infl>
+        <idx:iform value="σύντροφοι"/>
+        <idx:iform value="συντρόφου"/>
+        <idx:iform value="συντρόφων"/>
+        <idx:iform value="σύντροφο"/>
+        <idx:iform value="συντρόφους"/>
+        <idx:iform value="σύντροφε"/>
+    </idx:infl>
     <ol><li><span>Compagnon.</span></li>...</ol>
     <p><i>Forms:</i></p>
     <ul>
@@ -72,20 +77,20 @@ After (verb, no visible table — iform still emitted):
 
 ```xml
 <idx:entry name="word" scriptable="yes">
-    <idx:orth value="έχω">
-        <b>έχω</b>
-        <idx:infl>
-            <idx:iform value="είχα"/>
-            <idx:iform value="είχες"/>
-            ... (many more)
-        </idx:infl>
-    </idx:orth>
+    <idx:orth value="έχω"><b>έχω</b></idx:orth>
+    <idx:infl>
+        <idx:iform value="είχα"/>
+        <idx:iform value="είχες"/>
+        ... (many more)
+    </idx:infl>
     <ol><li><span>Avoir.</span></li></ol>
 </idx:entry>
 ```
 
-The `<idx:infl>` element sits **inside** `<idx:orth>` per Amazon's Kindle Publishing
-Guidelines and kindling's parser expectations.
+The `<idx:infl>` element sits as a **sibling** of `<idx:orth>` (the layout used by
+tab2opf and other working open-source dictionary generators). Mixing `<b>` text
+content with an `<idx:infl>` child inside `<idx:orth>` crashes the Kindle popup
+renderer on long-press, so the iform block is kept outside.
 
 ## Lookup behaviour on Kindle
 

@@ -54,7 +54,7 @@ class HtmlChapterRendererTest {
     }
 
     @Test
-    void should_emit_idx_infl_block_inside_idx_orth_when_inflection_forms_present() {
+    void should_emit_idx_infl_as_sibling_of_idx_orth_when_inflection_forms_present() {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("σύντροφος", List.of(new LexiconEntry(
@@ -69,11 +69,14 @@ class HtmlChapterRendererTest {
 
         // Then
         assertThat(html)
-                .contains("<idx:orth value=\"σύντροφος\"><b>σύντροφος</b><idx:infl>")
-                .contains("<idx:iform value=\"σύντροφοι\"/>")
+                .contains("<idx:orth value=\"σύντροφος\"><b>σύντροφος</b></idx:orth>")
+                .contains("<idx:infl><idx:iform value=\"σύντροφοι\"/>")
                 .contains("<idx:iform value=\"συντρόφου\"/>")
-                .contains("<idx:iform value=\"συντρόφους\"/>")
-                .contains("</idx:infl></idx:orth>");
+                .contains("<idx:iform value=\"συντρόφους\"/></idx:infl>");
+        // <idx:infl> must be a sibling of <idx:orth>, never a child (mixed content
+        // inside <idx:orth> crashes the Kindle popup renderer on long-press)
+        assertThat(html).doesNotContain("<idx:orth value=\"σύντροφος\"><idx:infl");
+        assertThat(html).doesNotContain("</idx:infl></idx:orth>");
     }
 
     @Test

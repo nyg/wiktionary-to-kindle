@@ -10,3 +10,4 @@ epub-test
 .playwright-mcp
 dumps
 dictionaries
+.factorypath

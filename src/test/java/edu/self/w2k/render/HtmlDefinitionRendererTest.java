@@ -189,6 +189,32 @@ class HtmlDefinitionRendererTest {
     }
 
     @Test
+    void should_drop_article_cell_and_noise_forms_from_inflection_lookup_index() {
+        // Given — kaikki Greek dump emits article cells (η, οι, των, …), parenthesized
+        // alternatives (τη(ν)), multi-word phrases, and pure-punctuation rows as
+        // standalone "forms"; indexing them would tie common tokens to hundreds of
+        // headwords and crash the Kindle popup on long-press.
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnonne."), List.of());
+        List<WiktionaryForm> forms = List.of(
+                new WiktionaryForm("η", List.of("singular", "nominative"), null, null),
+                new WiktionaryForm("οι", List.of("plural", "nominative"), null, null),
+                new WiktionaryForm("της", List.of("singular", "genitive"), null, null),
+                new WiktionaryForm("των", List.of("plural", "genitive"), null, null),
+                new WiktionaryForm("τη(ν)", List.of("singular", "accusative"), null, null),
+                new WiktionaryForm("παρακαλώ !", List.of("phrase"), null, null),
+                new WiktionaryForm("-", List.of("placeholder"), null, null),
+                new WiktionaryForm("σύντροφες", List.of("plural", "nominative"), null, null));
+        WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(sense), forms);
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — only the real inflected form survives the filter
+        assertThat(result).isPresent();
+        assertThat(result.get().inflectionForms()).containsExactly("σύντροφες");
+    }
+
+    @Test
     void should_xml_escape_form_article_and_tag_in_visible_table() {
         // Given
         WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());

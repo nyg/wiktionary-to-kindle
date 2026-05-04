@@ -61,7 +61,8 @@ class HtmlChapterRenderer {
 
         sb.append("""
                         <idx:entry name="word" scriptable="yes">
-                            <idx:orth value="%s"><b>%s</b>%s</idx:orth>
+                            <idx:orth value="%s"><b>%s</b></idx:orth>
+                            %s
                             %s
                         </idx:entry>
                 """.formatted(displayTerm, displayTerm, inflectionMarkup, combinedDef));
