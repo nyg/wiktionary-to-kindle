@@ -5,10 +5,21 @@ Converts a set of Wiktionary entries into a MOBI dictionary usable by a Kindle.
 ## How it works
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the desired language edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
-2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition string and the result is grouped in-memory by normalised key.
+2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition string, its inflected forms are collected as Kindle lookup targets, and the result is grouped in-memory by normalised key.
 3. Chunked MobiPocket HTML files and an OPF manifest are written to `dictionaries/`.
 4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded automatically and cached under `~/.cache/wiktionary-to-kindle/kindling/` (Linux/macOS) or `%LOCALAPPDATA%\wiktionary-to-kindle\Cache\kindling\` (Windows). The binary is SHA-256 verified before use.
 5. `kindling-cli build` converts the OPF to a `.mobi` Kindle dictionary in `dictionaries/`.
+
+## Inflected forms
+
+Wiktionary entries on kaikki include a `forms` array listing every inflected form of the lemma — plurals, declension cases, conjugations, gender-agreement forms. `wiktionary-to-kindle` exposes those forms in two ways:
+
+* **Lookup index** — every form becomes a tap-to-lookup target on Kindle via `<idx:iform>` markup. Looking up `συντρόφους` (the accusative plural) resolves to the lemma `σύντροφος`. Emitted for every part of speech, including verbs.
+* **Visible paradigm table** — for non-verb entries, a small table of the form `{tag-abbrev}: {article} {form}` is appended to the definition. Verb entries skip the table (Greek, Romance and Slavic verbs have 50–200+ forms, which would dwarf the definition). A `forms.size() > 30` safety net also skips the table for pathological non-verb cases.
+
+Gender-equivalent cross-references (e.g. `συντρόφισσα` listed as a feminine equivalent of `σύντροφος`, or `ingénieure` listed under `ingénieur`) are filtered out of the **lookup index** by a language-agnostic post-pass: any form whose normalised text already exists as a standalone headword in the same dump is dropped from the iform list, so long-press on `συντρόφισσα` resolves to its own entry instead of being shadowed by the lemma. The **visible "Forms:" table** in each entry's HTML body is untouched — readers still see the full paradigm (e.g. `ingénieure`, `ingénieurs`) under the lemma.
+
+See [`docs/inflection-support.md`](docs/inflection-support.md) for the full design.
 
 ## Examples of generated dictionaries
 

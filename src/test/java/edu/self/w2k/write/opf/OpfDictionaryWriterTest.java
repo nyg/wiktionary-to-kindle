@@ -25,9 +25,9 @@ class OpfDictionaryWriterTest {
     void should_write_opf_html_and_return_opf_path_when_called() throws Exception {
         // Given
         TreeMap<String, List<LexiconEntry>> defs = new TreeMap<>();
-        defs.put("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>")));
-        defs.put("banana", List.of(new LexiconEntry("banana", "<ol><li>tropical fruit</li></ol>")));
-        defs.put("cherry", List.of(new LexiconEntry("cherry", "<ol><li>small fruit</li></ol>")));
+        defs.put("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>", List.of())));
+        defs.put("banana", List.of(new LexiconEntry("banana", "<ol><li>tropical fruit</li></ol>", List.of())));
+        defs.put("cherry", List.of(new LexiconEntry("cherry", "<ol><li>small fruit</li></ol>", List.of())));
 
         // When
         Path result = unit.write(defs, "en", "fr", "English-French Dictionary", tmp);
@@ -49,7 +49,7 @@ class OpfDictionaryWriterTest {
         TreeMap<String, List<LexiconEntry>> defs = new TreeMap<>();
         for (int i = 0; i <= HtmlChapterRenderer.ENTRIES_PER_CHAPTER; i++) {
             String key = String.format("word%05d", i);
-            defs.put(key, List.of(new LexiconEntry(key, "<ol><li>def</li></ol>")));
+            defs.put(key, List.of(new LexiconEntry(key, "<ol><li>def</li></ol>", List.of())));
         }
 
         // When

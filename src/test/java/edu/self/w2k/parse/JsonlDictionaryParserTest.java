@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import edu.self.w2k.model.WiktionaryEntry;
+import edu.self.w2k.model.WiktionaryForm;
 
 @ExtendWith(MockitoExtension.class)
 class JsonlDictionaryParserTest {
@@ -34,13 +35,7 @@ class JsonlDictionaryParserTest {
                 {"word":"γεια","lang_code":"el","senses":[]}
                 {"word":"hello","lang_code":"en","senses":[]}
                 """;
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (GZIPOutputStream gzip = new GZIPOutputStream(bos);
-             Writer writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
-            writer.write(jsonl);
-        }
-        Path dump = tmp.resolve("dump.jsonl.gz");
-        Files.write(dump, bos.toByteArray());
+        Path dump = writeGzippedJsonl(jsonl);
 
         // When
         List<WiktionaryEntry> result;
@@ -61,13 +56,7 @@ class JsonlDictionaryParserTest {
                 {"word":"","lang_code":"el","senses":[]}
                 {"word":"καλή","lang_code":"el","senses":[]}
                 """;
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (GZIPOutputStream gzip = new GZIPOutputStream(bos);
-             Writer writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
-            writer.write(jsonl);
-        }
-        Path dump = tmp.resolve("dump.jsonl.gz");
-        Files.write(dump, bos.toByteArray());
+        Path dump = writeGzippedJsonl(jsonl);
 
         // When
         List<WiktionaryEntry> result;
@@ -79,5 +68,67 @@ class JsonlDictionaryParserTest {
         assertThat(result)
                 .extracting(WiktionaryEntry::word)
                 .containsExactly("καλή");
+    }
+
+    @Test
+    void should_deserialise_pos_and_forms_when_parsing() throws Exception {
+        // Given
+        String jsonl = """
+                {"word":"σύντροφος","lang_code":"el","pos":"noun","senses":[],"forms":[\
+                {"form":"σύντροφοι","tags":["plural","nominative"],"article":"οι"},\
+                {"form":"συντρόφου","tags":["singular","genitive"],"article":"του"},\
+                {"form":"συντρόφισσα","tags":["feminine"],"source":"form line template 'équiv-pour'"}]}
+                """;
+        Path dump = writeGzippedJsonl(jsonl);
+
+        // When
+        List<WiktionaryEntry> result;
+        try (Stream<WiktionaryEntry> stream = unit.parse(dump, "el")) {
+            result = stream.toList();
+        }
+
+        // Then
+        assertThat(result).hasSize(1);
+        WiktionaryEntry entry = result.getFirst();
+        assertThat(entry.pos()).isEqualTo("noun");
+        assertThat(entry.forms())
+                .extracting(WiktionaryForm::form)
+                .containsExactly("σύντροφοι", "συντρόφου", "συντρόφισσα");
+        assertThat(entry.forms().get(0).tags()).containsExactly("plural", "nominative");
+        assertThat(entry.forms().get(0).article()).isEqualTo("οι");
+        assertThat(entry.forms().get(2).source()).contains("équiv-pour");
+    }
+
+    @Test
+    void should_default_forms_to_empty_when_field_missing() throws Exception {
+        // Given
+        String jsonl = """
+                {"word":"foo","lang_code":"el","senses":[]}
+                """;
+        Path dump = writeGzippedJsonl(jsonl);
+
+        // When
+        List<WiktionaryEntry> result;
+        try (Stream<WiktionaryEntry> stream = unit.parse(dump, "el")) {
+            result = stream.toList();
+        }
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().forms()).isEmpty();
+        // Jackson's Nulls.AS_EMPTY converts a missing String field to "" rather than null.
+        // The renderer treats empty pos the same as null (neither equals "verb").
+        assertThat(result.getFirst().pos()).isEmpty();
+    }
+
+    private Path writeGzippedJsonl(String jsonl) throws Exception {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(bos);
+             Writer writer = new OutputStreamWriter(gzip, StandardCharsets.UTF_8)) {
+            writer.write(jsonl);
+        }
+        Path dump = tmp.resolve("dump.jsonl.gz");
+        Files.write(dump, bos.toByteArray());
+        return dump;
     }
 }

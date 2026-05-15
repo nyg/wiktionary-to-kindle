@@ -1,9 +1,12 @@
 package edu.self.w2k.render;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.model.WiktionaryExample;
+import edu.self.w2k.model.WiktionaryForm;
 import edu.self.w2k.model.WiktionarySense;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,20 +24,21 @@ class HtmlDefinitionRendererTest {
         // Given
         WiktionaryExample example = new WiktionaryExample("The apple fell from the tree.");
         WiktionarySense sense = new WiktionarySense(List.of("A round fruit"), List.of(example));
+        WiktionaryEntry entry = new WiktionaryEntry("apple", "en", "noun", List.of(sense), List.of());
 
         // When
-        Optional<String> result = unit.render(List.of(sense));
+        Optional<RenderedEntry> result = unit.render(entry);
 
         // Then
         assertThat(result).isPresent();
-        String html = result.get();
+        String html = result.get().html();
         assertThat(html)
                 .startsWith("<ol>")
                 .contains("<li><span>")
                 .contains("A round fruit")
                 .contains("<ul>")
-                .contains("<li>The apple fell from the tree.</li>")
-                .endsWith("</ol>");
+                .contains("<li>The apple fell from the tree.</li>");
+        assertThat(result.get().inflectionForms()).isEmpty();
     }
 
     @Test
@@ -42,9 +46,10 @@ class HtmlDefinitionRendererTest {
         // Given
         WiktionarySense emptyGloss = new WiktionarySense(List.of("", "  "), List.of());
         WiktionarySense nullGloss = new WiktionarySense(List.of(), List.of());
+        WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(emptyGloss, nullGloss), List.of());
 
         // When
-        Optional<String> result = unit.render(List.of(emptyGloss, nullGloss));
+        Optional<RenderedEntry> result = unit.render(entry);
 
         // Then
         assertThat(result).isEmpty();
@@ -54,16 +59,178 @@ class HtmlDefinitionRendererTest {
     void should_escape_xml_and_replace_newlines_when_rendering() {
         // Given
         WiktionarySense sense = new WiktionarySense(List.of("A & B\nC"), List.of());
+        WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of());
 
         // When
-        Optional<String> result = unit.render(List.of(sense));
+        Optional<RenderedEntry> result = unit.render(entry);
 
         // Then
         assertThat(result).isPresent();
-        String html = result.get();
+        String html = result.get().html();
         assertThat(html)
                 .contains("&amp;")
                 .contains("; ")
                 .doesNotContain("\n");
+    }
+
+    @Test
+    void should_render_visible_forms_table_when_pos_is_noun() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of());
+        WiktionaryForm pluralNom = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
+        WiktionaryForm singularGen = new WiktionaryForm("συντρόφου", List.of("singular", "genitive"), "του", null);
+        WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun",
+                List.of(sense), List.of(pluralNom, singularGen));
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        String html = result.get().html();
+        assertThat(html)
+                .contains("<p><i>Forms:</i></p>")
+                .contains("<li>pl. nom.: οι σύντροφοι</li>")
+                .contains("<li>sg. gen.: του συντρόφου</li>");
+        assertThat(result.get().inflectionForms())
+                .containsExactly("σύντροφοι", "συντρόφου");
+    }
+
+    @Test
+    void should_skip_visible_forms_table_when_pos_is_verb() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("Avoir."), List.of());
+        WiktionaryForm form = new WiktionaryForm("είχα", List.of("singular", "first-person"), null, null);
+        WiktionaryEntry entry = new WiktionaryEntry("έχω", "el", "verb", List.of(sense), List.of(form));
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        String html = result.get().html();
+        assertThat(html).doesNotContain("Forms:");
+        // iform list still returned for verb lookup
+        assertThat(result.get().inflectionForms()).containsExactly("είχα");
+    }
+
+    @Test
+    void should_skip_visible_forms_table_when_more_than_threshold_forms() {
+        // Given
+        List<WiktionaryForm> manyForms = new ArrayList<>();
+        for (int i = 0; i < 31; i++) {
+            manyForms.add(new WiktionaryForm("form" + i, List.of("plural"), null, null));
+        }
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionaryEntry entry = new WiktionaryEntry("x", "el", "noun", List.of(sense), manyForms);
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().html()).doesNotContain("Forms:");
+        assertThat(result.get().inflectionForms()).hasSize(31);
+    }
+
+    @Test
+    void should_keep_all_forms_in_renderer_regardless_of_source_marker() {
+        // Given — the renderer is language-agnostic: it does not look at the kaikki `source`
+        // field. Per-language cross-reference markers (e.g. fr `équiv-pour`) are handled
+        // downstream by GenerateCommand via a headword-collision post-pass, not here.
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of());
+        WiktionaryForm trueInflection = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
+        WiktionaryForm equivPour = new WiktionaryForm("συντρόφισσα", List.of("feminine"),
+                null, "form line template 'équiv-pour'");
+        WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun",
+                List.of(sense), List.of(trueInflection, equivPour));
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — both forms appear in the visible table AND in the iform list
+        assertThat(result).isPresent();
+        String html = result.get().html();
+        assertThat(html).contains("σύντροφοι").contains("συντρόφισσα");
+        assertThat(result.get().inflectionForms()).containsExactly("σύντροφοι", "συντρόφισσα");
+    }
+
+    @Test
+    void should_skip_visible_table_when_forms_empty() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of());
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().html()).doesNotContain("Forms:");
+        assertThat(result.get().inflectionForms()).isEmpty();
+    }
+
+    @Test
+    void should_dedupe_inflection_forms_preserving_order() {
+        // Given (kaikki may list the same form twice with different tag combinations)
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionaryForm a = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
+        WiktionaryForm b = new WiktionaryForm("σύντροφοι", List.of("plural", "vocative"), null, null);
+        WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(sense), List.of(a, b));
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — iform list deduplicated
+        assertThat(result).isPresent();
+        assertThat(result.get().inflectionForms()).containsExactly("σύντροφοι");
+        // Visible table keeps both rows so the reader sees both functions
+        assertThat(result.get().html())
+                .contains("pl. nom.")
+                .contains("pl. voc.");
+    }
+
+    @Test
+    void should_drop_structural_non_words_from_inflection_lookup_index() {
+        // Given — wiktextract sometimes emits parenthesised alternatives (τη(ν)), multi-word
+        // phrases, and pure-punctuation rows as standalone "forms". The renderer drops these
+        // language-agnostic structural non-words from the iform index. Real single-token forms
+        // (including common Greek articles like η, οι, των) are kept and indexed.
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnonne."), List.of());
+        List<WiktionaryForm> forms = List.of(
+                new WiktionaryForm("η", List.of("singular", "nominative"), null, null),
+                new WiktionaryForm("των", List.of("plural", "genitive"), null, null),
+                new WiktionaryForm("τη(ν)", List.of("singular", "accusative"), null, null),
+                new WiktionaryForm("παρακαλώ !", List.of("phrase"), null, null),
+                new WiktionaryForm("-", List.of("placeholder"), null, null),
+                new WiktionaryForm("σύντροφες", List.of("plural", "nominative"), null, null));
+        WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(sense), forms);
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — articles and the real inflection are kept; structural non-words are dropped
+        assertThat(result).isPresent();
+        assertThat(result.get().inflectionForms())
+                .containsExactly("η", "των", "σύντροφες");
+    }
+
+    @Test
+    void should_xml_escape_form_article_and_tag_in_visible_table() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionaryForm form = new WiktionaryForm("a&b", List.of("custom<tag>"), "<art>", null);
+        WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of(form));
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        String html = result.get().html();
+        assertThat(html)
+                .contains("a&amp;b")
+                .contains("&lt;art&gt;")
+                .contains("custom&lt;tag&gt;");
     }
 }
