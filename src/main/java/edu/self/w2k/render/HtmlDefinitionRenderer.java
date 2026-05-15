@@ -17,16 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class HtmlDefinitionRenderer implements DefinitionRenderer {
 
-    private static final String EQUIV_POUR_MARKER = "équiv-pour";
     private static final int VISIBLE_FORMS_THRESHOLD = 30;
-
-    // wiktextract emits Greek article-cells (η, οι, του, …) as standalone forms rows
-    // alongside real inflections; indexing them as iforms ties common tokens to
-    // hundreds of headwords and crashes the Kindle popup on long-press.
-    private static final Set<String> NON_LOOKUP_FORMS = Set.of(
-            "ο", "η", "το", "οι", "τα",
-            "του", "της", "των",
-            "τον", "την", "τη", "τους", "τις");
 
     @Override
     public Optional<RenderedEntry> render(WiktionaryEntry entry) {
@@ -110,10 +101,6 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
             if (text == null || text.isBlank()) {
                 continue;
             }
-            String source = form.source();
-            if (source != null && source.contains(EQUIV_POUR_MARKER)) {
-                continue;
-            }
             kept.add(form);
         }
         return kept;
@@ -134,7 +121,7 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
     }
 
     private static boolean isUsableLookupKey(String text) {
-        if (text.isEmpty() || NON_LOOKUP_FORMS.contains(text)) {
+        if (text.isEmpty()) {
             return false;
         }
         boolean hasLetter = false;

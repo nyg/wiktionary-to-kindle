@@ -134,8 +134,10 @@ class HtmlDefinitionRendererTest {
     }
 
     @Test
-    void should_filter_equiv_pour_forms_from_both_iform_and_visible_table() {
-        // Given
+    void should_keep_all_forms_in_renderer_regardless_of_source_marker() {
+        // Given — the renderer is language-agnostic: it does not look at the kaikki `source`
+        // field. Per-language cross-reference markers (e.g. fr `équiv-pour`) are handled
+        // downstream by GenerateCommand via a headword-collision post-pass, not here.
         WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of());
         WiktionaryForm trueInflection = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
         WiktionaryForm equivPour = new WiktionaryForm("συντρόφισσα", List.of("feminine"),
@@ -146,11 +148,11 @@ class HtmlDefinitionRendererTest {
         // When
         Optional<RenderedEntry> result = unit.render(entry);
 
-        // Then
+        // Then — both forms appear in the visible table AND in the iform list
         assertThat(result).isPresent();
         String html = result.get().html();
-        assertThat(html).contains("σύντροφοι").doesNotContain("συντρόφισσα");
-        assertThat(result.get().inflectionForms()).containsExactly("σύντροφοι");
+        assertThat(html).contains("σύντροφοι").contains("συντρόφισσα");
+        assertThat(result.get().inflectionForms()).containsExactly("σύντροφοι", "συντρόφισσα");
     }
 
     @Test
@@ -189,16 +191,14 @@ class HtmlDefinitionRendererTest {
     }
 
     @Test
-    void should_drop_article_cell_and_noise_forms_from_inflection_lookup_index() {
-        // Given — kaikki Greek dump emits article cells (η, οι, των, …), parenthesized
-        // alternatives (τη(ν)), multi-word phrases, and pure-punctuation rows as
-        // standalone "forms"; indexing them would tie common tokens to hundreds of
-        // headwords and crash the Kindle popup on long-press.
+    void should_drop_structural_non_words_from_inflection_lookup_index() {
+        // Given — wiktextract sometimes emits parenthesised alternatives (τη(ν)), multi-word
+        // phrases, and pure-punctuation rows as standalone "forms". The renderer drops these
+        // language-agnostic structural non-words from the iform index. Real single-token forms
+        // (including common Greek articles like η, οι, των) are kept and indexed.
         WiktionarySense sense = new WiktionarySense(List.of("Compagnonne."), List.of());
         List<WiktionaryForm> forms = List.of(
                 new WiktionaryForm("η", List.of("singular", "nominative"), null, null),
-                new WiktionaryForm("οι", List.of("plural", "nominative"), null, null),
-                new WiktionaryForm("της", List.of("singular", "genitive"), null, null),
                 new WiktionaryForm("των", List.of("plural", "genitive"), null, null),
                 new WiktionaryForm("τη(ν)", List.of("singular", "accusative"), null, null),
                 new WiktionaryForm("παρακαλώ !", List.of("phrase"), null, null),
@@ -209,9 +209,10 @@ class HtmlDefinitionRendererTest {
         // When
         Optional<RenderedEntry> result = unit.render(entry);
 
-        // Then — only the real inflected form survives the filter
+        // Then — articles and the real inflection are kept; structural non-words are dropped
         assertThat(result).isPresent();
-        assertThat(result.get().inflectionForms()).containsExactly("σύντροφες");
+        assertThat(result.get().inflectionForms())
+                .containsExactly("η", "των", "σύντροφες");
     }
 
     @Test

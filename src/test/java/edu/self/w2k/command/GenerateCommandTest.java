@@ -101,6 +101,59 @@ class GenerateCommandTest {
     }
 
     @Test
+    void should_drop_inflection_forms_that_collide_with_existing_headwords() throws Exception {
+        // Given — σύντροφος lists συντρόφισσα as a (gender-equivalent) form, but συντρόφισσα
+        // also exists as its own standalone headword in the dump. The visible Forms: table in
+        // the rendered HTML stays untouched; only the iform lookup index is filtered.
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "fr", "Test Title");
+        WiktionaryEntry lemma = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(), List.of());
+        WiktionaryEntry equiv = new WiktionaryEntry("συντρόφισσα", "el", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(lemma, equiv));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>σύντροφος body mentions συντρόφισσα</def>",
+                        List.of("σύντροφοι", "συντρόφισσα"))))
+                .thenReturn(Optional.of(new RenderedEntry("<def>συντρόφισσα body</def>", List.of())));
+
+        // When
+        unit.run();
+
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("el"), eq("fr"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+
+        LexiconEntry lemmaEntry = captured.get("σύντροφος").getFirst();
+        assertThat(lemmaEntry.inflectionForms()).containsExactly("σύντροφοι");
+        assertThat(lemmaEntry.definition()).contains("συντρόφισσα");
+
+        LexiconEntry equivEntry = captured.get("συντρόφισσα").getFirst();
+        assertThat(equivEntry.inflectionForms()).isEmpty();
+    }
+
+    @Test
+    void should_match_collision_filter_case_insensitively_via_normalised_key() throws Exception {
+        // Given — headword key normalisation lowercases; the filter should use the same rule.
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "en", "Test Title");
+        WiktionaryEntry lemma = new WiktionaryEntry("ingénieur", "fr", "noun", List.of(), List.of());
+        WiktionaryEntry feminine = new WiktionaryEntry("Ingénieure", "fr", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(lemma, feminine));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def/>",
+                        List.of("ingénieurs", "ingénieure"))))
+                .thenReturn(Optional.of(new RenderedEntry("<def/>", List.of())));
+
+        // When
+        unit.run();
+
+        // Then — "ingénieure" collides with normalised key of "Ingénieure" and is dropped;
+        // the real plural "ingénieurs" is kept.
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("en"), eq("Test Title"), eq(tmp));
+        LexiconEntry lex = captor.getValue().get("ingénieur").getFirst();
+        assertThat(lex.inflectionForms()).containsExactly("ingénieurs");
+    }
+
+    @Test
     void should_lowercase_and_strip_when_normalising_key() {
         // When
         String result = GenerateCommand.normaliseKey("  Hello  ");
