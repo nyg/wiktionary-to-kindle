@@ -11,3 +11,5 @@ epub-test
 dumps
 dictionaries
 .factorypath
+.metals
+.vscode
