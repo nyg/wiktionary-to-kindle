@@ -89,7 +89,8 @@ public class CLI implements Callable<Integer> {
     @Command(name = "generate",
              aliases = {"gen"},
              description = "Generate Kindle dictionary from downloaded dump.",
-             mixinStandardHelpOptions = true)
+             mixinStandardHelpOptions = true,
+             defaultValueProvider = Generate.KindlingVersionDefault.class)
     static class Generate implements Callable<Integer> {
 
         @Parameters(index = "0",
@@ -108,9 +109,20 @@ public class CLI implements Callable<Integer> {
         private Path kindlingCliPath;
 
         @Option(names = "--kindling-version",
-                defaultValue = KindlingRelease.DEFAULT_VERSION,
                 description = "Kindling release tag to download (default: ${DEFAULT-VALUE})")
         private String kindlingVersion;
+
+        static class KindlingVersionDefault implements CommandLine.IDefaultValueProvider {
+
+            @Override
+            public String defaultValue(CommandLine.Model.ArgSpec argSpec) {
+                if (argSpec.isOption()
+                        && "--kindling-version".equals(((CommandLine.Model.OptionSpec) argSpec).longestName())) {
+                    return KindlingRelease.load().version();
+                }
+                return null;
+            }
+        }
 
         @Override
         public Integer call() throws Exception {

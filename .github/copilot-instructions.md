@@ -32,7 +32,7 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar download fr     # French edition
 # The latest dump matching DUMP_LANG in dumps/ is auto-discovered.
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate <DUMP_LANG> <WORD_LANG>
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en                        # auto-downloads kindling-cli on first run
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.14.5
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version vX.Y.Z
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 # gen is a short alias for generate
 
@@ -50,7 +50,7 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar --version
 - **`edu.self.w2k.download`** — `KaikkiDumpDownloader` (HttpClient-based), `DumpDownloader` interface
 - **`edu.self.w2k.write`** — `DictionaryWriter` interface, `DictionaryTitles` utility
 - **`edu.self.w2k.write.opf`** — `OpfDictionaryWriter` (emits chunked `.html` + `.opf`), `HtmlChapterRenderer`
-- **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (pinned version + per-platform digests), `XdgCachePaths`, `KindlingException`
+- **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (loads the pinned version + per-platform digests from `src/main/resources/kindling-release.properties`), `XdgCachePaths`, `KindlingException`
 - **`edu.self.w2k.parse`** — `JsonlDictionaryParser`, `DictionaryParser` interface
 - **`edu.self.w2k.render`** — `HtmlDefinitionRenderer`, `DefinitionRenderer` interface
 - **`edu.self.w2k.model`** — `LexiconEntry` plus Jackson-annotated records: `WiktionaryEntry`, `WiktionarySense`, `WiktionaryExample`
@@ -80,7 +80,7 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 
 `KindlingDictionaryConverter` composes `OpfDictionaryWriter` with a `kindling-cli` binary. It calls `KindlingCliResolver.resolve()` to obtain the binary, then runs `kindling-cli build <opf> -o <mobi>`. Output: `dictionaries/dictionary-{src}-{trg}.mobi` (plus `.opf` and `.html` side-artefacts).
 
-`KindlingCliResolver.resolve()` tries in order: explicit `--kindling-cli` override → PATH probe (`which`/`where`) → cached binary at `<XdgCachePaths.kindlingCacheDir()>/<version>/<assetName>` (SHA-256 verified) → download via `KindlingDownloader`. `KindlingDownloader` fetches from GitHub Releases, verifies SHA-256 against `KindlingRelease.DEFAULT_ASSETS` (or the GitHub API `digest` field for non-default versions), renames atomically, and marks the file executable.
+`KindlingCliResolver.resolve()` tries in order: explicit `--kindling-cli` override → PATH probe (`which`/`where`) → cached binary at `<XdgCachePaths.kindlingCacheDir()>/<version>/<assetName>` (SHA-256 verified) → download via `KindlingDownloader`. `KindlingDownloader` fetches from GitHub Releases, verifies SHA-256 against the pinned digests from `kindling-release.properties` (loaded by `KindlingRelease`), or the GitHub API `digest` field for non-default versions, renames atomically, and marks the file executable.
 
 ## Key Conventions
 
