@@ -1,26 +1,49 @@
 package edu.self.w2k.kindling;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.util.EnumMap;
 import java.util.Map;
+import java.util.Properties;
 
-public final class KindlingRelease {
+public record KindlingRelease(String version, Map<KindlingPlatform, String> digests) {
 
-    public static final String DEFAULT_VERSION = "v0.14.5";
+    static final String RESOURCE_NAME = "/kindling-release.properties";
 
-    public record Asset(String fileName, String sha256) {}
+    public static KindlingRelease load() {
+        try (InputStream in = KindlingRelease.class.getResourceAsStream(RESOURCE_NAME)) {
+            if (in == null) {
+                throw new IllegalStateException("Classpath resource " + RESOURCE_NAME + " is missing");
+            }
+            return parse(in);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read " + RESOURCE_NAME, e);
+        }
+    }
 
-    public static final Map<KindlingPlatform, Asset> DEFAULT_ASSETS = Map.of(
-            KindlingPlatform.LINUX_X64,
-                new Asset("kindling-cli-linux",
-                        "11369537b1d82bd835a06ffa940e8e75a5ee034e5eaee5d7ff4352c15b66f137"),
-            KindlingPlatform.MAC_APPLE_SILICON,
-                new Asset("kindling-cli-mac-apple-silicon",
-                        "ac15153df818e4fea2608627a5f5cb2ee59f762be02c535160a8b6871f29ea3c"),
-            KindlingPlatform.MAC_INTEL,
-                new Asset("kindling-cli-mac-intel",
-                        "a7d1657beacd30ec6016caf44b1738bad679783a06ef8dd6a08b9a961a9bc0c6"),
-            KindlingPlatform.WINDOWS_X64,
-                new Asset("kindling-cli-windows.exe",
-                        "dc06c1059682949eacc17d49c1ebb03c1b70a60ca8c2b8f0f508ba0fe622d62c"));
+    static KindlingRelease parse(InputStream in) throws IOException {
+        Properties props = new Properties();
+        props.load(in);
 
-    private KindlingRelease() {}
+        String version = props.getProperty("version");
+        if (version == null || version.isBlank()) {
+            throw new IllegalStateException(RESOURCE_NAME + " has no version property");
+        }
+
+        Map<KindlingPlatform, String> digests = new EnumMap<>(KindlingPlatform.class);
+        for (KindlingPlatform platform : KindlingPlatform.values()) {
+            String key = "sha256." + platform.assetName();
+            String digest = props.getProperty(key);
+            if (digest == null || !digest.matches("[0-9a-f]{64}")) {
+                throw new IllegalStateException(RESOURCE_NAME + " is missing a valid " + key + " property");
+            }
+            digests.put(platform, digest);
+        }
+        return new KindlingRelease(version.strip(), Map.copyOf(digests));
+    }
+
+    public String digest(KindlingPlatform platform) {
+        return digests.get(platform); // never null: parse() validates every enum value
+    }
 }

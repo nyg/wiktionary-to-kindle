@@ -3,6 +3,8 @@ package edu.self.w2k.kindling;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
@@ -82,5 +84,24 @@ class KindlingDownloaderTest {
                 .isInstanceOf(KindlingException.class)
                 .hasMessageContaining("SHA-256 mismatch");
         assertThat(destDir.resolve("." + assetName + ".part")).doesNotExist();
+    }
+
+    @Test
+    void should_resolve_digest_locally_when_version_is_pinned_default() throws Exception {
+        // Given
+        String version = KindlingRelease.load().version();
+        KindlingPlatform platform = KindlingPlatform.LINUX_X64;
+
+        when(fetcher.getFile(any(URI.class), any(Path.class))).thenAnswer(inv -> {
+            Path dest = inv.getArgument(1, Path.class);
+            Files.write(dest, "arbitrary-content".getBytes(StandardCharsets.UTF_8));
+            return dest;
+        });
+
+        // When / Then
+        assertThatThrownBy(() -> unit.download(version, platform, destDir))
+                .isInstanceOf(KindlingException.class)
+                .hasMessageContaining("SHA-256 mismatch");
+        verify(fetcher, never()).getString(any(URI.class));
     }
 }

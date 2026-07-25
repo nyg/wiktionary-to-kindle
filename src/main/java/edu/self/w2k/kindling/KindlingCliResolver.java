@@ -30,11 +30,8 @@ public class KindlingCliResolver {
              downloader,
              KindlingCliResolver::probePath,
              (v, p) -> {
-                 if (!v.equals(KindlingRelease.DEFAULT_VERSION)) {
-                     return null;
-                 }
-                 KindlingRelease.Asset asset = KindlingRelease.DEFAULT_ASSETS.get(p);
-                 return asset != null ? asset.sha256() : null;
+                 KindlingRelease release = KindlingRelease.load();
+                 return v.equals(release.version()) ? release.digest(p) : null;
              });
     }
 
