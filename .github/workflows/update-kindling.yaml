@@ -38,7 +38,7 @@ jobs:
 
       - uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.9
         with:
-          token: ${{ secrets.KINDLING_UPDATE_PAT }}
+          token: ${{ secrets.WIKTIONARY_KINDLING }}
           commit-message: 'chore(deps): update kindling-cli to ${{ steps.release.outputs.tag }}'
           branch: nyg/update-kindling
           delete-branch: true
