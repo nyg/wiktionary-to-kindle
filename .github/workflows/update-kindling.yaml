@@ -37,6 +37,7 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        id: cpr
         with:
           token: ${{ secrets.WIKTIONARY_KINDLING }}
           commit-message: 'chore(deps): update kindling-cli to ${{ steps.release.outputs.tag }}'
@@ -52,3 +53,9 @@ jobs:
             non-pinned versions. No binaries are downloaded by this workflow.
 
             Automated by `.github/workflows/update-kindling.yaml`.
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-operation == 'created' || steps.cpr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ secrets.WIKTIONARY_KINDLING }}
+        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}" --repo "$GITHUB_REPOSITORY"
