@@ -77,42 +77,17 @@ public class GenerateCommand implements Command {
      * and would silently delete the folded entries' definitions. See docs/form-of-folding.md.
      */
     static void foldFormOfEntries(TreeMap<String, List<LexiconEntry>> grouped) {
-        // keys backed by at least one entry with an independent meaning; only these can absorb forms
-        // (folding into a form-of-only group would just move the dead end around)
-        Set<String> realKeys = new HashSet<>();
-        for (Map.Entry<String, List<LexiconEntry>> group : grouped.entrySet()) {
-            if (group.getValue().stream().anyMatch(e -> e.formOfLemmas().isEmpty())) {
-                realKeys.add(group.getKey());
-            }
-        }
-
+        Set<String> realKeys = collectRealKeys(grouped);
         Map<String, Set<String>> extraIforms = new HashMap<>();
         long folded = 0;
 
         Iterator<Map.Entry<String, List<LexiconEntry>>> it = grouped.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, List<LexiconEntry>> group = it.next();
-            String ownKey = group.getKey();
             List<LexiconEntry> entries = group.getValue();
 
-            List<List<String>> lemmaKeysPerEntry = new ArrayList<>(entries.size());
-            boolean allFoldable = true;
-            for (LexiconEntry e : entries) {
-                if (e.formOfLemmas().isEmpty() || !HtmlDefinitionRenderer.isUsableLookupKey(e.word().strip())) {
-                    allFoldable = false;
-                    break;
-                }
-                List<String> lemmaKeys = e.formOfLemmas().stream()
-                        .map(GenerateCommand::normaliseKey)
-                        .filter(key -> !key.equals(ownKey) && realKeys.contains(key))
-                        .toList();
-                if (lemmaKeys.isEmpty()) {
-                    allFoldable = false;
-                    break;
-                }
-                lemmaKeysPerEntry.add(lemmaKeys);
-            }
-            if (!allFoldable) {
+            List<List<String>> lemmaKeysPerEntry = foldableLemmaKeys(entries, group.getKey(), realKeys);
+            if (lemmaKeysPerEntry == null) {
                 continue;
             }
 
@@ -126,6 +101,48 @@ public class GenerateCommand implements Command {
             it.remove();
         }
 
+        mergeExtraIforms(grouped, extraIforms);
+
+        log.info("Folded {} form-of entries into their lemma's inflection index", folded);
+    }
+
+    /**
+     * Keys backed by at least one entry with an independent meaning; only these can absorb forms
+     * (folding into a form-of-only group would just move the dead end around).
+     */
+    private static Set<String> collectRealKeys(TreeMap<String, List<LexiconEntry>> grouped) {
+        Set<String> realKeys = new HashSet<>();
+        for (Map.Entry<String, List<LexiconEntry>> group : grouped.entrySet()) {
+            if (group.getValue().stream().anyMatch(e -> e.formOfLemmas().isEmpty())) {
+                realKeys.add(group.getKey());
+            }
+        }
+        return realKeys;
+    }
+
+    /**
+     * Returns each entry's resolvable lemma keys when every entry under the key can fold, or
+     * {@code null} when anything must stay (independent meaning, unusable word, no lemma present).
+     */
+    private static List<List<String>> foldableLemmaKeys(List<LexiconEntry> entries, String ownKey, Set<String> realKeys) {
+        List<List<String>> lemmaKeysPerEntry = new ArrayList<>(entries.size());
+        for (LexiconEntry e : entries) {
+            if (e.formOfLemmas().isEmpty() || !HtmlDefinitionRenderer.isUsableLookupKey(e.word().strip())) {
+                return null;
+            }
+            List<String> lemmaKeys = e.formOfLemmas().stream()
+                    .map(GenerateCommand::normaliseKey)
+                    .filter(key -> !key.equals(ownKey) && realKeys.contains(key))
+                    .toList();
+            if (lemmaKeys.isEmpty()) {
+                return null;
+            }
+            lemmaKeysPerEntry.add(lemmaKeys);
+        }
+        return lemmaKeysPerEntry;
+    }
+
+    private static void mergeExtraIforms(TreeMap<String, List<LexiconEntry>> grouped, Map<String, Set<String>> extraIforms) {
         for (Map.Entry<String, Set<String>> extra : extraIforms.entrySet()) {
             // target groups always survive: they contain a non-form-of entry, which is never removed
             List<LexiconEntry> entries = grouped.get(extra.getKey());
@@ -136,8 +153,6 @@ public class GenerateCommand implements Command {
                 entries.set(0, new LexiconEntry(first.word(), first.definition(), List.copyOf(merged), first.formOfLemmas()));
             }
         }
-
-        log.info("Folded {} form-of entries into their lemma's inflection index", folded);
     }
 
     /**

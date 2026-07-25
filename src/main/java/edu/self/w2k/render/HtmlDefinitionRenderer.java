@@ -54,28 +54,29 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
             }
             hasRenderableSense = true;
 
-            boolean hasLemma = false;
-            List<WiktionaryFormOf> formOf = sense.formOf();
-            if (formOf != null) {
-                for (WiktionaryFormOf ref : formOf) {
-                    if (ref == null) {
-                        continue;
-                    }
-                    String word = ref.word();
-                    if (word == null || word.isBlank()) {
-                        continue;
-                    }
-                    hasLemma = true;
-                    lemmas.add(word.strip());
-                }
-            }
-            if (!hasLemma) {
+            List<String> senseLemmas = lemmaWords(sense.formOf());
+            if (senseLemmas.isEmpty()) {
                 // a sense with its own meaning — not a form-of-only entry
                 return List.of();
             }
+            lemmas.addAll(senseLemmas);
         }
 
         return hasRenderableSense ? List.copyOf(lemmas) : List.of();
+    }
+
+    private static List<String> lemmaWords(List<WiktionaryFormOf> formOf) {
+        if (formOf == null || formOf.isEmpty()) {
+            return List.of();
+        }
+        List<String> words = new ArrayList<>(formOf.size());
+        for (WiktionaryFormOf ref : formOf) {
+            String word = ref == null ? null : ref.word();
+            if (word != null && !word.isBlank()) {
+                words.add(word.strip());
+            }
+        }
+        return words;
     }
 
     private static boolean hasRenderableGloss(WiktionarySense sense) {
