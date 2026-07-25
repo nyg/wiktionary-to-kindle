@@ -64,13 +64,17 @@ public class GenerateCommand implements Command {
     }
 
     /**
-     * Folds "form-of-only" entries (e.g. Latin <i>suis</i>, whose only senses are "Datif pluriel de
-     * suus.") into their lemma's inflection index. On Kindle an exact headword match shadows the
+     * Folds "form-of-only" lookup keys (e.g. Latin <i>suis</i>, whose only senses are "Datif pluriel
+     * de suus.") into their lemma's inflection index. On Kindle an exact headword match shadows the
      * {@code <idx:iform>} index, so keeping these as standalone headwords makes them dead ends. When
-     * the lemma exists in the dictionary, the standalone entry is dropped and its word registered as
-     * an inflection form on the lemma, so a lookup resolves straight to the full lemma entry. When
-     * no referenced lemma is present (or the entry's word is unusable as a lookup key), the entry is
-     * kept as-is — a dead-end definition is better than nothing.
+     * every entry under a key is a form-of entry with at least one lemma present in the dictionary,
+     * the whole key is dropped and each entry's word registered as an inflection form on its
+     * lemma(s), so a lookup resolves straight to the full lemma entry.
+     * <p>
+     * Folding is all-or-nothing per key: if anything under the key must stay — a homograph with its
+     * own meaning, or a form-of entry whose lemma is absent — the key keeps all its entries. A
+     * partial fold would gain nothing (the surviving headword still shadows the inflection index)
+     * and would silently delete the folded entries' definitions. See docs/form-of-folding.md.
      */
     static void foldFormOfEntries(TreeMap<String, List<LexiconEntry>> grouped) {
         // keys backed by at least one entry with an independent meaning; only these can absorb forms
@@ -91,31 +95,35 @@ public class GenerateCommand implements Command {
             String ownKey = group.getKey();
             List<LexiconEntry> entries = group.getValue();
 
-            for (int i = entries.size() - 1; i >= 0; i--) {
-                LexiconEntry e = entries.get(i);
-                if (e.formOfLemmas().isEmpty()) {
-                    continue;
+            List<List<String>> lemmaKeysPerEntry = new ArrayList<>(entries.size());
+            boolean allFoldable = true;
+            for (LexiconEntry e : entries) {
+                if (e.formOfLemmas().isEmpty() || !HtmlDefinitionRenderer.isUsableLookupKey(e.word().strip())) {
+                    allFoldable = false;
+                    break;
                 }
-                String word = e.word().strip();
-                if (!HtmlDefinitionRenderer.isUsableLookupKey(word)) {
-                    continue;
+                List<String> lemmaKeys = e.formOfLemmas().stream()
+                        .map(GenerateCommand::normaliseKey)
+                        .filter(key -> !key.equals(ownKey) && realKeys.contains(key))
+                        .toList();
+                if (lemmaKeys.isEmpty()) {
+                    allFoldable = false;
+                    break;
                 }
-                boolean registered = false;
-                for (String lemma : e.formOfLemmas()) {
-                    String lemmaKey = normaliseKey(lemma);
-                    if (!lemmaKey.equals(ownKey) && realKeys.contains(lemmaKey)) {
-                        extraIforms.computeIfAbsent(lemmaKey, k -> new LinkedHashSet<>()).add(word);
-                        registered = true;
-                    }
-                }
-                if (registered) {
-                    entries.remove(i);
-                    folded++;
+                lemmaKeysPerEntry.add(lemmaKeys);
+            }
+            if (!allFoldable) {
+                continue;
+            }
+
+            for (int i = 0; i < entries.size(); i++) {
+                String word = entries.get(i).word().strip();
+                for (String lemmaKey : lemmaKeysPerEntry.get(i)) {
+                    extraIforms.computeIfAbsent(lemmaKey, k -> new LinkedHashSet<>()).add(word);
                 }
             }
-            if (entries.isEmpty()) {
-                it.remove();
-            }
+            folded += entries.size();
+            it.remove();
         }
 
         for (Map.Entry<String, Set<String>> extra : extraIforms.entrySet()) {

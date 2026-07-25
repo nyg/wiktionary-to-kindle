@@ -74,7 +74,7 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 
 `GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then runs two post-passes before handing the map to the `DictionaryWriter`:
 
-1. `foldFormOfEntries()` — drops each form-of-only entry whose lemma exists in the map and registers the entry's word as an inflection form on the lemma instead. On Kindle an exact headword match shadows the `<idx:iform>` index, so this makes an inflected-form lookup resolve straight to the full lemma entry (issue #56). Entries whose lemma is absent (or whose word is unusable as a lookup key) are kept as-is.
+1. `foldFormOfEntries()` — folds form-of-only lookup keys into their lemma's inflection index. On Kindle an exact headword match shadows the `<idx:iform>` index, so this makes an inflected-form lookup resolve straight to the full lemma entry (issue #56). Folding is all-or-nothing per key: only when every entry under the key is form-of with a lemma present in the map is the key dropped (words registered as iforms on their lemma(s), multi-lemma forms on all of them); otherwise — homograph with its own meaning, missing lemma, chain — the key keeps all its entries. See `docs/form-of-folding.md`.
 2. `filterFormsCollidingWithHeadwords()` — drops any inflection form whose normalised text still exists as a headword key.
 
 `HtmlChapterRenderer` builds one MobiPocket HTML document (≤ 10 000 entries per chunk) preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and `xmlns:mbp`/`xmlns:idx` namespace declarations.
