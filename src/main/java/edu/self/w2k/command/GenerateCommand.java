@@ -10,6 +10,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,14 +87,14 @@ public class GenerateCommand implements Command {
             Map.Entry<String, List<LexiconEntry>> group = it.next();
             List<LexiconEntry> entries = group.getValue();
 
-            List<List<String>> lemmaKeysPerEntry = foldableLemmaKeys(entries, group.getKey(), realKeys);
-            if (lemmaKeysPerEntry == null) {
+            Optional<List<List<String>>> lemmaKeysPerEntry = foldableLemmaKeys(entries, group.getKey(), realKeys);
+            if (lemmaKeysPerEntry.isEmpty()) {
                 continue;
             }
 
             for (int i = 0; i < entries.size(); i++) {
                 String word = entries.get(i).word().strip();
-                for (String lemmaKey : lemmaKeysPerEntry.get(i)) {
+                for (String lemmaKey : lemmaKeysPerEntry.get().get(i)) {
                     extraIforms.computeIfAbsent(lemmaKey, k -> new LinkedHashSet<>()).add(word);
                 }
             }
@@ -121,25 +122,25 @@ public class GenerateCommand implements Command {
     }
 
     /**
-     * Returns each entry's resolvable lemma keys when every entry under the key can fold, or
-     * {@code null} when anything must stay (independent meaning, unusable word, no lemma present).
+     * Returns each entry's resolvable lemma keys when every entry under the key can fold, or an
+     * empty Optional when anything must stay (independent meaning, unusable word, no lemma present).
      */
-    private static List<List<String>> foldableLemmaKeys(List<LexiconEntry> entries, String ownKey, Set<String> realKeys) {
+    private static Optional<List<List<String>>> foldableLemmaKeys(List<LexiconEntry> entries, String ownKey, Set<String> realKeys) {
         List<List<String>> lemmaKeysPerEntry = new ArrayList<>(entries.size());
         for (LexiconEntry e : entries) {
             if (e.formOfLemmas().isEmpty() || !HtmlDefinitionRenderer.isUsableLookupKey(e.word().strip())) {
-                return null;
+                return Optional.empty();
             }
             List<String> lemmaKeys = e.formOfLemmas().stream()
                     .map(GenerateCommand::normaliseKey)
                     .filter(key -> !key.equals(ownKey) && realKeys.contains(key))
                     .toList();
             if (lemmaKeys.isEmpty()) {
-                return null;
+                return Optional.empty();
             }
             lemmaKeysPerEntry.add(lemmaKeys);
         }
-        return lemmaKeysPerEntry;
+        return Optional.of(lemmaKeysPerEntry);
     }
 
     private static void mergeExtraIforms(TreeMap<String, List<LexiconEntry>> grouped, Map<String, Set<String>> extraIforms) {
