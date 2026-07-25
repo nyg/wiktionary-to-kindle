@@ -36,7 +36,7 @@ jobs:
           printf '%s' "$file" > src/main/resources/kindling-release.properties
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.9
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ secrets.WIKTIONARY_KINDLING }}
           commit-message: 'chore(deps): update kindling-cli to ${{ steps.release.outputs.tag }}'
