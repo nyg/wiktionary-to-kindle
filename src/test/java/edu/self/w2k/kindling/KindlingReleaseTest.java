@@ -57,10 +57,10 @@ class KindlingReleaseTest {
                 sha256.kindling-cli-mac-intel=%s
                 sha256.kindling-cli-windows.exe=%s
                 """.formatted("1".repeat(64), "2".repeat(64), "3".repeat(64), "4".repeat(64));
+        ByteArrayInputStream in = new ByteArrayInputStream(props.getBytes(StandardCharsets.ISO_8859_1));
 
         // When / Then
-        assertThatThrownBy(() -> KindlingRelease.parse(
-                new ByteArrayInputStream(props.getBytes(StandardCharsets.ISO_8859_1))))
+        assertThatThrownBy(() -> KindlingRelease.parse(in))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("version");
     }
@@ -74,10 +74,10 @@ class KindlingReleaseTest {
                 sha256.kindling-cli-mac-apple-silicon=%s
                 sha256.kindling-cli-mac-intel=%s
                 """.formatted("1".repeat(64), "2".repeat(64), "3".repeat(64));
+        ByteArrayInputStream in = new ByteArrayInputStream(props.getBytes(StandardCharsets.ISO_8859_1));
 
         // When / Then
-        assertThatThrownBy(() -> KindlingRelease.parse(
-                new ByteArrayInputStream(props.getBytes(StandardCharsets.ISO_8859_1))))
+        assertThatThrownBy(() -> KindlingRelease.parse(in))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("sha256.kindling-cli-windows.exe");
     }
@@ -92,10 +92,10 @@ class KindlingReleaseTest {
                 sha256.kindling-cli-mac-intel=%s
                 sha256.kindling-cli-windows.exe=%s
                 """.formatted("1".repeat(64), "2".repeat(64), "3".repeat(64), "4".repeat(64));
+        ByteArrayInputStream in = new ByteArrayInputStream(props.getBytes(StandardCharsets.ISO_8859_1));
 
         // When / Then
-        assertThatThrownBy(() -> KindlingRelease.parse(
-                new ByteArrayInputStream(props.getBytes(StandardCharsets.ISO_8859_1))))
+        assertThatThrownBy(() -> KindlingRelease.parse(in))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("sha256.kindling-cli-linux");
     }

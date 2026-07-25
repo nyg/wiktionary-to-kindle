@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CLITest {
 
     @Test
-    void should_return_bundled_version_when_option_is_kindling_version() throws Exception {
+    void should_return_bundled_version_when_option_is_kindling_version() {
         // Given
         CLI.Generate.KindlingVersionDefault unit = new CLI.Generate.KindlingVersionDefault();
         CommandLine.Model.OptionSpec option = CommandLine.Model.OptionSpec.builder("--kindling-version").build();
@@ -25,7 +25,7 @@ class CLITest {
     }
 
     @Test
-    void should_return_null_when_option_is_not_kindling_version() throws Exception {
+    void should_return_null_when_option_is_not_kindling_version() {
         // Given
         CLI.Generate.KindlingVersionDefault unit = new CLI.Generate.KindlingVersionDefault();
         CommandLine.Model.OptionSpec option = CommandLine.Model.OptionSpec.builder("--other").build();
