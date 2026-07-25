@@ -12,6 +12,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.OptionalLong;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,15 @@ public class KaikkiDumpDownloader implements DumpDownloader {
 
     private static final String BASE_URL = "https://kaikki.org";
     private static final String DUMP_FILENAME = "raw-wiktextract-data.jsonl.gz";
+
+    /** Applies to the HEAD probe only — a metadata round-trip should be quick. */
+    private static final Duration HEAD_TIMEOUT = Duration.ofSeconds(30);
+
+    /**
+     * Upper bound for the body transfer. Dumps are multi-gigabyte, so this is
+     * deliberately generous: it exists only to stop a wedged connection hanging forever.
+     */
+    private static final Duration BODY_TIMEOUT = Duration.ofHours(6);
 
     private final String lang;
     private final HttpClient httpClient;
@@ -47,27 +57,28 @@ public class KaikkiDumpDownloader implements DumpDownloader {
         }
 
         String url = buildUrl(lang);
-        log.info("Downloading {} (checking headers...)", url);
+        log.info("Checking {}", url);
 
         Path partPath = dumpsDir.resolve("raw-wiktextract-data-" + lang + ".jsonl.gz.part");
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(Duration.ofSeconds(30))
-                .build();
 
         try {
-            HttpResponse<Path> response = httpClient.send(request, HttpResponse.BodyHandlers.ofFile(partPath));
-            if (response.statusCode() != 200) {
-                log.error("Download failed — HTTP {}", response.statusCode());
-                Files.deleteIfExists(partPath);
+            HttpResponse<Void> head = httpClient.send(headRequest(url), HttpResponse.BodyHandlers.discarding());
+            if (head.statusCode() != 200) {
+                log.error("Download failed — HTTP {}", head.statusCode());
                 return;
             }
 
-            String generatedDate = buildGeneratedDate(response.headers());
+            String generatedDate = buildGeneratedDate(head.headers());
             Path dumpPath = dumpsDir.resolve("raw-wiktextract-data-%s-%s.jsonl.gz".formatted(lang, generatedDate));
             if (Files.exists(dumpPath)) {
                 log.info("Dump already exists at {}. Delete it to re-download.", dumpPath);
-                Files.deleteIfExists(partPath);
+                return;
+            }
+
+            log.info("Downloading {} MB to {} (generated: {})", contentLengthMb(head.headers()), dumpPath, generatedDate);
+            HttpResponse<Path> response = httpClient.send(getRequest(url), HttpResponse.BodyHandlers.ofFile(partPath));
+            if (response.statusCode() != 200) {
+                log.error("Download failed — HTTP {}", response.statusCode());
                 return;
             }
 
@@ -85,6 +96,26 @@ public class KaikkiDumpDownloader implements DumpDownloader {
                 log.warn("Failed to delete partial file", e);
             }
         }
+    }
+
+    private static HttpRequest headRequest(String url) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                .timeout(HEAD_TIMEOUT)
+                .build();
+    }
+
+    private static HttpRequest getRequest(String url) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(BODY_TIMEOUT)
+                .build();
+    }
+
+    private static String contentLengthMb(HttpHeaders headers) {
+        OptionalLong length = headers.firstValueAsLong("content-length");
+        return length.isPresent() ? Long.toString(length.getAsLong() / (1024 * 1024)) : "?";
     }
 
     private String buildGeneratedDate(HttpHeaders headers) {
