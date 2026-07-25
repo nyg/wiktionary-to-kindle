@@ -81,8 +81,8 @@ On first run, `kindling-cli` is downloaded automatically from GitHub Releases an
 # Produces dictionaries/dictionary-el-en.mobi (plus .opf and .html side-artefacts)
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en
 
-# Pin a specific kindling release (default: v0.14.5)
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.14.5
+# Pin a specific kindling release (run `generate --help` to see the default)
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version vX.Y.Z
 
 # Use a pre-installed kindling-cli binary (skips download)
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli

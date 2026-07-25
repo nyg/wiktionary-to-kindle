@@ -74,9 +74,9 @@ public class KindlingDownloader {
     private String resolveDigest(String version,
                                  KindlingPlatform platform,
                                  String assetName) throws IOException, KindlingException {
-        if (version.equals(KindlingRelease.DEFAULT_VERSION)
-                && KindlingRelease.DEFAULT_ASSETS.containsKey(platform)) {
-            return KindlingRelease.DEFAULT_ASSETS.get(platform).sha256();
+        KindlingRelease release = KindlingRelease.load();
+        if (version.equals(release.version())) {
+            return release.digest(platform);
         }
         String json = fetcher.getString(URI.create("%s/%s".formatted(API_BASE, version)));
         return parseDigestFromJson(json, assetName, version);
