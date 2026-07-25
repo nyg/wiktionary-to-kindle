@@ -4,23 +4,23 @@ import java.util.Map;
 
 public final class KindlingRelease {
 
-    public static final String DEFAULT_VERSION = "v0.14.5";
+    public static final String DEFAULT_VERSION = "v0.28.0";
 
     public record Asset(String fileName, String sha256) {}
 
     public static final Map<KindlingPlatform, Asset> DEFAULT_ASSETS = Map.of(
             KindlingPlatform.LINUX_X64,
                 new Asset("kindling-cli-linux",
-                        "11369537b1d82bd835a06ffa940e8e75a5ee034e5eaee5d7ff4352c15b66f137"),
+                        "de9b13813100e246ab5681e4d82b78e6c6f4248337cee17ae38ff4165ef11266"),
             KindlingPlatform.MAC_APPLE_SILICON,
                 new Asset("kindling-cli-mac-apple-silicon",
-                        "ac15153df818e4fea2608627a5f5cb2ee59f762be02c535160a8b6871f29ea3c"),
+                        "889ea08dca2ebd5d39c39ac2a03f0e59351185a6229c170fca0a9689df9e0bfb"),
             KindlingPlatform.MAC_INTEL,
                 new Asset("kindling-cli-mac-intel",
-                        "a7d1657beacd30ec6016caf44b1738bad679783a06ef8dd6a08b9a961a9bc0c6"),
+                        "a22d6d76cea226bcfd724489d219b56d5fcf5989cf925bb726fb77961a1cc24e"),
             KindlingPlatform.WINDOWS_X64,
                 new Asset("kindling-cli-windows.exe",
-                        "dc06c1059682949eacc17d49c1ebb03c1b70a60ca8c2b8f0f508ba0fe622d62c"));
+                        "64d6a32b169ddc552c2695367ec3091848223f2c68c356a057a9d2cd2faedf79"));
 
     private KindlingRelease() {}
 }

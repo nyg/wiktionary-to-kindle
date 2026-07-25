@@ -40,7 +40,7 @@ class KindlingCliResolverTest {
         Path executable = Files.createFile(tmp.resolve("kindling-cli"));
         executable.toFile().setExecutable(true);
         KindlingCliResolver unit = new KindlingCliResolver(
-                "v0.14.5", Optional.of(executable), downloader, pathProbe, digestProvider);
+                "v0.28.0", Optional.of(executable), downloader, pathProbe, digestProvider);
 
         // When
         Path result = unit.resolve();
@@ -57,7 +57,7 @@ class KindlingCliResolverTest {
         executableOnPath.toFile().setExecutable(true);
         when(pathProbe.apply("kindling-cli")).thenReturn(Optional.of(executableOnPath));
         KindlingCliResolver unit = new KindlingCliResolver(
-                "v0.14.5", Optional.empty(), downloader, pathProbe, digestProvider);
+                "v0.28.0", Optional.empty(), downloader, pathProbe, digestProvider);
 
         // When
         Path result = unit.resolve();

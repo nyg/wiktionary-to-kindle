@@ -32,7 +32,7 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar download fr     # French edition
 # The latest dump matching DUMP_LANG in dumps/ is auto-discovered.
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate <DUMP_LANG> <WORD_LANG>
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en                        # auto-downloads kindling-cli on first run
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.14.5
+java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version v0.28.0
 java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 # gen is a short alias for generate
 
