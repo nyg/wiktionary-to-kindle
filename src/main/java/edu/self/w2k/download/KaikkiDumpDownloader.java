@@ -57,7 +57,7 @@ public class KaikkiDumpDownloader implements DumpDownloader {
         }
 
         String url = buildUrl(lang);
-        log.info("Checking {} (headers...)", url);
+        log.info("Checking {}", url);
 
         Path partPath = dumpsDir.resolve("raw-wiktextract-data-" + lang + ".jsonl.gz.part");
 
