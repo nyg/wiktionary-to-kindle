@@ -7,6 +7,7 @@ import java.util.Optional;
 import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionaryForm;
+import edu.self.w2k.model.WiktionaryFormOf;
 import edu.self.w2k.model.WiktionarySense;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,7 @@ class HtmlDefinitionRendererTest {
     void should_render_html_with_glosses_and_examples_when_senses_have_content() {
         // Given
         WiktionaryExample example = new WiktionaryExample("The apple fell from the tree.");
-        WiktionarySense sense = new WiktionarySense(List.of("A round fruit"), List.of(example));
+        WiktionarySense sense = new WiktionarySense(List.of("A round fruit"), List.of(example), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("apple", "en", "noun", List.of(sense), List.of());
 
         // When
@@ -44,8 +45,8 @@ class HtmlDefinitionRendererTest {
     @Test
     void should_return_empty_when_no_glosses_have_content() {
         // Given
-        WiktionarySense emptyGloss = new WiktionarySense(List.of("", "  "), List.of());
-        WiktionarySense nullGloss = new WiktionarySense(List.of(), List.of());
+        WiktionarySense emptyGloss = new WiktionarySense(List.of("", "  "), List.of(), List.of());
+        WiktionarySense nullGloss = new WiktionarySense(List.of(), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(emptyGloss, nullGloss), List.of());
 
         // When
@@ -58,7 +59,7 @@ class HtmlDefinitionRendererTest {
     @Test
     void should_escape_xml_and_replace_newlines_when_rendering() {
         // Given
-        WiktionarySense sense = new WiktionarySense(List.of("A & B\nC"), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("A & B\nC"), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of());
 
         // When
@@ -76,7 +77,7 @@ class HtmlDefinitionRendererTest {
     @Test
     void should_render_visible_forms_table_when_pos_is_noun() {
         // Given
-        WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of(), List.of());
         WiktionaryForm pluralNom = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
         WiktionaryForm singularGen = new WiktionaryForm("συντρόφου", List.of("singular", "genitive"), "του", null);
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun",
@@ -99,7 +100,7 @@ class HtmlDefinitionRendererTest {
     @Test
     void should_skip_visible_forms_table_when_pos_is_verb() {
         // Given
-        WiktionarySense sense = new WiktionarySense(List.of("Avoir."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Avoir."), List.of(), List.of());
         WiktionaryForm form = new WiktionaryForm("είχα", List.of("singular", "first-person"), null, null);
         WiktionaryEntry entry = new WiktionaryEntry("έχω", "el", "verb", List.of(sense), List.of(form));
 
@@ -121,7 +122,7 @@ class HtmlDefinitionRendererTest {
         for (int i = 0; i < 31; i++) {
             manyForms.add(new WiktionaryForm("form" + i, List.of("plural"), null, null));
         }
-        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "el", "noun", List.of(sense), manyForms);
 
         // When
@@ -138,7 +139,7 @@ class HtmlDefinitionRendererTest {
         // Given — the renderer is language-agnostic: it does not look at the kaikki `source`
         // field. Per-language cross-reference markers (e.g. fr `équiv-pour`) are handled
         // downstream by GenerateCommand via a headword-collision post-pass, not here.
-        WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnon."), List.of(), List.of());
         WiktionaryForm trueInflection = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
         WiktionaryForm equivPour = new WiktionaryForm("συντρόφισσα", List.of("feminine"),
                 null, "form line template 'équiv-pour'");
@@ -158,7 +159,7 @@ class HtmlDefinitionRendererTest {
     @Test
     void should_skip_visible_table_when_forms_empty() {
         // Given
-        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of());
 
         // When
@@ -173,7 +174,7 @@ class HtmlDefinitionRendererTest {
     @Test
     void should_dedupe_inflection_forms_preserving_order() {
         // Given (kaikki may list the same form twice with different tag combinations)
-        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryForm a = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
         WiktionaryForm b = new WiktionaryForm("σύντροφοι", List.of("plural", "vocative"), null, null);
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(sense), List.of(a, b));
@@ -196,7 +197,7 @@ class HtmlDefinitionRendererTest {
         // phrases, and pure-punctuation rows as standalone "forms". The renderer drops these
         // language-agnostic structural non-words from the iform index. Real single-token forms
         // (including common Greek articles like η, οι, των) are kept and indexed.
-        WiktionarySense sense = new WiktionarySense(List.of("Compagnonne."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Compagnonne."), List.of(), List.of());
         List<WiktionaryForm> forms = List.of(
                 new WiktionaryForm("η", List.of("singular", "nominative"), null, null),
                 new WiktionaryForm("των", List.of("plural", "genitive"), null, null),
@@ -216,9 +217,75 @@ class HtmlDefinitionRendererTest {
     }
 
     @Test
+    void should_collect_form_of_lemmas_when_all_senses_are_form_of() {
+        // Given
+        WiktionarySense dative = new WiktionarySense(List.of("Datif pluriel de suus."), List.of(),
+                List.of(new WiktionaryFormOf("suus")));
+        WiktionarySense ablative = new WiktionarySense(List.of("Ablatif pluriel de suus."), List.of(),
+                List.of(new WiktionaryFormOf("suus")));
+        WiktionaryEntry entry = new WiktionaryEntry("suis", "la", "adj", List.of(dative, ablative), List.of());
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().formOfLemmas()).containsExactly("suus");
+    }
+
+    @Test
+    void should_return_empty_form_of_lemmas_when_entry_has_independent_sense() {
+        // Given — one form-of sense and one sense with its own meaning: a mixed entry
+        WiktionarySense formOf = new WiktionarySense(List.of("Vocatif masculin singulier de rarus."), List.of(),
+                List.of(new WiktionaryFormOf("rarus")));
+        WiktionarySense independent = new WiktionarySense(List.of("Rare, peu commun."), List.of(), List.of());
+        WiktionaryEntry entry = new WiktionaryEntry("rare", "la", "adj", List.of(formOf, independent), List.of());
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — mixed entries stay regular headwords
+        assertThat(result).isPresent();
+        assertThat(result.get().formOfLemmas()).isEmpty();
+    }
+
+    @Test
+    void should_ignore_blank_lemma_words_and_collect_distinct_lemmas_when_form_of() {
+        // Given — two lemmas referenced, one twice, plus a blank reference on a sense that also
+        // carries a valid one
+        WiktionarySense first = new WiktionarySense(List.of("Génitif singulier de canis."), List.of(),
+                List.of(new WiktionaryFormOf("canis"), new WiktionaryFormOf("  ")));
+        WiktionarySense second = new WiktionarySense(List.of("Deuxième personne de cano."), List.of(),
+                List.of(new WiktionaryFormOf(" cano "), new WiktionaryFormOf("canis")));
+        WiktionaryEntry entry = new WiktionaryEntry("canis", "la", "verb", List.of(first, second), List.of());
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — lemma words are stripped and deduplicated
+        assertThat(result).isPresent();
+        assertThat(result.get().formOfLemmas()).containsExactly("canis", "cano");
+    }
+
+    @Test
+    void should_return_empty_form_of_lemmas_when_form_of_sense_has_only_blank_words() {
+        // Given — the only renderable sense references no usable lemma
+        WiktionarySense sense = new WiktionarySense(List.of("Some form gloss."), List.of(),
+                List.of(new WiktionaryFormOf(""), new WiktionaryFormOf(null)));
+        WiktionaryEntry entry = new WiktionaryEntry("x", "la", "noun", List.of(sense), List.of());
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then — treated as an independent sense: the entry stays a regular headword
+        assertThat(result).isPresent();
+        assertThat(result.get().formOfLemmas()).isEmpty();
+    }
+
+    @Test
     void should_xml_escape_form_article_and_tag_in_visible_table() {
         // Given
-        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of());
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryForm form = new WiktionaryForm("a&b", List.of("custom<tag>"), "<art>", null);
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of(form));
 

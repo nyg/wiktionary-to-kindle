@@ -48,7 +48,7 @@ class GenerateCommandTest {
         WiktionaryEntry entry2 = new WiktionaryEntry("apple", "el", "noun", List.of(), List.of());
         WiktionaryEntry entry3 = new WiktionaryEntry("banana", "el", "noun", List.of(), List.of());
         when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry1, entry2, entry3));
-        when(renderer.render(any())).thenReturn(Optional.of(new RenderedEntry("<def>", List.of())));
+        when(renderer.render(any())).thenReturn(Optional.of(new RenderedEntry("<def>", List.of(), List.of())));
 
         // When
         unit.run();
@@ -69,7 +69,7 @@ class GenerateCommandTest {
         WiktionaryEntry entry2 = new WiktionaryEntry("banana", "el", "noun", List.of(), List.of());
         when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry1, entry2));
         when(renderer.render(any()))
-                .thenReturn(Optional.of(new RenderedEntry("<def>", List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>", List.of(), List.of())))
                 .thenReturn(Optional.empty());
 
         // When
@@ -88,7 +88,7 @@ class GenerateCommandTest {
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(), List.of());
         when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(entry));
         when(renderer.render(any()))
-                .thenReturn(Optional.of(new RenderedEntry("<def>", List.of("σύντροφοι", "συντρόφου"))));
+                .thenReturn(Optional.of(new RenderedEntry("<def>", List.of("σύντροφοι", "συντρόφου"), List.of())));
 
         // When
         unit.run();
@@ -111,8 +111,8 @@ class GenerateCommandTest {
         when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(lemma, equiv));
         when(renderer.render(any()))
                 .thenReturn(Optional.of(new RenderedEntry("<def>σύντροφος body mentions συντρόφισσα</def>",
-                        List.of("σύντροφοι", "συντρόφισσα"))))
-                .thenReturn(Optional.of(new RenderedEntry("<def>συντρόφισσα body</def>", List.of())));
+                        List.of("σύντροφοι", "συντρόφισσα"), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>συντρόφισσα body</def>", List.of(), List.of())));
 
         // When
         unit.run();
@@ -139,8 +139,8 @@ class GenerateCommandTest {
         when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(lemma, feminine));
         when(renderer.render(any()))
                 .thenReturn(Optional.of(new RenderedEntry("<def/>",
-                        List.of("ingénieurs", "ingénieure"))))
-                .thenReturn(Optional.of(new RenderedEntry("<def/>", List.of())));
+                        List.of("ingénieurs", "ingénieure"), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def/>", List.of(), List.of())));
 
         // When
         unit.run();
@@ -151,6 +151,189 @@ class GenerateCommandTest {
         verify(writer).write(captor.capture(), eq("fr"), eq("en"), eq("Test Title"), eq(tmp));
         LexiconEntry lex = captor.getValue().get("ingénieur").getFirst();
         assertThat(lex.inflectionForms()).containsExactly("ingénieurs");
+    }
+
+    @Test
+    void should_fold_form_of_entry_into_lemma_iforms_when_lemma_exists() throws Exception {
+        // Given — "suis" is a form-of-only entry pointing at lemma "suus"
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry lemma = new WiktionaryEntry("suus", "la", "adj", List.of(), List.of());
+        WiktionaryEntry formOf = new WiktionaryEntry("suis", "la", "adj", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(lemma, formOf));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>suus</def>", List.of("sua", "suum"), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Datif pluriel de suus.</def>", List.of(), List.of("suus"))));
+
+        // When
+        unit.run();
+
+        // Then — standalone "suis" headword is gone; its word became an iform on the lemma
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured).containsOnlyKeys("suus");
+        assertThat(captured.get("suus").getFirst().inflectionForms()).containsExactly("sua", "suum", "suis");
+    }
+
+    @Test
+    void should_keep_form_of_entry_when_lemma_is_absent() throws Exception {
+        // Given — the referenced lemma has no entry in the dictionary
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry formOf = new WiktionaryEntry("petit", "la", "verb", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(formOf));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de petere.</def>", List.of(), List.of("petere"))));
+
+        // When
+        unit.run();
+
+        // Then — a dead-end entry is better than nothing
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        assertThat(captor.getValue()).containsOnlyKeys("petit");
+    }
+
+    @Test
+    void should_keep_form_of_entry_when_lemma_group_is_itself_form_of_only() throws Exception {
+        // Given — a chain: "b" is a form of "a", but "a" is itself only a form of a missing lemma
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry intermediate = new WiktionaryEntry("a", "la", "verb", List.of(), List.of());
+        WiktionaryEntry formOf = new WiktionaryEntry("b", "la", "verb", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(intermediate, formOf));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de missing.</def>", List.of(), List.of("missing"))))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de a.</def>", List.of(), List.of("a"))));
+
+        // When
+        unit.run();
+
+        // Then — neither entry is folded; both keep their dead-end definitions
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        assertThat(captor.getValue()).containsOnlyKeys("a", "b");
+    }
+
+    @Test
+    void should_keep_all_entries_when_word_group_mixes_real_and_form_of() throws Exception {
+        // Given — "page" is both a real Latin noun and (as a separate entry) a form of "pagus";
+        // the lemma "pagus" also exists. Folding is all-or-nothing per key: since the real noun
+        // keeps the headword (which shadows the iform index anyway), folding the form-of sibling
+        // would gain nothing and silently delete its definition.
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry realNoun = new WiktionaryEntry("page", "la", "noun", List.of(), List.of());
+        WiktionaryEntry formOf = new WiktionaryEntry("page", "la", "noun", List.of(), List.of());
+        WiktionaryEntry lemma = new WiktionaryEntry("pagus", "la", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(realNoun, formOf, lemma));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Une page.</def>", List.of(), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Vocatif de pagus.</def>", List.of(), List.of("pagus"))))
+                .thenReturn(Optional.of(new RenderedEntry("<def>pagus</def>", List.of(), List.of())));
+
+        // When
+        unit.run();
+
+        // Then — both "page" entries survive (their definitions are combined by the writer);
+        // no iform is registered on the lemma
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured).containsOnlyKeys("page", "pagus");
+        assertThat(captured.get("page"))
+                .extracting(LexiconEntry::definition)
+                .containsExactly("<def>Une page.</def>", "<def>Vocatif de pagus.</def>");
+        assertThat(captured.get("pagus").getFirst().inflectionForms()).isEmpty();
+    }
+
+    @Test
+    void should_register_iform_on_every_lemma_when_form_references_two_words() throws Exception {
+        // Given — "mari" is dative/ablative of both "mare" (sea) and "mas" (male)
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry sea = new WiktionaryEntry("mare", "la", "noun", List.of(), List.of());
+        WiktionaryEntry male = new WiktionaryEntry("mas", "la", "noun", List.of(), List.of());
+        WiktionaryEntry formOf = new WiktionaryEntry("mari", "la", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(sea, male, formOf));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>mer</def>", List.of(), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>mâle</def>", List.of(), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Datif de mare ou mas.</def>", List.of(), List.of("mare", "mas"))));
+
+        // When
+        unit.run();
+
+        // Then — the form-of entry is folded and its word indexed on both lemmas
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured).containsOnlyKeys("mare", "mas");
+        assertThat(captured.get("mare").getFirst().inflectionForms()).containsExactly("mari");
+        assertThat(captured.get("mas").getFirst().inflectionForms()).containsExactly("mari");
+    }
+
+    @Test
+    void should_keep_whole_group_when_one_form_of_entry_has_no_resolvable_lemma() throws Exception {
+        // Given — two form-of entries share the key "b": one points at existing lemma "a", the
+        // other at a lemma missing from the dictionary. All-or-nothing: folding only the first
+        // would leave a "b" headword that shadows the iform while deleting the first definition.
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry lemma = new WiktionaryEntry("a", "la", "noun", List.of(), List.of());
+        WiktionaryEntry resolvable = new WiktionaryEntry("b", "la", "noun", List.of(), List.of());
+        WiktionaryEntry unresolvable = new WiktionaryEntry("b", "la", "verb", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(lemma, resolvable, unresolvable));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>a</def>", List.of(), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de a.</def>", List.of(), List.of("a"))))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de missing.</def>", List.of(), List.of("missing"))));
+
+        // When
+        unit.run();
+
+        // Then — the whole "b" group survives and no iform is registered on "a"
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured).containsOnlyKeys("a", "b");
+        assertThat(captured.get("b")).hasSize(2);
+        assertThat(captured.get("a").getFirst().inflectionForms()).isEmpty();
+    }
+
+    @Test
+    void should_keep_form_of_entry_when_it_only_references_itself() throws Exception {
+        // Given — a form-of entry whose lemma normalises to its own key (e.g. case difference)
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry selfRef = new WiktionaryEntry("Roma", "la", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(selfRef));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de roma.</def>", List.of(), List.of("roma"))));
+
+        // When
+        unit.run();
+
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        assertThat(captor.getValue()).containsOnlyKeys("roma");
+    }
+
+    @Test
+    void should_keep_form_of_entry_when_its_word_is_not_a_usable_lookup_key() throws Exception {
+        // Given — a multi-word form-of entry cannot enter the iform index
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "fr", "la", "Test Title");
+        WiktionaryEntry lemma = new WiktionaryEntry("res", "la", "noun", List.of(), List.of());
+        WiktionaryEntry multiWord = new WiktionaryEntry("res publica", "la", "noun", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("fr"))).thenReturn(Stream.of(lemma, multiWord));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>res</def>", List.of(), List.of())))
+                .thenReturn(Optional.of(new RenderedEntry("<def>Forme de res.</def>", List.of(), List.of("res"))));
+
+        // When
+        unit.run();
+
+        // Then — kept as its own entry; no iform added to the lemma
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("fr"), eq("la"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured).containsOnlyKeys("res", "res publica");
+        assertThat(captured.get("res").getFirst().inflectionForms()).isEmpty();
     }
 
     @Test

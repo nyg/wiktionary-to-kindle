@@ -4,4 +4,5 @@ import java.util.List;
 
 public record LexiconEntry(String word,
                            String definition,
-                           List<String> inflectionForms) {}
+                           List<String> inflectionForms,
+                           List<String> formOfLemmas) {}

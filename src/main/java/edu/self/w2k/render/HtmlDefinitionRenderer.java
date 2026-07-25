@@ -11,6 +11,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionaryForm;
+import edu.self.w2k.model.WiktionaryFormOf;
 import edu.self.w2k.model.WiktionarySense;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,7 +35,57 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
             appendFormsTable(sb, filtered);
         }
 
-        return Optional.of(new RenderedEntry(sb.toString(), inflectionForms));
+        return Optional.of(new RenderedEntry(sb.toString(), inflectionForms, collectFormOfLemmas(entry.senses())));
+    }
+
+    /**
+     * Returns the distinct lemma words this entry is an inflection of, but only when the entry is
+     * "form-of-only", i.e. every sense with a renderable gloss carries a {@code form_of} reference.
+     * Mixed entries (at least one sense with an independent meaning) return an empty list so they
+     * are kept as regular headwords.
+     */
+    private static List<String> collectFormOfLemmas(List<WiktionarySense> senses) {
+        Set<String> lemmas = new LinkedHashSet<>();
+        boolean hasRenderableSense = false;
+
+        for (WiktionarySense sense : senses) {
+            if (sense == null || !hasRenderableGloss(sense)) {
+                continue;
+            }
+            hasRenderableSense = true;
+
+            List<String> senseLemmas = lemmaWords(sense.formOf());
+            if (senseLemmas.isEmpty()) {
+                // a sense with its own meaning — not a form-of-only entry
+                return List.of();
+            }
+            lemmas.addAll(senseLemmas);
+        }
+
+        return hasRenderableSense ? List.copyOf(lemmas) : List.of();
+    }
+
+    private static List<String> lemmaWords(List<WiktionaryFormOf> formOf) {
+        if (formOf == null || formOf.isEmpty()) {
+            return List.of();
+        }
+        List<String> words = new ArrayList<>(formOf.size());
+        for (WiktionaryFormOf ref : formOf) {
+            String word = ref == null ? null : ref.word();
+            if (word != null && !word.isBlank()) {
+                words.add(word.strip());
+            }
+        }
+        return words;
+    }
+
+    private static boolean hasRenderableGloss(WiktionarySense sense) {
+        for (String gloss : sense.glosses()) {
+            if (gloss != null && !gloss.isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean appendDefinitions(StringBuilder sb, List<WiktionarySense> senses) {
@@ -120,7 +171,7 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         return List.copyOf(seen);
     }
 
-    private static boolean isUsableLookupKey(String text) {
+    public static boolean isUsableLookupKey(String text) {
         if (text.isEmpty()) {
             return false;
         }

@@ -18,8 +18,8 @@ class HtmlChapterRendererTest {
     void should_render_kindle_idx_entries_when_called() {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
-                Map.entry("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>", List.of()))),
-                Map.entry("banana", List.of(new LexiconEntry("banana", "<ol><li>tropical fruit</li></ol>", List.of())))
+                Map.entry("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>", List.of(), List.of()))),
+                Map.entry("banana", List.of(new LexiconEntry("banana", "<ol><li>tropical fruit</li></ol>", List.of(), List.of())))
         );
 
         // When
@@ -40,8 +40,8 @@ class HtmlChapterRendererTest {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("word", List.of(
-                        new LexiconEntry("word", "def1", List.of()),
-                        new LexiconEntry("word", "def2", List.of())
+                        new LexiconEntry("word", "def1", List.of(), List.of()),
+                        new LexiconEntry("word", "def2", List.of(), List.of())
                 ))
         );
 
@@ -60,7 +60,7 @@ class HtmlChapterRendererTest {
                 Map.entry("σύντροφος", List.of(new LexiconEntry(
                         "σύντροφος",
                         "<ol><li>Compagnon.</li></ol>",
-                        List.of("σύντροφοι", "συντρόφου", "συντρόφους"))))
+                        List.of("σύντροφοι", "συντρόφου", "συντρόφους"), List.of())))
         );
 
         // When
@@ -83,7 +83,7 @@ class HtmlChapterRendererTest {
     void should_omit_idx_infl_when_inflection_forms_empty() {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
-                Map.entry("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>", List.of())))
+                Map.entry("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>", List.of(), List.of())))
         );
 
         // When
@@ -98,7 +98,7 @@ class HtmlChapterRendererTest {
     void should_xml_escape_iform_values_when_emitting() {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
-                Map.entry("x", List.of(new LexiconEntry("x", "<ol><li>def</li></ol>", List.of("a&b", "<c>"))))
+                Map.entry("x", List.of(new LexiconEntry("x", "<ol><li>def</li></ol>", List.of("a&b", "<c>"), List.of())))
         );
 
         // When
@@ -116,8 +116,8 @@ class HtmlChapterRendererTest {
         // Given — two LexiconEntrys for the same headword with overlapping forms
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("apple", List.of(
-                        new LexiconEntry("apple", "def1", List.of("apples", "apple's")),
-                        new LexiconEntry("apple", "def2", List.of("apples", "appling"))
+                        new LexiconEntry("apple", "def1", List.of("apples", "apple's"), List.of()),
+                        new LexiconEntry("apple", "def2", List.of("apples", "appling"), List.of())
                 ))
         );
 
