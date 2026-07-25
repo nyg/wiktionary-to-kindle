@@ -53,7 +53,7 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar --version
 - **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (pinned version + per-platform digests), `XdgCachePaths`, `KindlingException`
 - **`edu.self.w2k.parse`** — `JsonlDictionaryParser`, `DictionaryParser` interface
 - **`edu.self.w2k.render`** — `HtmlDefinitionRenderer`, `DefinitionRenderer` interface
-- **`edu.self.w2k.model`** — `LexiconEntry` plus Jackson-annotated records: `WiktionaryEntry`, `WiktionarySense`, `WiktionaryExample`
+- **`edu.self.w2k.model`** — `LexiconEntry` plus Jackson-annotated records: `WiktionaryEntry`, `WiktionarySense`, `WiktionaryExample`, `WiktionaryForm`, `WiktionaryFormOf`
 
 ### Data Directories
 
@@ -70,9 +70,12 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar --version
 <ol><li><span>gloss</span><ul><li>example</li></ul></li>...</ol>
 ```
 
-Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; internal newlines are replaced with `"; "`. Entries with no renderable glosses (e.g. `form_of`-only) return `Optional.empty()` and are skipped.
+Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; internal newlines are replaced with `"; "`. Entries with no renderable glosses return `Optional.empty()` and are skipped. Entries whose renderable senses all carry a `form_of` reference (e.g. Latin *suis* → "Datif pluriel de suus.") are flagged as form-of-only via `RenderedEntry.formOfLemmas()`.
 
-`GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then passes the map to the `DictionaryWriter`.
+`GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then runs two post-passes before handing the map to the `DictionaryWriter`:
+
+1. `foldFormOfEntries()` — drops each form-of-only entry whose lemma exists in the map and registers the entry's word as an inflection form on the lemma instead. On Kindle an exact headword match shadows the `<idx:iform>` index, so this makes an inflected-form lookup resolve straight to the full lemma entry (issue #56). Entries whose lemma is absent (or whose word is unusable as a lookup key) are kept as-is.
+2. `filterFormsCollidingWithHeadwords()` — drops any inflection form whose normalised text still exists as a headword key.
 
 `HtmlChapterRenderer` builds one MobiPocket HTML document (≤ 10 000 entries per chunk) preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and `xmlns:mbp`/`xmlns:idx` namespace declarations.
 

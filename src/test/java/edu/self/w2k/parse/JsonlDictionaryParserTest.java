@@ -19,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.model.WiktionaryForm;
+import edu.self.w2k.model.WiktionaryFormOf;
+import edu.self.w2k.model.WiktionarySense;
 
 @ExtendWith(MockitoExtension.class)
 class JsonlDictionaryParserTest {
@@ -97,6 +99,52 @@ class JsonlDictionaryParserTest {
         assertThat(entry.forms().get(0).tags()).containsExactly("plural", "nominative");
         assertThat(entry.forms().get(0).article()).isEqualTo("οι");
         assertThat(entry.forms().get(2).source()).contains("équiv-pour");
+    }
+
+    @Test
+    void should_deserialise_form_of_when_sense_is_an_inflection() throws Exception {
+        // Given
+        String jsonl = """
+                {"word":"suis","lang_code":"la","pos":"adj","senses":[\
+                {"glosses":["Datif pluriel de suus."],"form_of":[{"word":"suus"}],"tags":["form-of"]},\
+                {"glosses":["Ablatif pluriel de suus."],"form_of":[{"word":"suus"}],"tags":["form-of"]}]}
+                """;
+        Path dump = writeGzippedJsonl(jsonl);
+
+        // When
+        List<WiktionaryEntry> result;
+        try (Stream<WiktionaryEntry> stream = unit.parse(dump, "la")) {
+            result = stream.toList();
+        }
+
+        // Then
+        assertThat(result).hasSize(1);
+        WiktionaryEntry entry = result.getFirst();
+        assertThat(entry.senses())
+                .hasSize(2)
+                .allSatisfy(sense -> assertThat(sense.formOf())
+                        .extracting(WiktionaryFormOf::word)
+                        .containsExactly("suus"));
+    }
+
+    @Test
+    void should_default_form_of_to_empty_when_field_missing() throws Exception {
+        // Given
+        String jsonl = """
+                {"word":"suus","lang_code":"la","pos":"adj","senses":[{"glosses":["Son, sa."]}]}
+                """;
+        Path dump = writeGzippedJsonl(jsonl);
+
+        // When
+        List<WiktionaryEntry> result;
+        try (Stream<WiktionaryEntry> stream = unit.parse(dump, "la")) {
+            result = stream.toList();
+        }
+
+        // Then
+        assertThat(result).hasSize(1);
+        WiktionarySense sense = result.getFirst().senses().getFirst();
+        assertThat(sense.formOf()).isEmpty();
     }
 
     @Test
