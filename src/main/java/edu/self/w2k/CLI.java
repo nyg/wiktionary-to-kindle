@@ -7,6 +7,7 @@ import java.util.concurrent.Callable;
 
 import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
+import edu.self.w2k.config.AppVersion;
 import edu.self.w2k.download.KaikkiDumpDownloader;
 import edu.self.w2k.dump.DumpCatalog;
 import edu.self.w2k.kindling.KindlingCliResolver;
@@ -29,13 +30,25 @@ import picocli.CommandLine.Spec;
 @Slf4j
 @Command(name = "wiktionary-to-kindle",
          mixinStandardHelpOptions = true,
-         version = "1.0.0",
+         versionProvider = CLI.BuildVersion.class,
          description = "Converts Wiktionary data into Kindle-compatible dictionaries.",
          subcommands = {CLI.Download.class, CLI.Generate.class, CommandLine.HelpCommand.class})
 public class CLI implements Callable<Integer> {
 
     static final Path DICTIONARIES_DIR = Path.of("dictionaries");
     static final Path DUMPS_DIR = Path.of("dumps");
+
+    /**
+     * Reports the version Maven filtered into the build, rather than a literal in this annotation
+     * that would keep saying 1.0.0 after every release.
+     */
+    static class BuildVersion implements CommandLine.IVersionProvider {
+
+        @Override
+        public String[] getVersion() {
+            return new String[] {"wiktionary-to-kindle " + AppVersion.get()};
+        }
+    }
 
     @Spec
     CommandSpec spec;

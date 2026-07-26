@@ -9,6 +9,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.core.FileAppender;
 import edu.self.w2k.config.AppPaths;
+import edu.self.w2k.config.AppVersion;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -37,7 +38,7 @@ public class App extends Application {
         Scene scene = new Scene(loader.load());
         scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
 
-        stage.setTitle("Wiktionary to Kindle");
+        stage.setTitle("Wiktionary to Kindle " + AppVersion.get());
         stage.setScene(scene);
         stage.setMinWidth(720);
         stage.setMinHeight(560);
@@ -46,7 +47,8 @@ public class App extends Application {
 
         // Logged after the appenders are installed, so both the console pane and the log file always
         // open with the environment details a bug report needs.
-        log.info("wiktionary-to-kindle started — Java {}, {} {}, max heap {} MB",
+        log.info("wiktionary-to-kindle {} started — Java {}, {} {}, max heap {} MB",
+                 AppVersion.get(),
                  Runtime.version(),
                  System.getProperty("os.name"),
                  System.getProperty("os.arch"),
