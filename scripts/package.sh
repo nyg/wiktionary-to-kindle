@@ -78,8 +78,8 @@ detect_default_type() {
 readonly PACKAGE_TYPE="${1:-$(detect_default_type)}"
 
 case "$(uname -s)" in
-  MINGW* | MSYS* | CYGWIN*) readonly CLASSPATH_SEPARATOR=";" ;;
-  *) readonly CLASSPATH_SEPARATOR=":" ;;
+  MINGW* | MSYS* | CYGWIN*) readonly PATH_SEPARATOR=";" ;;
+  *) readonly PATH_SEPARATOR=":" ;;
 esac
 
 resolve_java_home() {
@@ -157,7 +157,7 @@ build_runtime() {
 
   log "jlink: building runtime image"
   "$java_home/bin/jlink" \
-    --module-path "$java_home/jmods:$JAVAFX_MODS_DIR" \
+    --module-path "$java_home/jmods$PATH_SEPARATOR$JAVAFX_MODS_DIR" \
     --add-modules "$JDK_MODULES,$JAVAFX_MODULES" \
     --strip-debug \
     --no-header-files \
@@ -218,7 +218,7 @@ JAVA
 
   "$RUNTIME_DIR/bin/java" \
     --add-modules "$JAVAFX_MODULES" \
-    -cp "$classes$CLASSPATH_SEPARATOR$(find_app_jar)" \
+    -cp "$classes$PATH_SEPARATOR$(find_app_jar)" \
     RuntimeProbe || die "runtime image is incomplete — see the failure above"
 }
 

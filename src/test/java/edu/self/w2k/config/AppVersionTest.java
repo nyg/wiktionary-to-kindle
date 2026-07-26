@@ -38,4 +38,24 @@ class AppVersionTest {
         // When / Then
         assertThat(AppVersion.sanitise("  2.0.0  ")).isEqualTo("2.0.0");
     }
+
+    @Test
+    void should_fall_back_when_the_resource_is_absent() {
+        // When / Then
+        assertThat(AppVersion.load("/no-such-resource.properties")).isEqualTo(AppVersion.UNKNOWN);
+    }
+
+    @Test
+    void should_fall_back_rather_than_fail_class_init_when_properties_are_malformed() {
+        // Given a truncated unicode escape, which Properties.load rejects with
+        // IllegalArgumentException. Letting that escape would fail AppVersion's static initialiser
+        // and turn a cosmetic version lookup into an ExceptionInInitializerError at startup.
+        assertThat(AppVersion.load("/malformed-version.properties")).isEqualTo(AppVersion.UNKNOWN);
+    }
+
+    @Test
+    void should_fall_back_when_the_resource_holds_no_version_key() {
+        // Given binary content, which parses into entries without a usable version key
+        assertThat(AppVersion.load("/edu/self/w2k/gui/icon.png")).isEqualTo(AppVersion.UNKNOWN);
+    }
 }
