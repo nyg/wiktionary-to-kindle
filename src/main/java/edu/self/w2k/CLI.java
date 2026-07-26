@@ -10,6 +10,7 @@ import java.util.concurrent.Callable;
 import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
 import edu.self.w2k.download.KaikkiDumpDownloader;
+import edu.self.w2k.dump.DumpCatalog;
 import edu.self.w2k.kindling.KindlingCliResolver;
 import edu.self.w2k.kindling.KindlingDictionaryConverter;
 import edu.self.w2k.kindling.KindlingDownloader;
@@ -46,20 +47,7 @@ public class CLI implements Callable<Integer> {
     }
 
     static Optional<Path> findLatestDump(String lang) {
-        String prefix = "raw-wiktextract-data-" + lang + "-";
-        String suffix = ".jsonl.gz";
-        Path latest = null;
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(DUMPS_DIR, prefix + "*" + suffix)) {
-            for (Path path : stream) {
-                if (latest == null || path.getFileName().toString()
-                        .compareTo(latest.getFileName().toString()) > 0) {
-                    latest = path;
-                }
-            }
-        } catch (Exception _) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(latest);
+        return new DumpCatalog(DUMPS_DIR).latestFor(lang);
     }
 
     @Override
