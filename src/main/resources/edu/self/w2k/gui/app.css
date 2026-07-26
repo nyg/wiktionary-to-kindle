@@ -1,0 +1,46 @@
+/* Styling for the wiktionary-to-kindle desktop app. */
+
+.root {
+    -fx-font-family: -apple-system, "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13px;
+}
+
+.section-label {
+    -fx-font-weight: bold;
+    -fx-opacity: 0.75;
+}
+
+.title-preview {
+    -fx-font-weight: bold;
+}
+
+.status-label {
+    -fx-opacity: 0.8;
+}
+
+.path-label {
+    -fx-opacity: 0.6;
+    -fx-font-size: 11px;
+}
+
+.warning-label {
+    -fx-text-fill: #b06000;
+}
+
+/* The console is read as a stream of timestamped lines, so it needs a monospaced grid. */
+.log-view {
+    -fx-font-family: "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    -fx-font-size: 11.5px;
+}
+
+.log-view .list-cell {
+    -fx-padding: 1 6 1 6;
+}
+
+.log-view .list-cell:filled:selected {
+    -fx-background-color: -fx-selection-bar;
+}
+
+.progress-bar {
+    -fx-pref-height: 14px;
+}

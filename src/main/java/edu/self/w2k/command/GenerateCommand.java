@@ -61,6 +61,14 @@ public class GenerateCommand implements Command {
 
     @Override
     public void run() throws IOException {
+        execute();
+    }
+
+    /**
+     * Same work as {@link #run()}, but returns the generated dictionary. The GUI offers to reveal the
+     * result on disk, so it needs the path rather than reconstructing the writer's naming scheme.
+     */
+    public Path execute() throws IOException {
         log.info("Using dump: {}", dumpFile);
         TreeMap<String, List<LexiconEntry>> grouped = new TreeMap<>();
         AtomicLong count = new AtomicLong();
@@ -93,7 +101,7 @@ public class GenerateCommand implements Command {
         foldFormOfEntries(grouped);
         filterFormsCollidingWithHeadwords(grouped);
 
-        writer.write(grouped, srcLang, trgLang, title, outputDir);
+        return writer.write(grouped, srcLang, trgLang, title, outputDir);
     }
 
     /**

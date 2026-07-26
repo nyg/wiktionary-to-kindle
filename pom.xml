@@ -13,6 +13,12 @@
         <!-- Third-party -->
         <commons-text.version>1.15.0</commons-text.version>
         <jackson-databind.version>2.22.0</jackson-databind.version>
+        <!--
+            Kept on the 25.x line to match maven.compiler.release and the JDK used in CI.
+            Maven resolves a platform-classified native artifact for the build host, which is why
+            org.openjfx is excluded from the shaded CLI JAR below.
+        -->
+        <javafx.version>25.0.4</javafx.version>
         <logback-classic.version>1.5.37</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
         <picocli.version>4.7.7</picocli.version>
@@ -28,12 +34,30 @@
         <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+        <javafx-maven-plugin.version>0.0.8</javafx-maven-plugin.version>
 
         <!-- SonarCloud -->
         <sonar.organization>nyg</sonar.organization>
         <sonar.projectKey>nyg_wiktionary-to-kindle</sonar.projectKey>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <!--
+            Excluded from coverage measurement, not from analysis: these are JavaFX view and bootstrap
+            classes whose bodies are scene-graph construction and property binding. Reaching them
+            needs a running toolkit, and OpenJFX publishes no Monocle artifacts for this release line,
+            so they cannot be covered headlessly.
+
+            They are kept deliberately thin so little logic hides here — anything worth asserting
+            lives in MainViewModel, ProgressSnapshot, DictionaryPipeline, ByteSizes, LanguageConverter
+            and UiLogAppender, which are all covered. MainFxmlLoadTest additionally loads main.fxml
+            under Xvfb in CI and checks every @FXML field is injected.
+        -->
+        <sonar.coverage.exclusions>
+            src/main/java/edu/self/w2k/gui/App.java,
+            src/main/java/edu/self/w2k/gui/Launcher.java,
+            src/main/java/edu/self/w2k/gui/MainController.java,
+            src/main/java/edu/self/w2k/gui/PreferencesDialog.java
+        </sonar.coverage.exclusions>
     </properties>
 
     <dependencies>
@@ -58,16 +82,30 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j-api.version}</version>
         </dependency>
+        <!--
+            Compile scope, not runtime: the GUI's UiLogAppender extends logback's AppenderBase to
+            feed the console pane, so the API is needed at compile time. Application code still logs
+            through the SLF4J facade only.
+        -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${logback-classic.version}</version>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -141,6 +179,18 @@
                 <version>${maven-shade-plugin.version}</version>
                 <configuration>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <!--
+                        The shaded JAR is the cross-platform CLI artifact. JavaFX resolves to a
+                        native, platform-classified artifact, so bundling it would silently tie this
+                        JAR to whichever OS built it. The CLI entry point never touches JavaFX, so
+                        excluding it here keeps one JAR usable everywhere; the GUI ships as a
+                        jpackage bundle with JavaFX in its runtime image instead.
+                    -->
+                    <artifactSet>
+                        <excludes>
+                            <exclude>org.openjfx:*</exclude>
+                        </excludes>
+                    </artifactSet>
                 </configuration>
                 <executions>
                     <execution>
@@ -150,6 +200,16 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- Runs the GUI during development: mvn javafx:run -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>${javafx-maven-plugin.version}</version>
+                <configuration>
+                    <mainClass>edu.self.w2k.gui.Launcher</mainClass>
+                </configuration>
             </plugin>
 
             <!-- Needed for code coverage analysis with SonarCloud. -->

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+    fx:controller declares the type; App installs a controllerFactory that constructs it with the log
+    appender. The declaration is required even with a factory — FXMLLoader only consults the factory
+    once it knows which controller class to ask for.
+-->
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="edu.self.w2k.gui.MainController">
+
+    <top>
+        <MenuBar>
+            <menus>
+                <Menu text="File">
+                    <items>
+                        <MenuItem text="Preferences…" accelerator="Shortcut+COMMA" onAction="#onPreferences"/>
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+
+    <center>
+        <TabPane tabClosingPolicy="UNAVAILABLE">
+            <tabs>
+
+                <Tab text="Build">
+                    <content>
+                        <VBox spacing="12">
+                            <padding>
+                                <Insets top="14" right="14" bottom="14" left="14"/>
+                            </padding>
+
+                            <GridPane hgap="10" vgap="10">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="130"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+
+                                <Label text="Wiktionary edition" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                                <ComboBox fx:id="editionCombo" maxWidth="Infinity"
+                                          GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                                <Label text="Word language" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                                <ComboBox fx:id="wordLanguageCombo" maxWidth="Infinity"
+                                          GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                <Label text="Dictionary title" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                                <Label fx:id="titlePreview" styleClass="title-preview"
+                                       GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                            </GridPane>
+
+                            <HBox spacing="8">
+                                <Button fx:id="startButton" text="Build dictionary"
+                                        defaultButton="true" onAction="#onStart"/>
+                                <Button fx:id="cancelButton" text="Cancel" onAction="#onCancel"/>
+                                <Button fx:id="revealButton" text="Show in folder" onAction="#onReveal"/>
+                            </HBox>
+
+                            <Separator/>
+
+                            <VBox spacing="6">
+                                <ProgressBar fx:id="progressBar" progress="0" maxWidth="Infinity"/>
+                                <Label fx:id="statusLabel" styleClass="status-label"/>
+                            </VBox>
+
+                            <Label text="Log" styleClass="section-label"/>
+                            <ListView fx:id="logView" styleClass="log-view" VBox.vgrow="ALWAYS"/>
+                        </VBox>
+                    </content>
+                </Tab>
+
+                <Tab text="Dumps">
+                    <content>
+                        <VBox spacing="10">
+                            <padding>
+                                <Insets top="14" right="14" bottom="14" left="14"/>
+                            </padding>
+
+                            <TableView fx:id="dumpsTable" VBox.vgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="dumpLangColumn" text="Edition" prefWidth="110"/>
+                                    <TableColumn fx:id="dumpDateColumn" text="Generated" prefWidth="140"/>
+                                    <TableColumn fx:id="dumpSizeColumn" text="Size" prefWidth="100"/>
+                                </columns>
+                            </TableView>
+
+                            <HBox spacing="8">
+                                <Button text="Refresh" onAction="#onRefreshDumps"/>
+                                <Button fx:id="deleteDumpButton" text="Delete" onAction="#onDeleteDump"/>
+                            </HBox>
+
+                            <Label fx:id="dumpsLocationLabel" styleClass="path-label"/>
+                        </VBox>
+                    </content>
+                </Tab>
+
+            </tabs>
+        </TabPane>
+    </center>
+
+</BorderPane>
