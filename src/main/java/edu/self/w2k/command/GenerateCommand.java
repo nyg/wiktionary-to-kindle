@@ -1,6 +1,8 @@
 package edu.self.w2k.command;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,14 +20,14 @@ import java.util.stream.Stream;
 
 import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.parse.DictionaryParser;
+import edu.self.w2k.progress.ProgressListener;
+import edu.self.w2k.progress.ProgressListener.Stage;
 import edu.self.w2k.render.DefinitionRenderer;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import edu.self.w2k.write.DictionaryWriter;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 public class GenerateCommand implements Command {
 
     private final DictionaryParser parser;
@@ -36,6 +38,26 @@ public class GenerateCommand implements Command {
     private final String srcLang;
     private final String trgLang;
     private final String title;
+    private final ProgressListener progress;
+
+    public GenerateCommand(DictionaryParser parser, DefinitionRenderer renderer, DictionaryWriter writer,
+                           Path dumpFile, Path outputDir, String srcLang, String trgLang, String title) {
+        this(parser, renderer, writer, dumpFile, outputDir, srcLang, trgLang, title, ProgressListener.NOOP);
+    }
+
+    public GenerateCommand(DictionaryParser parser, DefinitionRenderer renderer, DictionaryWriter writer,
+                           Path dumpFile, Path outputDir, String srcLang, String trgLang, String title,
+                           ProgressListener progress) {
+        this.parser = parser;
+        this.renderer = renderer;
+        this.writer = writer;
+        this.dumpFile = dumpFile;
+        this.outputDir = outputDir;
+        this.srcLang = srcLang;
+        this.trgLang = trgLang;
+        this.title = title;
+        this.progress = progress;
+    }
 
     @Override
     public void run() throws IOException {
@@ -48,6 +70,12 @@ public class GenerateCommand implements Command {
                         .map(r -> new LexiconEntry(e.word(), r.html(), r.inflectionForms(), r.formOfLemmas()))
                         .stream())) {
             stream.forEach(e -> {
+                // The only cancellation point in the pipeline's longest stage: a multi-gigabyte dump
+                // takes tens of minutes to stream, and the GUI's cancel interrupts this thread.
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new UncheckedIOException(
+                            new InterruptedIOException("Generation cancelled after %d entries".formatted(count.get())));
+                }
                 String key = normaliseKey(e.word());
                 if (!key.isEmpty()) {
                     grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(e);
@@ -55,9 +83,13 @@ public class GenerateCommand implements Command {
                 }
             });
         }
+        catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
 
         log.info("Done. {} entries grouped into {} unique keys for srcLang={}, trgLang={}", count.get(), grouped.size(), srcLang, trgLang);
 
+        progress.onProgress(Stage.FOLD, 0, ProgressListener.TOTAL_UNKNOWN);
         foldFormOfEntries(grouped);
         filterFormsCollidingWithHeadwords(grouped);
 

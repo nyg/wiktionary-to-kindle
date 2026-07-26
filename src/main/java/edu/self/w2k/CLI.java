@@ -1,5 +1,6 @@
 package edu.self.w2k;
 
+import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -81,8 +82,14 @@ public class CLI implements Callable<Integer> {
 
         @Override
         public Integer call() {
-            new DownloadCommand(new KaikkiDumpDownloader(lang)).run();
-            return 0;
+            try {
+                new DownloadCommand(new KaikkiDumpDownloader(lang)).run();
+                return 0;
+            }
+            catch (IOException e) {
+                log.error("Download failed: {}", e.getLocalizedMessage());
+                return 1;
+            }
         }
     }
 
