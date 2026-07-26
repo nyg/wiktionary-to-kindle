@@ -28,7 +28,13 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - run: mvn --no-transfer-progress verify
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      # The GUI's FXML load test needs a graphics toolkit, and OpenJFX publishes no Monocle
+      # artifacts for this release line, so a virtual display is how it gets exercised here. The
+      # test self-skips if the toolkit cannot start, so this never hard-fails the build.
+      - run: xvfb-run -a mvn --no-transfer-progress verify
 
       - run: mvn --no-transfer-progress sonar:sonar
         if: env.SONAR_TOKEN != ''
