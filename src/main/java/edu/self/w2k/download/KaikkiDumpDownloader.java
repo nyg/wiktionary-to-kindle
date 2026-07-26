@@ -1,6 +1,9 @@
 package edu.self.w2k.download;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
@@ -12,14 +15,12 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.OptionalLong;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
+import edu.self.w2k.progress.ProgressListener;
+import edu.self.w2k.progress.ProgressListener.Stage;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class KaikkiDumpDownloader implements DumpDownloader {
 
     private static final String BASE_URL = "https://kaikki.org";
@@ -34,27 +35,46 @@ public class KaikkiDumpDownloader implements DumpDownloader {
      */
     private static final Duration BODY_TIMEOUT = Duration.ofHours(6);
 
+    private static final long BYTES_PER_MB = 1024L * 1024L;
+    private static final int TRANSFER_BUFFER_BYTES = 64 * 1024;
+
+    /** Progress is emitted at most once per this many bytes, to keep listeners cheap. */
+    private static final long PROGRESS_INTERVAL_BYTES = 4 * BYTES_PER_MB;
+
     private final String lang;
     private final HttpClient httpClient;
     private final Path dumpsDir;
+    private final ProgressListener progress;
 
     public KaikkiDumpDownloader(String lang) {
-        this(lang,
-             HttpClient.newBuilder()
-                     .followRedirects(HttpClient.Redirect.NORMAL)
-                     .connectTimeout(Duration.ofSeconds(30))
-                     .build(),
-             Path.of("dumps"));
+        this(lang, Path.of("dumps"), ProgressListener.NOOP);
+    }
+
+    public KaikkiDumpDownloader(String lang, Path dumpsDir, ProgressListener progress) {
+        this(lang, defaultHttpClient(), dumpsDir, progress);
+    }
+
+    KaikkiDumpDownloader(String lang, HttpClient httpClient, Path dumpsDir) {
+        this(lang, httpClient, dumpsDir, ProgressListener.NOOP);
+    }
+
+    KaikkiDumpDownloader(String lang, HttpClient httpClient, Path dumpsDir, ProgressListener progress) {
+        this.lang = lang;
+        this.httpClient = httpClient;
+        this.dumpsDir = dumpsDir;
+        this.progress = progress;
+    }
+
+    private static HttpClient defaultHttpClient() {
+        return HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(30))
+                .build();
     }
 
     @Override
-    public void download() {
-        try {
-            Files.createDirectories(dumpsDir);
-        } catch (Exception e) {
-            log.error("Failed to create dump directory: {}", e.getLocalizedMessage(), e);
-            return;
-        }
+    public DownloadResult download() throws IOException {
+        Files.createDirectories(dumpsDir);
 
         String url = buildUrl(lang);
         log.info("Checking {}", url);
@@ -64,37 +84,76 @@ public class KaikkiDumpDownloader implements DumpDownloader {
         try {
             HttpResponse<Void> head = httpClient.send(headRequest(url), HttpResponse.BodyHandlers.discarding());
             if (head.statusCode() != 200) {
-                log.error("Download failed — HTTP {}", head.statusCode());
-                return;
+                throw new IOException("HTTP %d for %s".formatted(head.statusCode(), url));
             }
 
             String generatedDate = buildGeneratedDate(head.headers());
             Path dumpPath = dumpsDir.resolve("raw-wiktextract-data-%s-%s.jsonl.gz".formatted(lang, generatedDate));
             if (Files.exists(dumpPath)) {
                 log.info("Dump already exists at {}. Delete it to re-download.", dumpPath);
-                return;
+                return new DownloadResult(dumpPath, true);
             }
 
-            log.info("Downloading {} MB to {} (generated: {})", contentLengthMb(head.headers()), dumpPath, generatedDate);
-            HttpResponse<Path> response = httpClient.send(getRequest(url), HttpResponse.BodyHandlers.ofFile(partPath));
-            if (response.statusCode() != 200) {
-                log.error("Download failed — HTTP {}", response.statusCode());
-                return;
+            long total = contentLength(head.headers());
+            log.info("Downloading {} MB to {} (generated: {})", megabytes(total), dumpPath, generatedDate);
+
+            HttpResponse<InputStream> response =
+                    httpClient.send(getRequest(url), HttpResponse.BodyHandlers.ofInputStream());
+            try (InputStream body = response.body()) {
+                if (response.statusCode() != 200) {
+                    throw new IOException("HTTP %d for %s".formatted(response.statusCode(), url));
+                }
+                try (OutputStream out = Files.newOutputStream(partPath)) {
+                    transfer(body, out, total);
+                }
             }
 
             Files.move(partPath, dumpPath, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Download complete: {} ({} MB, generated: {})", dumpPath, Files.size(dumpPath) / (1024 * 1024), generatedDate);
-        } catch (InterruptedException _) {
+            log.info("Download complete: {} ({} MB, generated: {})",
+                     dumpPath, Files.size(dumpPath) / BYTES_PER_MB, generatedDate);
+            return new DownloadResult(dumpPath, false);
+        }
+        catch (InterruptedException _) {
             Thread.currentThread().interrupt();
-            log.warn("Download interrupted for lang: {}", lang);
-        } catch (IOException e) {
-            log.error("Download failed", e);
-        } finally {
-            try {
-                Files.deleteIfExists(partPath);
-            } catch (IOException e) {
-                log.warn("Failed to delete partial file", e);
+            throw new InterruptedIOException("Download interrupted for lang: " + lang);
+        }
+        finally {
+            discardPartialFile(partPath);
+        }
+    }
+
+    /**
+     * Streams the body into {@code out}, reporting progress and honouring interruption. A manual loop
+     * is used rather than {@code BodyHandlers.ofFile}, which offers neither a byte-level callback nor
+     * a cancellation point. The atomic {@code .part} rename stays in the caller, unchanged.
+     */
+    private void transfer(InputStream in, OutputStream out, long total) throws IOException {
+        byte[] buffer = new byte[TRANSFER_BUFFER_BYTES];
+        long done = 0;
+        long lastReported = 0;
+
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedIOException("Download cancelled after %d bytes".formatted(done));
             }
+            out.write(buffer, 0, read);
+            done += read;
+            if (done - lastReported >= PROGRESS_INTERVAL_BYTES) {
+                lastReported = done;
+                progress.onProgress(Stage.DOWNLOAD, done, total);
+            }
+        }
+        progress.onProgress(Stage.DOWNLOAD, done, total);
+    }
+
+    private static void discardPartialFile(Path partPath) {
+        try {
+            Files.deleteIfExists(partPath);
+        }
+        catch (IOException e) {
+            // Never mask the outcome of the download itself with a cleanup failure.
+            log.warn("Failed to delete partial file {}: {}", partPath, e.getLocalizedMessage());
         }
     }
 
@@ -113,9 +172,12 @@ public class KaikkiDumpDownloader implements DumpDownloader {
                 .build();
     }
 
-    private static String contentLengthMb(HttpHeaders headers) {
-        OptionalLong length = headers.firstValueAsLong("content-length");
-        return length.isPresent() ? Long.toString(length.getAsLong() / (1024 * 1024)) : "?";
+    private static long contentLength(HttpHeaders headers) {
+        return headers.firstValueAsLong("content-length").orElse(ProgressListener.TOTAL_UNKNOWN);
+    }
+
+    private static String megabytes(long bytes) {
+        return bytes < 0 ? "?" : Long.toString(bytes / BYTES_PER_MB);
     }
 
     private String buildGeneratedDate(HttpHeaders headers) {

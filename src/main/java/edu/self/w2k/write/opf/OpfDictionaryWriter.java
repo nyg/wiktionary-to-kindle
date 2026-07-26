@@ -19,10 +19,22 @@ import javax.imageio.ImageIO;
 
 import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.write.DictionaryWriter;
+import edu.self.w2k.progress.ProgressListener;
+import edu.self.w2k.progress.ProgressListener.Stage;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class OpfDictionaryWriter implements DictionaryWriter {
+
+    private final ProgressListener progress;
+
+    public OpfDictionaryWriter() {
+        this(ProgressListener.NOOP);
+    }
+
+    public OpfDictionaryWriter(ProgressListener progress) {
+        this.progress = progress;
+    }
 
     @Override
     public Path write(TreeMap<String, List<LexiconEntry>> defs, String srcLang, String trgLang,
@@ -33,6 +45,7 @@ public class OpfDictionaryWriter implements DictionaryWriter {
 
         List<Map.Entry<String, List<LexiconEntry>>> entries = new ArrayList<>(defs.entrySet());
         List<String> htmlFileNames = new ArrayList<>();
+        int totalChapters = chapterCount(entries.size());
 
         for (int start = 0, idx = 0; start < entries.size(); start += HtmlChapterRenderer.ENTRIES_PER_CHAPTER, idx++) {
             int end = Math.min(start + HtmlChapterRenderer.ENTRIES_PER_CHAPTER, entries.size());
@@ -40,6 +53,7 @@ public class OpfDictionaryWriter implements DictionaryWriter {
             Files.write(outputDir.resolve(fileName), HtmlChapterRenderer.render(entries.subList(start, end)));
             htmlFileNames.add(fileName);
             log.debug("Wrote {} ({} entries)", fileName, end - start);
+            progress.onProgress(Stage.WRITE_HTML, idx + 1L, totalChapters);
         }
 
         writeCoverImage(outputDir);
@@ -48,6 +62,11 @@ public class OpfDictionaryWriter implements DictionaryWriter {
         Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames, uid);
         log.info("OPF generation complete: {} HTML file(s) + 1 OPF + NCX", htmlFileNames.size());
         return opfPath;
+    }
+
+    /** Number of chapter files {@code entryCount} entries will be chunked into. */
+    static int chapterCount(int entryCount) {
+        return Math.ceilDiv(entryCount, HtmlChapterRenderer.ENTRIES_PER_CHAPTER);
     }
 
     private static void writeCoverImage(Path outputDir) throws IOException {
