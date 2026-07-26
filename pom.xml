@@ -30,7 +30,7 @@
             Maven resolves a platform-classified native artifact for the build host, which is why
             org.openjfx is excluded from the shaded CLI JAR below.
         -->
-        <javafx.version>25.0.4</javafx.version>
+        <javafx.version>26.0.2</javafx.version>
         <logback-classic.version>1.5.37</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
         <picocli.version>4.7.7</picocli.version>
