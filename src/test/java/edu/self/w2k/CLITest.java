@@ -12,6 +12,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CLITest {
 
     @Test
+    void should_report_the_build_version_when_version_is_requested() {
+        // Given
+        CLI.BuildVersion unit = new CLI.BuildVersion();
+
+        // When
+        String[] result = unit.getVersion();
+
+        // Then — the version comes from the filtered build resource, not a literal in @Command
+        assertThat(result).hasSize(1);
+        assertThat(result[0]).startsWith("wiktionary-to-kindle ")
+                .doesNotContain("unknown")
+                .matches("wiktionary-to-kindle \\d+\\.\\d+\\.\\d+(-SNAPSHOT)?");
+    }
+
+    @Test
+    void should_wire_the_version_provider_into_the_command_spec() {
+        // When
+        CommandLine commandLine = new CommandLine(new CLI());
+
+        // Then — guards against the annotation reverting to a hardcoded version string
+        assertThat(commandLine.getCommandSpec().versionProvider()).isInstanceOf(CLI.BuildVersion.class);
+    }
+
+    @Test
     void should_return_bundled_version_when_option_is_kindling_version() {
         // Given
         CLI.Generate.KindlingVersionDefault unit = new CLI.Generate.KindlingVersionDefault();

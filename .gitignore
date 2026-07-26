@@ -13,3 +13,6 @@ dictionaries
 .factorypath
 .metals
 .vscode
+
+# Intermediate output of scripts/generate-icons.sh; icon.icns is what gets committed.
+assets/icon.iconset
