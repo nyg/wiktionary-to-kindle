@@ -2,52 +2,67 @@
 
 ## Project Overview
 
-`wiktionary-to-kindle` is a Java CLI tool that converts Wiktionary data into Kindle-compatible MOBI dictionaries. The pipeline is: **download** → **generate** (fetches `kindling-cli` on first run, then runs `kindling-cli build`).
+`wiktionary-to-kindle` converts Wiktionary data into Kindle-compatible MOBI dictionaries. The pipeline is: **download** → **generate** (fetches `kindling-cli` on first run, then runs `kindling-cli build`).
+
+Two front-ends share one service layer:
+
+- a **JavaFX desktop app** (`edu.self.w2k.gui.Launcher`), distributed as a jpackage bundle with an embedded Java runtime — the primary way users run this;
+- the original **picocli CLI** (`edu.self.w2k.CLI`), still shipped as a cross-platform fat JAR for Linux and scripted use.
+
+The service layer under `command`, `download`, `parse`, `render`, `write` and `kindling` is UI-free and shared by both. Keep it that way: anything that needs JavaFX belongs in `gui`.
 
 Data source: [kaikki.org](https://kaikki.org) pre-extracted JSONL dumps, produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) with all Lua templates fully expanded. One dump per Wiktionary language edition.
 
 ## Build & Test
 
-Requires Java 25 and Apache Maven. Produces a fat JAR via `maven-shade-plugin`.
+Requires Java 25 and Apache Maven.
 
 ```sh
-mvn package          # compiles, runs tests, produces fat JAR
-# Output: target/wiktionary-to-kindle-1.0.0.jar
+mvn package          # compiles, runs tests, produces the fat JAR
+mvn javafx:run       # runs the desktop app
+scripts/package.sh   # jlink + jpackage bundle for the host platform → target/dist
 ```
 
-JUnit 5 tests live in `src/test/java/edu/self/w2k/`.
+JUnit 5 tests live in `src/test/java/edu/self/w2k/`. `MainFxmlLoadTest` needs a graphics toolkit and self-skips without one; CI runs the suite under `xvfb-run`.
 
-## Running the JAR
+The version comes from `${project.version}` via a filtered `application.properties`, read through `AppVersion`. Resource filtering is scoped to that one file — filtering all of `src/main/resources` would corrupt `icon.png`.
 
-The entry point is `edu.self.w2k.CLI`. Commands:
+## Running the CLI
+
+The CLI entry point is `edu.self.w2k.CLI`; the GUI's is `edu.self.w2k.gui.Launcher`.
 
 ```sh
 # Download kaikki.org dump to dumps/ (skips if a dump for that lang already exists)
-java -jar target/wiktionary-to-kindle-1.0.0.jar download        # English (default)
-java -jar target/wiktionary-to-kindle-1.0.0.jar download fr     # French edition
+java -jar target/wiktionary-to-kindle-<version>.jar download        # English (default)
+java -jar target/wiktionary-to-kindle-<version>.jar download fr     # French edition
 # dl is a short alias for download
 
 # Generate Kindle dictionary from a downloaded dump.
 # DUMP_LANG = which Wiktionary edition to read; WORD_LANG = ISO 639-1 filter.
 # The latest dump matching DUMP_LANG in dumps/ is auto-discovered.
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate <DUMP_LANG> <WORD_LANG>
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en                        # auto-downloads kindling-cli on first run
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-version vX.Y.Z
-java -jar target/wiktionary-to-kindle-1.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
+java -jar target/wiktionary-to-kindle-<version>.jar generate <DUMP_LANG> <WORD_LANG>
+java -jar target/wiktionary-to-kindle-<version>.jar generate el en --kindling-version vX.Y.Z
+java -jar target/wiktionary-to-kindle-<version>.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 # gen is a short alias for generate
 
-# Help / version
-java -jar target/wiktionary-to-kindle-1.0.0.jar --help
-java -jar target/wiktionary-to-kindle-1.0.0.jar --version
+java -jar target/wiktionary-to-kindle-<version>.jar --help
+java -jar target/wiktionary-to-kindle-<version>.jar --version
 ```
+
+`download` exits 1 when the transfer fails. The CLI keeps CWD-relative `dumps/` and `dictionaries/` and does **not** read the GUI's preferences.
 
 ## Architecture
 
 ### Package Structure
 
-- **`edu.self.w2k`** — `CLI` — picocli root command + inner `Download` / `Generate` subcommand wiring classes
-- **`edu.self.w2k.command`** — `DownloadCommand`, `GenerateCommand` — service orchestrators; `Command` interface
-- **`edu.self.w2k.download`** — `KaikkiDumpDownloader` (HttpClient-based), `DumpDownloader` interface
+- **`edu.self.w2k`** — `CLI` — picocli root command + inner `Download` / `Generate` subcommand wiring classes, and `BuildVersion` (reports the filtered build version)
+- **`edu.self.w2k.gui`** — JavaFX front-end. `Launcher` (plain `main`, **must not** extend `Application` — a classpath launch otherwise fails with "JavaFX runtime components are missing"), `App` (FXML load, appender install), `MainViewModel` (state and derivations; `javafx.base` only, so unit-testable without a toolkit), `MainController` (bindings only), `PipelineService`/`PipelineTask` (threading + cancellation), `UiLogAppender`, `ProgressSnapshot`, `PreferencesDialog`, `ByteSizes`, `LanguageConverter`. FXML and CSS in `src/main/resources/edu/self/w2k/gui/`
+- **`edu.self.w2k.pipeline`** — `DictionaryPipeline` — the combined download-then-generate flow, JavaFX-free and injectable so it stays testable
+- **`edu.self.w2k.progress`** — `ProgressListener` (`Stage`, `TOTAL_UNKNOWN`, `NOOP`), `CountingInputStream`. Progress is constructor-injected everywhere, so each collaborator keeps its pre-existing constructor arity
+- **`edu.self.w2k.config`** — `AppPaths` (config and data dirs), `Preferences` (properties file), `LanguageCatalog` (dropdown lists), `AppVersion`
+- **`edu.self.w2k.dump`** — `DumpCatalog`, `DumpFile` — lists/deletes dumps; `CLI.findLatestDump` delegates to `latestFor`
+- **`edu.self.w2k.command`** — `DownloadCommand`, `GenerateCommand` — service orchestrators; `Command` interface. Both expose an `execute()` returning the produced path alongside the interface's `void run()`
+- **`edu.self.w2k.download`** — `KaikkiDumpDownloader` (HttpClient-based), `DumpDownloader` interface, `DownloadResult`
 - **`edu.self.w2k.write`** — `DictionaryWriter` interface, `DictionaryTitles` utility
 - **`edu.self.w2k.write.opf`** — `OpfDictionaryWriter` (emits chunked `.html` + `.opf`), `HtmlChapterRenderer`
 - **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (loads the pinned version + per-platform digests from `src/main/resources/kindling-release.properties`), `XdgCachePaths`, `KindlingException`
@@ -57,10 +72,17 @@ java -jar target/wiktionary-to-kindle-1.0.0.jar --version
 
 ### Data Directories
 
+The two front-ends resolve these differently, deliberately.
+
 | Directory | Purpose |
 |-----------|---------|
 | `dumps/`  | Downloaded `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` from kaikki.org |
 | `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf` and `-N.html` |
+
+- **CLI**: CWD-relative, via the `CLI.DUMPS_DIR` / `CLI.DICTIONARIES_DIR` constants. Unchanged from before the GUI existed.
+- **GUI**: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice.
+
+`AppPaths.configDir()` holds `preferences.properties` and `logs/app.log`; `XdgCachePaths` holds the cached `kindling-cli`.
 
 ### Dictionary Output Format
 
@@ -88,9 +110,28 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 ## Key Conventions
 
 - **CLI** uses [picocli](https://picocli.info/). `CLI.java` is the root `@Command`; `Download` and `Generate` are inner static subcommand classes that wire collaborators and delegate to the service-layer command classes.
-- **Service classes** (`DownloadCommand`, `GenerateCommand`) use Lombok `@RequiredArgsConstructor` and are independent of picocli — they can be constructed directly in tests.
-- **Logging** uses SLF4J 2.x with Logback Classic. `@Slf4j` (Lombok) is used on all classes.
+- **Service classes** (`DownloadCommand`, `GenerateCommand`) are independent of picocli and of JavaFX — they can be constructed directly in tests.
+- **Progress** flows through `ProgressListener`, constructor-injected with a `NOOP` default. Emissions are throttled (roughly every 4 MB); the dump is millions of lines, so per-item reporting would swamp any listener. Download progress needs `BodyHandlers.ofInputStream` plus a manual copy loop — `ofFile` offers neither a byte callback nor a cancellation point. Parse progress counts the *compressed* stream, since a gzip member's uncompressed size is unknowable up front.
+- **Cancellation** takes two mechanisms: interrupting the worker covers the download and parse loops, but the kindling stage blocks in `Process.waitFor()`, so `PipelineTask` tracks the process and destroys it in `cancelled()`.
+- **Logging** uses SLF4J 2.x with Logback Classic. `@Slf4j` (Lombok) is used on all classes. `logback.xml` configures the CLI console only; the GUI adds `UiLogAppender` and a file appender **programmatically**, so CLI output is untouched. `UiLogAppender` buffers into a bounded queue the UI drains in batches — never one `Platform.runLater` per event, which would freeze the window.
+- **Subprocesses**: `KindlingDictionaryConverter.defaultRunner()` pumps merged stdout/stderr through SLF4J. Do not switch it back to `inheritIO()` — a windowed app has no terminal, so the output would vanish.
 - **Jackson** is used for JSONL parsing. Model records carry `@JsonIgnoreProperties(ignoreUnknown = true)`. `ObjectMapper` is configured with `Nulls.AS_EMPTY` so missing collection fields default to empty lists. The `ObjectReader` is reused across all lines for efficiency.
 - **Parser streaming**: `JsonlDictionaryParser.parse()` returns a lazy `Stream<WiktionaryEntry>` backed by a `BufferedReader.lines()` pipeline. Callers must close the stream (use try-with-resources).
 - **Download** uses `java.net.http.HttpClient` and an atomic `.part` file rename to avoid corrupt downloads on failure. A HEAD request (30 s timeout) reads `last-modified` and `content-length` first, so the target filename and the skip-if-already-downloaded check resolve before any body transfer; the GET that follows carries a deliberately generous 6 h ceiling because dumps are multi-gigabyte (a request-level timeout bounds the *whole* exchange, not just the headers). URL is computed per lang: `en` → `/dictionary/`, others → `/{lang}wiktionary/`.
-- **Dump file path**: dumps are named `dumps/raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz`. `generate` resolves the file via `CLI.findLatestDump(lang)`, which globs the dumps dir for that prefix and picks the lexicographically latest filename (ISO date format sorts correctly). If no dump matches, generate exits 1.
+- **Dump file path**: dumps are named `dumps/raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz`. `generate` resolves the file via `CLI.findLatestDump(lang)` → `DumpCatalog.latestFor`, which globs the dumps dir for that prefix and picks the lexicographically latest filename (ISO date format sorts correctly). If no dump matches, generate exits 1. Discovery stays filename-based rather than going through `DumpFile.parse`, so a dump named `-unknown` (kaikki omitted `last-modified`) is still usable even though it cannot be listed in the dumps pane.
+
+## Packaging
+
+`scripts/package.sh` runs jlink then jpackage; one bash script covers all platforms, since Windows runners provide bash. Things that will bite if changed carelessly:
+
+- **The JDK module list** was computed with `jdeps --print-module-deps`, plus four modules static analysis cannot see: `jdk.crypto.ec` (without it every HTTPS request fails at handshake), `jdk.localedata` (without it language names degrade to bare uppercase codes), `java.logging` and `jdk.unsupported`. Both of the first two fail *silently*, which is why the script links a probe into the fresh image and runs it there.
+- **JavaFX is excluded from the shaded JAR** (`artifactSet` exclude in the shade config). JavaFX resolves to platform-classified native artifacts, so bundling it would tie the CLI JAR to whichever OS built it.
+- **Only classified JavaFX jars are real modules**; the unclassified ones are ~300-byte stubs that shadow them on the module path. The script selects by presence of `module-info.class`.
+- **`Launcher` must not extend `Application`** — see the `gui` package note above.
+- Use `$PATH_SEPARATOR`, not a literal `:`, in module paths and classpaths; Windows uses `;`.
+
+## CI & Release
+
+- `java-ci.yaml` — `build` runs `mvn verify` under `xvfb-run` on Ubuntu; `package` runs jlink+jpackage on macOS and Windows, so a packaging regression is caught in a PR rather than at release time.
+- `release.yml` — `workflow_dispatch` with a bump choice. Bumps via `maven-release-plugin` (hence the `-SNAPSHOT` version and `<scm>` block), builds the DMG, Scoop ZIP and portable JAR, publishes, then dispatches to `nyg/homebrew-tap` and pushes a manifest to `nyg/scoop-bucket`. `RELEASE_TOKEN` needs write access to all three repos.
+- Conventional commits; `git-cliff` generates the changelog from them via `cliff.toml`.
