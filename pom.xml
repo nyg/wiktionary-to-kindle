@@ -41,6 +41,23 @@
         <sonar.projectKey>nyg_wiktionary-to-kindle</sonar.projectKey>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <!--
+            Excluded from coverage measurement, not from analysis: these are JavaFX view and bootstrap
+            classes whose bodies are scene-graph construction and property binding. Reaching them
+            needs a running toolkit, and OpenJFX publishes no Monocle artifacts for this release line,
+            so they cannot be covered headlessly.
+
+            They are kept deliberately thin so little logic hides here — anything worth asserting
+            lives in MainViewModel, ProgressSnapshot, DictionaryPipeline, ByteSizes, LanguageConverter
+            and UiLogAppender, which are all covered. MainFxmlLoadTest additionally loads main.fxml
+            under Xvfb in CI and checks every @FXML field is injected.
+        -->
+        <sonar.coverage.exclusions>
+            src/main/java/edu/self/w2k/gui/App.java,
+            src/main/java/edu/self/w2k/gui/Launcher.java,
+            src/main/java/edu/self/w2k/gui/MainController.java,
+            src/main/java/edu/self/w2k/gui/PreferencesDialog.java
+        </sonar.coverage.exclusions>
     </properties>
 
     <dependencies>
