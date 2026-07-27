@@ -26,7 +26,10 @@
         <commons-text.version>1.15.0</commons-text.version>
         <jackson-databind.version>2.22.0</jackson-databind.version>
         <!--
-            Kept on the 25.x line to match maven.compiler.release and the JDK used in CI.
+            Kept on the newest GA line. OpenJFX also publishes 27 early-access builds, and Renovate
+            will keep offering them, but a -ea build is not something to ship in a release bundle.
+            26.x modules are compiled for Java 24, so they stay within maven.compiler.release and the
+            JDK CI pins.
             Maven resolves a platform-classified native artifact for the build host, which is why
             org.openjfx is excluded from the shaded CLI JAR below.
         -->
