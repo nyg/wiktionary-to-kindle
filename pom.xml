@@ -4,10 +4,6 @@
 
     <groupId>edu.self</groupId>
     <artifactId>wiktionary-to-kindle</artifactId>
-    <!--
-        maven-release-plugin requires a -SNAPSHOT version to bump from. 2.0.0 rather than 1.0.1
-        because this line ships a desktop application with a bundled runtime, not just a CLI.
-    -->
     <version>2.0.0-SNAPSHOT</version>
 
     <!-- Required by maven-release-plugin, which the release workflow drives. -->
@@ -25,12 +21,7 @@
         <!-- Third-party -->
         <commons-text.version>1.15.0</commons-text.version>
         <jackson-databind.version>2.22.0</jackson-databind.version>
-        <!--
-            Kept on the 25.x line to match maven.compiler.release and the JDK used in CI.
-            Maven resolves a platform-classified native artifact for the build host, which is why
-            org.openjfx is excluded from the shaded CLI JAR below.
-        -->
-        <javafx.version>25.0.4</javafx.version>
+        <javafx.version>26.0.2</javafx.version>
         <logback-classic.version>1.5.37</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
         <picocli.version>4.7.7</picocli.version>
@@ -54,17 +45,7 @@
         <sonar.projectKey>nyg_wiktionary-to-kindle</sonar.projectKey>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
-        <!--
-            Excluded from coverage measurement, not from analysis: these are JavaFX view and bootstrap
-            classes whose bodies are scene-graph construction and property binding. Reaching them
-            needs a running toolkit, and OpenJFX publishes no Monocle artifacts for this release line,
-            so they cannot be covered headlessly.
-
-            They are kept deliberately thin so little logic hides here — anything worth asserting
-            lives in MainViewModel, ProgressSnapshot, DictionaryPipeline, ByteSizes, LanguageConverter
-            and UiLogAppender, which are all covered. MainFxmlLoadTest additionally loads main.fxml
-            under Xvfb in CI and checks every @FXML field is injected.
-        -->
+       
         <sonar.coverage.exclusions>
             src/main/java/edu/self/w2k/gui/App.java,
             src/main/java/edu/self/w2k/gui/Launcher.java,
@@ -95,11 +76,6 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j-api.version}</version>
         </dependency>
-        <!--
-            Compile scope, not runtime: the GUI's UiLogAppender extends logback's AppenderBase to
-            feed the console pane, so the API is needed at compile time. Application code still logs
-            through the SLF4J facade only.
-        -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
@@ -147,10 +123,6 @@
     </dependencies>
 
     <build>
-        <!--
-            Filtering is scoped to application.properties alone. Filtering the whole directory would
-            run icon.png and any future binary resource through the token replacer and corrupt them.
-        -->
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -169,7 +141,6 @@
         </resources>
 
         <plugins>
-            <!-- Needed to compile with Lombok annotation processor. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -185,14 +156,12 @@
                 </configuration>
             </plugin>
 
-            <!-- Needed to run JUnit 5 tests. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
             </plugin>
 
-            <!-- Needed to execute the JAR from the command line. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -206,20 +175,12 @@
                 </configuration>
             </plugin>
 
-            <!-- Needed to pack dependencies inside the generated JAR. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>${maven-shade-plugin.version}</version>
                 <configuration>
                     <createDependencyReducedPom>false</createDependencyReducedPom>
-                    <!--
-                        The shaded JAR is the cross-platform CLI artifact. JavaFX resolves to a
-                        native, platform-classified artifact, so bundling it would silently tie this
-                        JAR to whichever OS built it. The CLI entry point never touches JavaFX, so
-                        excluding it here keeps one JAR usable everywhere; the GUI ships as a
-                        jpackage bundle with JavaFX in its runtime image instead.
-                    -->
                     <artifactSet>
                         <excludes>
                             <exclude>org.openjfx:*</exclude>
@@ -236,7 +197,6 @@
                 </executions>
             </plugin>
 
-            <!-- Runs the GUI during development: mvn javafx:run -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -246,7 +206,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Drives the version bump and tag in the release workflow. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
@@ -257,7 +216,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Needed for code coverage analysis with SonarCloud. -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -295,11 +253,6 @@
                 </executions>
             </plugin>
 
-            <!--
-                Maven 4 no longer resolves the `sonar` goal prefix from its default plugin
-                groups, so `mvn sonar:sonar` fails with NoPluginFoundForPrefixException
-                unless the plugin is declared here.
-            -->
             <plugin>
                 <groupId>org.sonarsource.scanner.maven</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
