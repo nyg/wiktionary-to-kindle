@@ -4,7 +4,11 @@
 
     <groupId>edu.self</groupId>
     <artifactId>wiktionary-to-kindle</artifactId>
-    <version>1.0.0</version>
+    <!--
+        maven-release-plugin requires a -SNAPSHOT version to bump from. 2.0.0 rather than 1.0.1
+        because this line ships a desktop application with a bundled runtime, not just a CLI.
+    -->
+    <version>2.0.0-SNAPSHOT</version>
 
     <!-- Required by maven-release-plugin, which the release workflow drives. -->
     <scm>

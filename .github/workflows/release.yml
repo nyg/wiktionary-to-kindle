@@ -1,0 +1,344 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+env:
+  JAVA_VERSION: '25'
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Job 1: bump the pom version, update the changelog, commit, tag and push
+# ──────────────────────────────────────────────────────────────────────────────
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.versions.outputs.release }}
+    steps:
+      - name: Validate branch
+        if: github.ref_name != 'master'
+        run: |
+          echo "::error::Releases must be created from the master branch (current: ${{ github.ref_name }})"
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Compute versions
+        id: versions
+        run: |
+          set -euo pipefail
+          current=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+          if [[ ! "$current" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)-SNAPSHOT$ ]]; then
+            echo "::error::Expected a semantic SNAPSHOT version (X.Y.Z-SNAPSHOT), got: $current"
+            exit 1
+          fi
+
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          patch=${BASH_REMATCH[3]}
+
+          case "${{ inputs.bump }}" in
+            patch) release="${major}.${minor}.${patch}" ;;
+            minor) release="${major}.$((minor + 1)).0" ;;
+            major) release="$((major + 1)).0.0" ;;
+            *) echo "::error::Unsupported bump type: ${{ inputs.bump }}"; exit 1 ;;
+          esac
+
+          next="${release%.*}.$(( ${release##*.} + 1 ))-SNAPSHOT"
+
+          echo "RELEASE_VERSION=$release" >> "$GITHUB_ENV"
+          echo "DEVELOPMENT_VERSION=$next" >> "$GITHUB_ENV"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "Release: $release → next development: $next"
+
+      - name: Check tag does not already exist
+        run: |
+          if git show-ref --tags --verify --quiet "refs/tags/v${{ env.RELEASE_VERSION }}"; then
+            echo "::error::Tag v${{ env.RELEASE_VERSION }} already exists"
+            exit 1
+          fi
+
+      - name: Install git-cliff
+        run: |
+          gh release download --repo orhun/git-cliff --pattern 'git-cliff-*-x86_64-unknown-linux-gnu.tar.gz'
+          tar xzf git-cliff-*-x86_64-unknown-linux-gnu.tar.gz --strip-components=1 --wildcards '*/git-cliff'
+          sudo mv git-cliff /usr/local/bin/
+          git cliff --version
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # Committed before release:prepare so the changelog is part of the tagged tree rather than
+      # landing a commit after it.
+      - name: Update changelog
+        run: |
+          git cliff --tag "v${{ env.RELEASE_VERSION }}" -o CHANGELOG.md
+          git add CHANGELOG.md
+          git commit -m "chore(release): update changelog for v${{ env.RELEASE_VERSION }}"
+
+      # Runs the full test suite as part of its own verification. Xvfb is needed for the FXML load
+      # test, exactly as in java-ci.
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Prepare release
+        run: >
+          xvfb-run -a mvn -B release:prepare
+          -DreleaseVersion=${{ env.RELEASE_VERSION }}
+          -DdevelopmentVersion=${{ env.DEVELOPMENT_VERSION }}
+          -DpushChanges=false
+
+      - name: Push commits and tag
+        run: |
+          git push origin master
+          git push origin "v${{ env.RELEASE_VERSION }}"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Job 2: build the bundles on each native platform, plus the portable JAR
+# ──────────────────────────────────────────────────────────────────────────────
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15          # arm64 (Apple Silicon)
+            artifact: macos
+          - os: windows-latest    # x64
+            artifact: windows
+          - os: ubuntu-latest     # cross-platform CLI JAR only
+            artifact: jar
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: v${{ needs.prepare.outputs.release_version }}
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      # Tests already ran in prepare's release:prepare; this is purely to produce the artifact.
+      - name: Build JAR
+        shell: bash
+        run: mvn -B -q --no-transfer-progress -DskipTests package
+
+      - name: Package macOS DMG
+        if: matrix.artifact == 'macos'
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/package.sh dmg
+          mkdir -p artifacts
+          mv "target/dist/"*.dmg "artifacts/WiktionaryToKindle.dmg"
+
+      # Scoop consumes a flat ZIP whose root holds the launcher, so the app-image directory is
+      # zipped from the inside. The directory name contains spaces, hence the quoting.
+      - name: Package Windows ZIP for Scoop
+        if: matrix.artifact == 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/package.sh app-image
+          mkdir -p artifacts
+
+          app_dir=$(find target/dist -mindepth 1 -maxdepth 1 -type d -print | head -1)
+          if [ -z "$app_dir" ]; then
+            echo "::error::no app-image directory under target/dist"
+            exit 1
+          fi
+          if [ ! -f "$app_dir/Wiktionary to Kindle.exe" ]; then
+            echo "::error::launcher not found in $app_dir — jpackage layout may have changed"
+            ls -la "$app_dir"
+            exit 1
+          fi
+
+          ( cd "$app_dir" && 7z a -tzip -mx=7 "$GITHUB_WORKSPACE/artifacts/WiktionaryToKindle-Scoop.zip" . )
+
+      - name: Collect portable JAR
+        if: matrix.artifact == 'jar'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cp "target/wiktionary-to-kindle-${{ needs.prepare.outputs.release_version }}.jar" artifacts/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist-${{ matrix.artifact }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 1
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Job 3: publish the GitHub release and update the tap and bucket
+# ──────────────────────────────────────────────────────────────────────────────
+  release:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.release_version }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: v${{ needs.prepare.outputs.release_version }}
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
+        with:
+          args: --latest --strip all
+
+      - name: Append install guidance to release notes
+        run: |
+          cat >> git-cliff/CHANGELOG.md <<'EOF'
+
+          ## Installing
+
+          The desktop app bundles its own Java runtime — nothing else to install.
+
+          **macOS** (Apple Silicon):
+
+          ```sh
+          brew install --cask nyg/tap/wiktionary-to-kindle
+          ```
+
+          **Windows** (no admin rights, no SmartScreen prompt):
+
+          ```powershell
+          scoop bucket add nyg https://github.com/nyg/scoop-bucket
+          scoop install wiktionary-to-kindle
+          ```
+
+          ### Manual install on macOS
+
+          The app is ad-hoc signed but **not notarized**, so macOS quarantines it after download and
+          blocks the first launch (*"is damaged"* or *"Apple could not verify…"* — both mean the same
+          thing; the app is not corrupted). Homebrew handles this for you. For the DMG, after copying
+          the app to Applications, clear the quarantine flag once:
+
+          ```sh
+          xattr -dr com.apple.quarantine "/Applications/Wiktionary to Kindle.app"
+          ```
+
+          ### Linux and scripted use
+
+          There is no Linux desktop package — Homebrew casks are macOS-only. Linux users and anyone
+          scripting the pipeline can use the portable JAR, which needs Java 25:
+
+          ```sh
+          java -jar wiktionary-to-kindle-VERSION.jar download el
+          java -jar wiktionary-to-kindle-VERSION.jar generate el en
+          ```
+          EOF
+          sed -i "s/wiktionary-to-kindle-VERSION.jar/wiktionary-to-kindle-${VERSION}.jar/g" git-cliff/CHANGELOG.md
+
+      - name: Create GitHub release
+        run: |
+          gh release create "v${VERSION}" \
+            'artifacts/WiktionaryToKindle.dmg' \
+            'artifacts/WiktionaryToKindle-Scoop.zip' \
+            "artifacts/wiktionary-to-kindle-${VERSION}.jar" \
+            --title "v${VERSION}" \
+            --verify-tag \
+            -F git-cliff/CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Compute asset checksums
+        id: sha
+        run: |
+          set -euo pipefail
+          dmg_sha=$(sha256sum 'artifacts/WiktionaryToKindle.dmg' | awk '{print $1}')
+          zip_sha=$(sha256sum 'artifacts/WiktionaryToKindle-Scoop.zip' | awk '{print $1}')
+          echo "dmg_sha256=$dmg_sha" >> "$GITHUB_OUTPUT"
+          echo "zip_sha256=$zip_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger homebrew tap cask update
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          repository: nyg/homebrew-tap
+          event-type: update-wiktionary-to-kindle-cask
+          client-payload: >-
+            {
+              "version": "${{ needs.prepare.outputs.release_version }}",
+              "dmg_sha256": "${{ steps.sha.outputs.dmg_sha256 }}"
+            }
+
+      - name: Update Scoop bucket manifest
+        env:
+          ZIP_SHA256: ${{ steps.sha.outputs.zip_sha256 }}
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${RELEASE_TOKEN}@github.com/nyg/scoop-bucket.git" _scoop_bucket
+          cd _scoop_bucket
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p bucket
+
+          # The launcher name contains spaces, so bin is given an alias to produce a usable
+          # `wiktionary-to-kindle` shim rather than one with spaces in its name.
+          jq -n \
+            --arg version "$VERSION" \
+            --arg url "https://github.com/nyg/wiktionary-to-kindle/releases/download/v${VERSION}/WiktionaryToKindle-Scoop.zip" \
+            --arg hash "sha256:${ZIP_SHA256}" \
+            '{
+              version: $version,
+              description: "Converts Wiktionary data into Kindle-compatible MOBI dictionaries.",
+              homepage: "https://github.com/nyg/wiktionary-to-kindle",
+              license: "MIT",
+              architecture: {
+                "64bit": {url: $url, hash: $hash}
+              },
+              bin: [["Wiktionary to Kindle.exe", "wiktionary-to-kindle"]],
+              shortcuts: [["Wiktionary to Kindle.exe", "Wiktionary to Kindle"]]
+            }' > bucket/wiktionary-to-kindle.json
+
+          git add bucket/wiktionary-to-kindle.json
+          git commit -m "chore: update wiktionary-to-kindle to v${VERSION}"
+          git push
