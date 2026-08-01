@@ -3,6 +3,7 @@ package edu.self.w2k.gui;
 import java.awt.Desktop;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -26,7 +28,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,7 +58,7 @@ public class MainController {
 
     @FXML private TableView<DumpFile> dumpsTable;
     @FXML private TableColumn<DumpFile, String> dumpLangColumn;
-    @FXML private TableColumn<DumpFile, Object> dumpDateColumn;
+    @FXML private TableColumn<DumpFile, LocalDate> dumpDateColumn;
     @FXML private TableColumn<DumpFile, String> dumpSizeColumn;
     @FXML private Button deleteDumpButton;
     @FXML private Label dumpsLocationLabel;
@@ -131,9 +132,17 @@ public class MainController {
         }
     }
 
+    /**
+     * Note the explicit accessor lambdas: {@code DumpFile} is a record, so {@code PropertyValueFactory}
+     * cannot read it. That factory introspects JavaBean names ({@code langProperty()}, then
+     * {@code getLang()}), finds neither on a record's {@code lang()} accessor, and yields a null cell
+     * value — a blank column, with no failure anywhere the compiler or a load test could see it.
+     */
     private void setUpDumpsTable() {
-        dumpLangColumn.setCellValueFactory(new PropertyValueFactory<>("lang"));
-        dumpDateColumn.setCellValueFactory(new PropertyValueFactory<>("generated"));
+        dumpLangColumn.setCellValueFactory(cell -> Bindings.createStringBinding(
+                () -> Language.of(cell.getValue().lang()).toString()));
+        dumpDateColumn.setCellValueFactory(cell ->
+                new SimpleObjectProperty<>(cell.getValue().generated()));
         dumpSizeColumn.setCellValueFactory(cell ->
                 Bindings.createStringBinding(() -> ByteSizes.format(cell.getValue().sizeBytes())));
         dumpsTable.setItems(viewModel.getDumps());
