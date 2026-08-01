@@ -19,23 +19,23 @@
 
         <!-- Third-party -->
         <commons-text.version>1.15.0</commons-text.version>
-        <jackson-databind.version>2.22.0</jackson-databind.version>
+        <jackson-databind.version>2.22.1</jackson-databind.version>
         <javafx.version>26.0.2</javafx.version>
-        <logback-classic.version>1.5.37</logback-classic.version>
+        <logback-classic.version>1.6.1</logback-classic.version>
         <lombok.version>1.18.46</lombok.version>
         <picocli.version>4.7.7</picocli.version>
         <slf4j-api.version>2.0.18</slf4j-api.version>
-        <junit-jupiter.version>6.1.1</junit-jupiter.version>
+        <junit-jupiter.version>6.1.2</junit-jupiter.version>
         <assertj-core.version>3.27.7</assertj-core.version>
         <mockito.version>5.23.0</mockito.version>
 
         <!-- Plugins -->
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+        <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
         <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+        <sonar-maven-plugin.version>5.7.0.6970</sonar-maven-plugin.version>
         <javafx-maven-plugin.version>0.0.8</javafx-maven-plugin.version>
         <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
 
