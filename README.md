@@ -148,16 +148,3 @@ It jlinks a trimmed runtime, verifies it — TLS, locale data, the JavaFX module
 Only the macOS `dmg` and Windows `app-image` targets are built in CI and shipped; the Linux `deb` target is a convenience for local use and is not exercised.
 
 The shaded JAR deliberately excludes JavaFX so it stays cross-platform: JavaFX resolves to native, platform-specific artifacts, and the desktop app gets them from its bundled runtime instead.
-
-## Releasing
-
-Run the **Release** workflow from the Actions tab and choose a bump. It tags the release, builds the DMG, the Scoop ZIP and the portable JAR, publishes them, then updates [nyg/homebrew-tap](https://github.com/nyg/homebrew-tap) and [nyg/scoop-bucket](https://github.com/nyg/scoop-bucket).
-
-## Helpful documentation
-
-* [International Digital Publishing Forum](http://idpf.org)
-* [EPUB 2 standard](http://idpf.org/epub/201)
-* [EPUB 3 standard](https://www.w3.org/community/epub3/)
-* [EPUB Dictionaries and Glossaries 1.0](http://idpf.org/epub/dict/)
-* [EPUB – Wikipedia](https://en.wikipedia.org/wiki/EPUB)
-* [Creating Dictionaries – Kindle Publishing Guidelines](https://kdp.amazon.com/en_US/help/topic/G2HXJS944GL88DNV)
