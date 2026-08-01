@@ -1,6 +1,24 @@
 # Changelog
 
 
+## [2.0.1](https://github.com/nyg/wiktionary-to-kindle/compare/v2.0.0..v2.0.1) - 2026-08-01
+
+### 🐛 Bug Fixes
+
+- [`2df9887`](https://github.com/nyg/wiktionary-to-kindle/commit/2df9887998f539e5799960eaaea4389ad27d59a0) *(deps)* Update all stable non-major dependencies ([#73](https://github.com/nyg/wiktionary-to-kindle/issues/73))
+
+### 📚 Documentation
+
+- [`8899b20`](https://github.com/nyg/wiktionary-to-kindle/commit/8899b2057c695fe985d6c51d6f6d238ad6b5be88) Lead README with a screenshot; fix blank columns in the dumps table ([#74](https://github.com/nyg/wiktionary-to-kindle/issues/74))
+
+### ⚙️ Miscellaneous
+
+- [`bfa102a`](https://github.com/nyg/wiktionary-to-kindle/commit/bfa102a2a95e237ad0a860d554c19aec6ca0b664) *(deps)* Update kindling-cli to v0.29.1 ([#75](https://github.com/nyg/wiktionary-to-kindle/issues/75))
+
+### Others
+
+- [`df01959`](https://github.com/nyg/wiktionary-to-kindle/commit/df0195999b173d434791d8701999affe4188eaa6) [maven-release-plugin] prepare for next development iteration
+
 ## 2.0.0 - 2026-07-28
 
 ### ⛰️  Features
@@ -64,6 +82,7 @@
 
 ### Others
 
+- [`3ac878a`](https://github.com/nyg/wiktionary-to-kindle/commit/3ac878a42fda6513a1fe65aeea0850d399d23f57) [maven-release-plugin] prepare release v2.0.0
 - [`87e0970`](https://github.com/nyg/wiktionary-to-kindle/commit/87e0970b2740744db75aa1a7b6f022bdbb2130e1) Update dependency com.fasterxml.jackson.core:jackson-databind to v2.21.3 ([#33](https://github.com/nyg/wiktionary-to-kindle/issues/33))
 - [`5ee3a98`](https://github.com/nyg/wiktionary-to-kindle/commit/5ee3a98837b1db229a8de17f98886820820e500e) Replace tab2opf Python submodule with Java OPF generator ([#17](https://github.com/nyg/wiktionary-to-kindle/issues/17))
 - [`b3907f0`](https://github.com/nyg/wiktionary-to-kindle/commit/b3907f08e2099e084a70607b44402cb47963c913) Update all stable non-major dependencies ([#13](https://github.com/nyg/wiktionary-to-kindle/issues/13))
