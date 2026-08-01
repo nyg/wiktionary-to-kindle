@@ -1,5 +1,12 @@
 # Project Review: `wiktionary-to-kindle`
 
+> **Historical snapshot — not a current bug list.**
+> This review describes the codebase as of 2026-05-01, before the service-layer refactor and the
+> desktop app. The classes it cites (`CLI.main`, `WiktionaryUtil`, `OpfUtil`, `DumpUtil`) no longer
+> exist; their responsibilities now live in `command`, `parse`, `render`, `write.opf` and `download`.
+> The findings were addressed and are kept here for the reasoning, not as open work. For how the
+> program runs today, see [`program-flow.md`](program-flow.md) and the README.
+
 **Date:** 2026-05-01  
 **Reviewers:** Claude Sonnet 4.6 · GPT-5.4 (independent reviews, findings merged)  
 **Baseline:** All 37 tests pass. The tool works correctly on the happy path.
