@@ -77,7 +77,7 @@ The two front-ends resolve these differently, deliberately.
 | Directory | Purpose |
 |-----------|---------|
 | `dumps/`  | Downloaded `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` from kaikki.org |
-| `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf` and `-N.html` |
+| `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf`, `-N.html` and `toc.ncx` |
 
 - **CLI**: CWD-relative, via the `CLI.DUMPS_DIR` / `CLI.DICTIONARIES_DIR` constants. Unchanged from before the GUI existed.
 - **GUI**: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice.
@@ -101,9 +101,9 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 
 `HtmlChapterRenderer` builds one MobiPocket HTML document (≤ 10 000 entries per chunk) preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and `xmlns:mbp`/`xmlns:idx` namespace declarations.
 
-`OpfDictionaryWriter` chunks the entry map, writes `dictionary-{src}-{trg}-N.html` files, then writes a `dictionary-{src}-{trg}.opf` OPF 2.0 manifest (with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`). Returns the OPF path.
+`OpfDictionaryWriter` chunks the entry map, writes `dictionary-{src}-{trg}-N.html` files, a `toc.ncx` navigation map, then writes a `dictionary-{src}-{trg}.opf` OPF 2.0 manifest (with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`). Returns the OPF path.
 
-`KindlingDictionaryConverter` composes `OpfDictionaryWriter` with a `kindling-cli` binary. It calls `KindlingCliResolver.resolve()` to obtain the binary, then runs `kindling-cli build <opf> -o <mobi>`. Output: `dictionaries/dictionary-{src}-{trg}.mobi` (plus `.opf` and `.html` side-artefacts).
+`KindlingDictionaryConverter` composes `OpfDictionaryWriter` with a `kindling-cli` binary. It calls `KindlingCliResolver.resolve()` to obtain the binary, then runs `kindling-cli build <opf> -o <mobi>`. Output: `dictionaries/dictionary-{src}-{trg}.mobi` (plus `.opf`, `.html` and `toc.ncx` side-artefacts).
 
 `KindlingCliResolver.resolve()` tries in order: explicit `--kindling-cli` override → PATH probe (`which`/`where`) → cached binary at `<XdgCachePaths.kindlingCacheDir()>/<version>/<assetName>` (SHA-256 verified) → download via `KindlingDownloader`. `KindlingDownloader` fetches from GitHub Releases, verifies SHA-256 against the pinned digests from `kindling-release.properties` (loaded by `KindlingRelease`), or the GitHub API `digest` field for non-default versions, renames atomically, and marks the file executable.
 
@@ -113,6 +113,7 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 - **Service classes** (`DownloadCommand`, `GenerateCommand`) are independent of picocli and of JavaFX — they can be constructed directly in tests.
 - **Progress** flows through `ProgressListener`, constructor-injected with a `NOOP` default. Emissions are throttled (roughly every 4 MB); the dump is millions of lines, so per-item reporting would swamp any listener. Download progress needs `BodyHandlers.ofInputStream` plus a manual copy loop — `ofFile` offers neither a byte callback nor a cancellation point. Parse progress counts the *compressed* stream, since a gzip member's uncompressed size is unknowable up front.
 - **Cancellation** takes two mechanisms: interrupting the worker covers the download and parse loops, but the kindling stage blocks in `Process.waitFor()`, so `PipelineTask` tracks the process and destroys it in `cancelled()`.
+- **Dumps table cell values** are wired with explicit accessor lambdas, never `PropertyValueFactory`. That factory introspects JavaBean names (`langProperty()`, then `getLang()`); `DumpFile` is a record exposing `lang()`, so it matches nothing, returns a null cell value and renders a blank column — with no compile error and no runtime exception. `MainFxmlLoadTest.should_render_a_value_in_every_dumps_column` locks this in.
 - **Logging** uses SLF4J 2.x with Logback Classic. `@Slf4j` (Lombok) is used on all classes. `logback.xml` configures the CLI console only; the GUI adds `UiLogAppender` and a file appender **programmatically**, so CLI output is untouched. `UiLogAppender` buffers into a bounded queue the UI drains in batches — never one `Platform.runLater` per event, which would freeze the window.
 - **Subprocesses**: `KindlingDictionaryConverter.defaultRunner()` pumps merged stdout/stderr through SLF4J. Do not switch it back to `inheritIO()` — a windowed app has no terminal, so the output would vanish.
 - **Jackson** is used for JSONL parsing. Model records carry `@JsonIgnoreProperties(ignoreUnknown = true)`. `ObjectMapper` is configured with `Nulls.AS_EMPTY` so missing collection fields default to empty lists. The `ObjectReader` is reused across all lines for efficiency.

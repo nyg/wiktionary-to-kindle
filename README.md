@@ -4,7 +4,11 @@ Turns Wiktionary into a MOBI dictionary your Kindle can use for tap-to-define �
 
 Available as a desktop app that bundles its own Java runtime, or as a command-line tool.
 
+![The Build tab: pick a Wiktionary edition and a word language, press Build dictionary, and watch the download, parse and MOBI conversion stream into the log](assets/screenshots/app-build-tab.png)
+
 ## Install
+
+The desktop app is the recommended way to run this — it bundles its own Java runtime, so there is nothing else to install.
 
 ### macOS
 
@@ -16,10 +20,17 @@ brew install --cask nyg/tap/wiktionary-to-kindle
 
 ```powershell
 scoop bucket add nyg https://github.com/nyg/scoop-bucket
+```
+
+```powershell
 scoop install wiktionary-to-kindle
 ```
 
 Scoop installs per-user, needs no admin rights, and avoids the SmartScreen prompt.
+
+### Linux
+
+There is no Linux desktop package — Homebrew casks are macOS-only. Run the portable JAR instead, which needs Java 25 installed. See [Command line](#command-line).
 
 ### Manual download
 
@@ -37,8 +48,6 @@ The app is ad-hoc signed but **not notarized**, so macOS quarantines the DMG dow
 xattr -dr com.apple.quarantine "/Applications/Wiktionary to Kindle.app"
 ```
 
-There is no Linux desktop package: Homebrew casks are macOS-only. Linux users can run the portable JAR, which needs Java 25 installed.
-
 ## Using the app
 
 1. Pick a **Wiktionary edition** — which Wiktionary the definitions are written in. The Greek Wiktionary defines words in Greek.
@@ -51,7 +60,14 @@ The first build for an edition downloads its dump, which is 100 MB to several GB
 
 When it finishes, **Show in folder** reveals the `.mobi`. Copy it to your Kindle over USB, or send it to your device's Kindle email address.
 
-The **Dumps** tab lists what has been downloaded, with dates and sizes, and lets you delete dumps you no longer need — worth checking, since they are the largest thing this app puts on your disk.
+The **Dumps** tab lists what has been downloaded, with the Wiktionary edition, generation date and size, and lets you delete dumps you no longer need — worth checking, since they are the largest thing this app puts on your disk.
+
+### On your Kindle
+
+Once the `.mobi` is on the device, set it as the default dictionary for its language, and tap-to-define uses it everywhere you read.
+
+![Choosing your new default dictionary](https://i.imgur.com/aXAbTbx.jpg)
+![Proof that it works](https://i.imgur.com/q3Tdxjo.jpg)
 
 ### Where files go
 
@@ -69,17 +85,18 @@ The same pipeline, for scripting and for Linux. Every release ships a portable J
 
 ```sh
 # Download a dump to ./dumps (skipped if one for that edition already exists)
-java -jar wiktionary-to-kindle-2.0.0.jar download el
+java -jar wiktionary-to-kindle-<version>.jar download el
 
 # Generate into ./dictionaries
 # DUMP_LANG = which Wiktionary edition to read; WORD_LANG = ISO 639-1 filter
-java -jar wiktionary-to-kindle-2.0.0.jar generate el en
+java -jar wiktionary-to-kindle-<version>.jar generate el en
 
 # Pin a kindling release, or use one already installed
-java -jar wiktionary-to-kindle-2.0.0.jar generate el en --kindling-version vX.Y.Z
-java -jar wiktionary-to-kindle-2.0.0.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
+java -jar wiktionary-to-kindle-<version>.jar generate el en --kindling-version vX.Y.Z
+java -jar wiktionary-to-kindle-<version>.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 
-java -jar wiktionary-to-kindle-2.0.0.jar --help
+java -jar wiktionary-to-kindle-<version>.jar --help
+java -jar wiktionary-to-kindle-<version>.jar --version
 ```
 
 `dl` and `gen` are short aliases. The CLI resolves `dumps/` and `dictionaries/` relative to the working directory, and does not read the app's preferences. `download` exits non-zero if the transfer fails.
@@ -88,9 +105,11 @@ java -jar wiktionary-to-kindle-2.0.0.jar --help
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the chosen edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
 2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition, its inflected forms are collected as Kindle lookup targets, and the result is grouped in memory by normalised key.
-3. Chunked MobiPocket HTML files and an OPF manifest are written.
+3. Chunked MobiPocket HTML files, a `toc.ncx` navigation map and an OPF manifest are written.
 4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded and cached, verified against a pinned SHA-256.
 5. `kindling-cli build` converts the OPF into a `.mobi` Kindle dictionary.
+
+[`docs/program-flow.md`](docs/program-flow.md) has sequence diagrams for each stage.
 
 ## Inflected forms
 
@@ -129,21 +148,3 @@ It jlinks a trimmed runtime, verifies it — TLS, locale data, the JavaFX module
 Only the macOS `dmg` and Windows `app-image` targets are built in CI and shipped; the Linux `deb` target is a convenience for local use and is not exercised.
 
 The shaded JAR deliberately excludes JavaFX so it stays cross-platform: JavaFX resolves to native, platform-specific artifacts, and the desktop app gets them from its bundled runtime instead.
-
-## Releasing
-
-Run the **Release** workflow from the Actions tab and choose a bump. It tags the release, builds the DMG, the Scoop ZIP and the portable JAR, publishes them, then updates [nyg/homebrew-tap](https://github.com/nyg/homebrew-tap) and [nyg/scoop-bucket](https://github.com/nyg/scoop-bucket).
-
-## Helpful documentation
-
-* [International Digital Publishing Forum](http://idpf.org)
-* [EPUB 2 standard](http://idpf.org/epub/201)
-* [EPUB 3 standard](https://www.w3.org/community/epub3/)
-* [EPUB Dictionaries and Glossaries 1.0](http://idpf.org/epub/dict/)
-* [EPUB – Wikipedia](https://en.wikipedia.org/wiki/EPUB)
-* [Creating Dictionaries – Kindle Publishing Guidelines](https://kdp.amazon.com/en_US/help/topic/G2HXJS944GL88DNV)
-
-## Screenshots
-
-![Choosing your new default dictionary](https://i.imgur.com/aXAbTbx.jpg)
-![Proof that it works](https://i.imgur.com/q3Tdxjo.jpg)
