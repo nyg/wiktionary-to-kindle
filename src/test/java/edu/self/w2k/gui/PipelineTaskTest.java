@@ -26,7 +26,7 @@ class PipelineTaskTest {
                                                              Optional.empty());
 
     private static final Path DUMP = Path.of("/data/dumps/raw-wiktextract-data-el-2026-07-24.jsonl.gz");
-    private static final Path MOBI = Path.of("/data/dictionaries/dictionary-en-el.mobi");
+    private static final Path MOBI = Path.of("/data/dictionaries/w2k-dictionary-en-el.mobi");
 
     @Test
     void should_return_the_generated_path_when_called() throws Exception {

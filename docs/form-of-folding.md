@@ -77,8 +77,8 @@ Counts are from the Latin subset of the 2026-05-02 fr dump (99 653 lookup keys).
 form must resolve to the same text position as its lemma:
 
 ```sh
-kindling-cli lookup dictionaries/dictionary-la-fr.mobi excipit
+kindling-cli lookup dictionaries/w2k-dictionary-la-fr.mobi excipit
 # "excipit" resolves (exact headword/alias) at text position 5866033
-kindling-cli lookup dictionaries/dictionary-la-fr.mobi excipio
+kindling-cli lookup dictionaries/w2k-dictionary-la-fr.mobi excipio
 # "excipio" resolves (exact headword/alias) at text position 5866033  ← same entry
 ```

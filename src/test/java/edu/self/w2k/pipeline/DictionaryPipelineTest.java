@@ -23,7 +23,7 @@ class DictionaryPipelineTest {
                                                              Optional.empty());
 
     private static final Path DUMP = Path.of("/data/dumps/raw-wiktextract-data-el-2026-07-24.jsonl.gz");
-    private static final Path MOBI = Path.of("/data/dictionaries/dictionary-en-el.mobi");
+    private static final Path MOBI = Path.of("/data/dictionaries/w2k-dictionary-en-el.mobi");
 
     @Test
     void should_pass_downloaded_dump_to_the_generator() throws Exception {

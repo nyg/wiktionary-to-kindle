@@ -6,13 +6,13 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
 import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.progress.ProgressListener;
 import edu.self.w2k.progress.ProgressListener.Stage;
+import edu.self.w2k.write.DictionaryTitles;
 import edu.self.w2k.write.DictionaryWriter;
 import edu.self.w2k.write.opf.OpfDictionaryWriter;
 import lombok.extern.slf4j.Slf4j;
@@ -90,8 +90,7 @@ public class KindlingDictionaryConverter implements DictionaryWriter {
                       String title,
                       Path outputDir) throws IOException {
         Path opfPath = opfWriter.write(defs, srcLang, trgLang, title, outputDir);
-        Path mobiPath = outputDir.resolve(
-                "dictionary-%s-%s.mobi".formatted(srcLang, trgLang).toLowerCase(Locale.ROOT));
+        Path mobiPath = outputDir.resolve(DictionaryTitles.baseName(srcLang, trgLang) + ".mobi");
 
         Path bin;
         try {

@@ -7,6 +7,7 @@ import java.util.concurrent.Callable;
 
 import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
+import edu.self.w2k.config.AppInfo;
 import edu.self.w2k.config.AppVersion;
 import edu.self.w2k.download.KaikkiDumpDownloader;
 import edu.self.w2k.dump.DumpCatalog;
@@ -28,7 +29,7 @@ import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
 @Slf4j
-@Command(name = "wiktionary-to-kindle",
+@Command(name = AppInfo.SLUG,
          mixinStandardHelpOptions = true,
          versionProvider = CLI.BuildVersion.class,
          description = "Converts Wiktionary data into Kindle-compatible dictionaries.",
@@ -46,7 +47,7 @@ public class CLI implements Callable<Integer> {
 
         @Override
         public String[] getVersion() {
-            return new String[] {"wiktionary-to-kindle " + AppVersion.get()};
+            return new String[] {AppInfo.SLUG + " " + AppVersion.get()};
         }
     }
 

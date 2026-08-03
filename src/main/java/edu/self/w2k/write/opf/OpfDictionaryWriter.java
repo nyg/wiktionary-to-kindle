@@ -11,13 +11,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import javax.imageio.ImageIO;
 
 import edu.self.w2k.model.LexiconEntry;
+import edu.self.w2k.write.DictionaryTitles;
 import edu.self.w2k.write.DictionaryWriter;
 import edu.self.w2k.progress.ProgressListener;
 import edu.self.w2k.progress.ProgressListener.Stage;
@@ -56,10 +56,13 @@ public class OpfDictionaryWriter implements DictionaryWriter {
             progress.onProgress(Stage.WRITE_HTML, idx + 1L, totalChapters);
         }
 
-        writeCoverImage(outputDir);
+        String coverFileName = coverFileName(srcLang, trgLang);
+        String ncxFileName = ncxFileName(srcLang, trgLang);
+        writeCoverImage(outputDir, coverFileName);
         String uid = UUID.randomUUID().toString();
-        writeTocNcx(outputDir, uid, title, htmlFileNames.getFirst());
-        Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames, uid);
+        writeTocNcx(outputDir, ncxFileName, uid, title, htmlFileNames.getFirst());
+        Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames, uid,
+                                    coverFileName, ncxFileName);
         log.info("OPF generation complete: {} HTML file(s) + 1 OPF + NCX", htmlFileNames.size());
         return opfPath;
     }
@@ -69,19 +72,19 @@ public class OpfDictionaryWriter implements DictionaryWriter {
         return Math.ceilDiv(entryCount, HtmlChapterRenderer.ENTRIES_PER_CHAPTER);
     }
 
-    private static void writeCoverImage(Path outputDir) throws IOException {
+    private static void writeCoverImage(Path outputDir, String fileName) throws IOException {
         BufferedImage img = new BufferedImage(600, 800, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = img.createGraphics();
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, 600, 800);
         g.dispose();
-        ImageIO.write(img, "JPEG", outputDir.resolve("cover.jpg").toFile());
+        ImageIO.write(img, "JPEG", outputDir.resolve(fileName).toFile());
     }
 
-    private static void writeTocNcx(Path outputDir, String uid, String title, String firstHtmlFile)
-            throws IOException {
+    private static void writeTocNcx(Path outputDir, String fileName, String uid, String title,
+                                    String firstHtmlFile) throws IOException {
         try (BufferedWriter w = new BufferedWriter(
-                new OutputStreamWriter(Files.newOutputStream(outputDir.resolve("toc.ncx")),
+                new OutputStreamWriter(Files.newOutputStream(outputDir.resolve(fileName)),
                         StandardCharsets.UTF_8))) {
             w.write("""
                     <?xml version="1.0" encoding="UTF-8"?>
@@ -106,13 +109,21 @@ public class OpfDictionaryWriter implements DictionaryWriter {
     }
 
     private static String htmlFileName(String srcLang, String trgLang, int index) {
-        return "dictionary-%s-%s-%d.html".formatted(srcLang, trgLang, index).toLowerCase(Locale.ROOT);
+        return "%s-%d.html".formatted(DictionaryTitles.baseName(srcLang, trgLang), index);
+    }
+
+    private static String coverFileName(String srcLang, String trgLang) {
+        return DictionaryTitles.baseName(srcLang, trgLang) + "-cover.jpg";
+    }
+
+    private static String ncxFileName(String srcLang, String trgLang) {
+        return DictionaryTitles.baseName(srcLang, trgLang) + "-toc.ncx";
     }
 
     private static Path writeOpfFile(Path outputDir, String srcLang, String trgLang,
-                                     String title, List<String> htmlFileNames, String uid) throws IOException {
-        Path opfPath = outputDir.resolve(
-                "dictionary-%s-%s.opf".formatted(srcLang, trgLang).toLowerCase(Locale.ROOT));
+                                     String title, List<String> htmlFileNames, String uid,
+                                     String coverFileName, String ncxFileName) throws IOException {
+        Path opfPath = outputDir.resolve(DictionaryTitles.baseName(srcLang, trgLang) + ".opf");
 
         try (BufferedWriter w = new BufferedWriter(
                 new OutputStreamWriter(Files.newOutputStream(opfPath), StandardCharsets.UTF_8))) {
@@ -132,9 +143,9 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                         </x-metadata>
                     </metadata>
                     <manifest>
-                        <item id="cover-image" href="cover.jpg" media-type="image/jpeg"/>
-                        <item id="toc" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
-                    """.formatted(uid, title, srcLang, srcLang, trgLang));
+                        <item id="cover-image" href="%s" media-type="image/jpeg"/>
+                        <item id="toc" href="%s" media-type="application/x-dtbncx+xml"/>
+                    """.formatted(uid, title, srcLang, srcLang, trgLang, coverFileName, ncxFileName));
 
             for (int i = 0; i < htmlFileNames.size(); i++) {
                 w.write("    <item id=\"dictionary%d\" href=\"%s\" media-type=\"application/xhtml+xml\"/>%n"

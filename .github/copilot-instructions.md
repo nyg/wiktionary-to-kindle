@@ -59,13 +59,13 @@ java -jar target/wiktionary-to-kindle-<version>.jar --version
 - **`edu.self.w2k.gui`** — JavaFX front-end. `Launcher` (plain `main`, **must not** extend `Application` — a classpath launch otherwise fails with "JavaFX runtime components are missing"), `App` (FXML load, appender install), `MainViewModel` (state and derivations; `javafx.base` only, so unit-testable without a toolkit), `MainController` (bindings only), `PipelineService`/`PipelineTask` (threading + cancellation), `UiLogAppender`, `ProgressSnapshot`, `PreferencesDialog`, `ByteSizes`, `LanguageConverter`. FXML and CSS in `src/main/resources/edu/self/w2k/gui/`
 - **`edu.self.w2k.pipeline`** — `DictionaryPipeline` — the combined download-then-generate flow, JavaFX-free and injectable so it stays testable
 - **`edu.self.w2k.progress`** — `ProgressListener` (`Stage`, `TOTAL_UNKNOWN`, `NOOP`), `CountingInputStream`. Progress is constructor-injected everywhere, so each collaborator keeps its pre-existing constructor arity
-- **`edu.self.w2k.config`** — `AppPaths` (config and data dirs), `Preferences` (properties file), `LanguageCatalog` (dropdown lists), `AppVersion`
+- **`edu.self.w2k.config`** — `AppInfo` (the app's display name, kebab-case slug and dictionary prefix, as the single source for all three), `AppPaths` (config, cache, state and data dirs), `Preferences` (properties file), `LanguageCatalog` (dropdown lists), `AppVersion`
 - **`edu.self.w2k.dump`** — `DumpCatalog`, `DumpFile` — lists/deletes dumps; `CLI.findLatestDump` delegates to `latestFor`
 - **`edu.self.w2k.command`** — `DownloadCommand`, `GenerateCommand` — service orchestrators; `Command` interface. Both expose an `execute()` returning the produced path alongside the interface's `void run()`
 - **`edu.self.w2k.download`** — `KaikkiDumpDownloader` (HttpClient-based), `DumpDownloader` interface, `DownloadResult`
 - **`edu.self.w2k.write`** — `DictionaryWriter` interface, `DictionaryTitles` utility
 - **`edu.self.w2k.write.opf`** — `OpfDictionaryWriter` (emits chunked `.html` + `.opf`), `HtmlChapterRenderer`
-- **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (loads the pinned version + per-platform digests from `src/main/resources/kindling-release.properties`), `XdgCachePaths`, `KindlingException`
+- **`edu.self.w2k.kindling`** — `KindlingDictionaryConverter` (composes `OpfDictionaryWriter` + kindling binary), `KindlingCliResolver` (override → PATH → cache → download), `KindlingDownloader` (GitHub releases API + SHA-256 verify), `KindlingPlatform` enum, `KindlingRelease` (loads the pinned version + per-platform digests from `src/main/resources/kindling-release.properties`), `KindlingException`
 - **`edu.self.w2k.parse`** — `JsonlDictionaryParser`, `DictionaryParser` interface
 - **`edu.self.w2k.render`** — `HtmlDefinitionRenderer`, `DefinitionRenderer` interface
 - **`edu.self.w2k.model`** — `LexiconEntry` plus Jackson-annotated records: `WiktionaryEntry`, `WiktionarySense`, `WiktionaryExample`, `WiktionaryForm`, `WiktionaryFormOf`
@@ -77,12 +77,21 @@ The two front-ends resolve these differently, deliberately.
 | Directory | Purpose |
 |-----------|---------|
 | `dumps/`  | Downloaded `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` from kaikki.org |
-| `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf`, `-N.html` and `toc.ncx` |
+| `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf`, `-N.html`, `-toc.ncx` and `-cover.jpg` |
 
 - **CLI**: CWD-relative, via the `CLI.DUMPS_DIR` / `CLI.DICTIONARIES_DIR` constants. Unchanged from before the GUI existed.
 - **GUI**: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice.
 
-`AppPaths.configDir()` holds `preferences.properties` and `logs/app.log`; `XdgCachePaths` holds the cached `kindling-cli`.
+`AppPaths` resolves four roles, all named `AppInfo.SLUG`. Unix-likes — **macOS included** — follow the XDG Base Directory spec; Windows gets sibling directories under `%LOCALAPPDATA%\wiktionary-to-kindle\`:
+
+| Role | Unix | Windows | Holds |
+|------|------|---------|-------|
+| `configDir()` | `$XDG_CONFIG_HOME` → `~/.config` | `…\Config` | `preferences.properties` |
+| `cacheDir()` | `$XDG_CACHE_HOME` → `~/.cache` | `…\Cache` | `kindling/<version>/<asset>` |
+| `stateDir()` | `$XDG_STATE_HOME` → `~/.local/state` | `…\State` | `logs/app.log` |
+| `defaultDataDir()` | `$XDG_DOCUMENTS_DIR` → `~/Documents` | `%USERPROFILE%\Documents` | `dumps/`, `dictionaries/` |
+
+The data dir is under Documents rather than `$XDG_DATA_HOME` on purpose — see the note above — but resolves that folder the XDG way: the `XDG_DOCUMENTS_DIR` env var, then the same key in `$XDG_CONFIG_HOME/user-dirs.dirs` (a leading `$HOME` is expanded, any parse failure falls through), then `~/Documents`.
 
 ### Dictionary Output Format
 
@@ -101,14 +110,17 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 
 `HtmlChapterRenderer` builds one MobiPocket HTML document (≤ 10 000 entries per chunk) preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and `xmlns:mbp`/`xmlns:idx` namespace declarations.
 
-`OpfDictionaryWriter` chunks the entry map, writes `dictionary-{src}-{trg}-N.html` files, a `toc.ncx` navigation map, then writes a `dictionary-{src}-{trg}.opf` OPF 2.0 manifest (with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`). Returns the OPF path.
+**Every output file is named from `DictionaryTitles.baseName(src, trg)`** → `w2k-dictionary-{src}-{trg}`, lowercased. The `W2K` prefix (from `AppInfo.DICTIONARY_PREFIX`) also leads the `<dc:title>`, which is the only thing Kindle shows in its dictionary settings list. The NCX and cover are named from the same stem rather than the fixed `toc.ncx` / `cover.jpg` they once used: several dictionaries share one output directory, so fixed names had each run overwrite the previous run's side-artefacts.
 
-`KindlingDictionaryConverter` composes `OpfDictionaryWriter` with a `kindling-cli` binary. It calls `KindlingCliResolver.resolve()` to obtain the binary, then runs `kindling-cli build <opf> -o <mobi>`. Output: `dictionaries/dictionary-{src}-{trg}.mobi` (plus `.opf`, `.html` and `toc.ncx` side-artefacts).
+`OpfDictionaryWriter` chunks the entry map, writes `w2k-dictionary-{src}-{trg}-N.html` files, a `-toc.ncx` navigation map and a `-cover.jpg`, then writes a `w2k-dictionary-{src}-{trg}.opf` OPF 2.0 manifest (with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`). Returns the OPF path.
 
-`KindlingCliResolver.resolve()` tries in order: explicit `--kindling-cli` override → PATH probe (`which`/`where`) → cached binary at `<XdgCachePaths.kindlingCacheDir()>/<version>/<assetName>` (SHA-256 verified) → download via `KindlingDownloader`. `KindlingDownloader` fetches from GitHub Releases, verifies SHA-256 against the pinned digests from `kindling-release.properties` (loaded by `KindlingRelease`), or the GitHub API `digest` field for non-default versions, renames atomically, and marks the file executable.
+`KindlingDictionaryConverter` composes `OpfDictionaryWriter` with a `kindling-cli` binary. It calls `KindlingCliResolver.resolve()` to obtain the binary, then runs `kindling-cli build <opf> -o <mobi>`. Output: `dictionaries/w2k-dictionary-{src}-{trg}.mobi` (plus the side-artefacts above).
+
+`KindlingCliResolver.resolve()` tries in order: explicit `--kindling-cli` override → PATH probe (`which`/`where`) → cached binary at `<AppPaths.cacheDir()>/kindling/<version>/<assetName>` (SHA-256 verified) → download via `KindlingDownloader`. `KindlingDownloader` fetches from GitHub Releases, verifies SHA-256 against the pinned digests from `kindling-release.properties` (loaded by `KindlingRelease`), or the GitHub API `digest` field for non-default versions, renames atomically, and marks the file executable.
 
 ## Key Conventions
 
+- **Naming**: the app has exactly two names, both in `AppInfo` — `DISPLAY_NAME` (`Wiktionary to Kindle`: window title, jpackage `--name`, `.app`/`.exe`, Scoop shortcut) and `SLUG` (`wiktionary-to-kindle`: artifactId, CLI command, directories, release assets, brew/scoop package). Never introduce a third spelling. `WiktionaryToKindle` and `WiktionaryKindle` both existed once and were removed; `--mac-package-name` is deliberately left unset so `CFBundleName` falls back to `--name`.
 - **CLI** uses [picocli](https://picocli.info/). `CLI.java` is the root `@Command`; `Download` and `Generate` are inner static subcommand classes that wire collaborators and delegate to the service-layer command classes.
 - **Service classes** (`DownloadCommand`, `GenerateCommand`) are independent of picocli and of JavaFX — they can be constructed directly in tests.
 - **Progress** flows through `ProgressListener`, constructor-injected with a `NOOP` default. Emissions are throttled (roughly every 4 MB); the dump is millions of lines, so per-item reporting would swamp any listener. Download progress needs `BodyHandlers.ofInputStream` plus a manual copy loop — `ofFile` offers neither a byte callback nor a cancellation point. Parse progress counts the *compressed* stream, since a gzip member's uncompressed size is unknowable up front.
@@ -135,4 +147,6 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 
 - `java-ci.yaml` — `build` runs `mvn verify` under `xvfb-run` on Ubuntu; `package` runs jlink+jpackage on macOS and Windows, so a packaging regression is caught in a PR rather than at release time.
 - `release.yml` — `workflow_dispatch` with a bump choice. Bumps via `maven-release-plugin` (hence the `-SNAPSHOT` version and `<scm>` block), builds the DMG, Scoop ZIP and portable JAR, publishes, then dispatches to `nyg/homebrew-tap` and pushes a manifest to `nyg/scoop-bucket`. `RELEASE_TOKEN` needs write access to all three repos.
+- **Release asset names** are `wiktionary-to-kindle-<version>-<os>-<arch>.<ext>` — `…-macos-arm64.dmg`, `…-windows-x64-scoop.zip`, and the plain `wiktionary-to-kindle-<version>.jar` (cross-platform, so no os/arch suffix). Every reference interpolates `VERSION` from a step-level `env`: the rename step, the 7z output, `gh release create`, both `sha256sum` inputs and the Scoop manifest url. Renaming an asset means updating the Homebrew cask in `nyg/homebrew-tap` too, and only **after** a release has published under the new name — the Scoop bucket regenerates itself.
+- `scripts/package.sh` derives the version by stripping the `wiktionary-to-kindle-` prefix off the built JAR's filename, so that literal must keep matching the pom's artifactId.
 - Conventional commits; `git-cliff` generates the changelog from them via `cliff.toml`.

@@ -38,9 +38,9 @@ Grab the [latest release](https://github.com/nyg/wiktionary-to-kindle/releases/l
 
 | File | For |
 |------|-----|
-| `WiktionaryToKindle.dmg` | macOS (Apple Silicon) |
-| `WiktionaryToKindle-Scoop.zip` | Windows — extract and run `Wiktionary to Kindle.exe` |
-| `wiktionary-to-kindle-*.jar` | Linux, or scripted use anywhere. Needs Java 25 |
+| `wiktionary-to-kindle-<version>-macos-arm64.dmg` | macOS (Apple Silicon) |
+| `wiktionary-to-kindle-<version>-windows-x64-scoop.zip` | Windows — extract and run `Wiktionary to Kindle.exe` |
+| `wiktionary-to-kindle-<version>.jar` | Linux, or scripted use anywhere. Needs Java 25 |
 
 The app is ad-hoc signed but **not notarized**, so macOS quarantines the DMG download and blocks the first launch — you may see *"is damaged"* or *"Apple could not verify…"*, which both mean the same thing and do not mean the app is corrupted. Homebrew handles this for you. If you installed the DMG by hand, clear the flag once:
 
@@ -58,13 +58,13 @@ So *edition: Greek, word language: English* gives you an English–Greek diction
 
 The first build for an edition downloads its dump, which is 100 MB to several GB. Progress and a live log are shown throughout, and **Cancel** stops the run cleanly at any stage. Subsequent builds reuse the downloaded dump.
 
-When it finishes, **Show in folder** reveals the `.mobi`. Copy it to your Kindle over USB, or send it to your device's Kindle email address.
+When it finishes, **Show in folder** reveals the `.mobi` — `w2k-dictionary-en-el.mobi` for the example above. Copy it to your Kindle over USB, or send it to your device's Kindle email address.
 
 The **Dumps** tab lists what has been downloaded, with the Wiktionary edition, generation date and size, and lets you delete dumps you no longer need — worth checking, since they are the largest thing this app puts on your disk.
 
 ### On your Kindle
 
-Once the `.mobi` is on the device, set it as the default dictionary for its language, and tap-to-define uses it everywhere you read.
+Once the `.mobi` is on the device, set it as the default dictionary for its language, and tap-to-define uses it everywhere you read. Titles are prefixed `W2K`, so the dictionaries this app builds group together in that list and stay apart from Amazon's own.
 
 ![Choosing your new default dictionary](https://i.imgur.com/aXAbTbx.jpg)
 ![Proof that it works](https://i.imgur.com/q3Tdxjo.jpg)
@@ -74,8 +74,11 @@ Once the `.mobi` is on the device, set it as the default dictionary for its lang
 | What | Location |
 |------|----------|
 | Dumps and dictionaries | `~/Documents/wiktionary-to-kindle/` (change in Preferences) |
-| Settings and logs | `~/.config/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Config` on Windows |
+| Settings | `~/.config/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Config` on Windows |
+| Log file | `~/.local/state/wiktionary-to-kindle/logs/app.log` — `%LOCALAPPDATA%\wiktionary-to-kindle\State` on Windows |
 | Cached `kindling-cli` | `~/.cache/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Cache` on Windows |
+
+macOS included, these follow the [XDG Base Directory specification](https://specifications.freedesktop.org/basedir-spec/latest/) and honour `XDG_CONFIG_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME`. Dumps and dictionaries deliberately sit in your documents folder instead — they are multi-gigabyte and the `.mobi` has to be found and copied to a Kindle, so both belong somewhere a file manager shows by default. That folder is still resolved the XDG way, via `XDG_DOCUMENTS_DIR`.
 
 Preferences also lets you point at a pre-installed `kindling-cli` or pin a specific version. Maximum heap is shown there but cannot be changed: it is fixed when the app starts, and the bundle sizes it at 75% of your machine's RAM.
 
@@ -105,7 +108,7 @@ java -jar wiktionary-to-kindle-<version>.jar --version
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the chosen edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
 2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition, its inflected forms are collected as Kindle lookup targets, and the result is grouped in memory by normalised key.
-3. Chunked MobiPocket HTML files, a `toc.ncx` navigation map and an OPF manifest are written.
+3. Chunked MobiPocket HTML files, an NCX navigation map and an OPF manifest are written.
 4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded and cached, verified against a pinned SHA-256.
 5. `kindling-cli build` converts the OPF into a `.mobi` Kindle dictionary.
 

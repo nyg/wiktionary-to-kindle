@@ -34,13 +34,35 @@ class OpfDictionaryWriterTest {
 
         // Then
         assertThat(result)
-                .isEqualTo(tmp.resolve("dictionary-en-fr.opf"))
+                .isEqualTo(tmp.resolve("w2k-dictionary-en-fr.opf"))
                 .exists();
         String opfContent = Files.readString(result);
         assertThat(opfContent)
                 .contains("<DictionaryInLanguage>en</DictionaryInLanguage>")
                 .contains("<DictionaryOutLanguage>fr</DictionaryOutLanguage>");
-        assertThat(tmp.resolve("dictionary-en-fr-0.html")).exists();
+        assertThat(tmp.resolve("w2k-dictionary-en-fr-0.html")).exists();
+    }
+
+    @Test
+    void should_name_the_ncx_and_cover_after_the_language_pair() throws Exception {
+        // Given two dictionaries generated into one directory, as the app does
+        TreeMap<String, List<LexiconEntry>> defs = new TreeMap<>();
+        defs.put("apple", List.of(new LexiconEntry("apple", "<ol><li>fruit</li></ol>", List.of(), List.of())));
+
+        // When
+        unit.write(defs, "en", "fr", "W2K English–French Dictionary", tmp);
+        unit.write(defs, "en", "de", "W2K English–German Dictionary", tmp);
+
+        // Then neither run has overwritten the other's side-artefacts
+        assertThat(tmp.resolve("w2k-dictionary-en-fr-toc.ncx")).exists();
+        assertThat(tmp.resolve("w2k-dictionary-en-fr-cover.jpg")).exists();
+        assertThat(tmp.resolve("w2k-dictionary-en-de-toc.ncx")).exists();
+        assertThat(tmp.resolve("w2k-dictionary-en-de-cover.jpg")).exists();
+
+        // And the OPF points at its own copies
+        assertThat(Files.readString(tmp.resolve("w2k-dictionary-en-fr.opf")))
+                .contains("href=\"w2k-dictionary-en-fr-toc.ncx\"")
+                .contains("href=\"w2k-dictionary-en-fr-cover.jpg\"");
     }
 
     @Test
@@ -56,7 +78,7 @@ class OpfDictionaryWriterTest {
         unit.write(defs, "en", "fr", "English-French Dictionary", tmp);
 
         // Then
-        assertThat(tmp.resolve("dictionary-en-fr-0.html")).exists();
-        assertThat(tmp.resolve("dictionary-en-fr-1.html")).exists();
+        assertThat(tmp.resolve("w2k-dictionary-en-fr-0.html")).exists();
+        assertThat(tmp.resolve("w2k-dictionary-en-fr-1.html")).exists();
     }
 }

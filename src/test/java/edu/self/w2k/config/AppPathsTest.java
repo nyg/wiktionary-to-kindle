@@ -2,10 +2,13 @@ package edu.self.w2k.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class AppPathsTest {
 
@@ -135,5 +138,138 @@ class AppPathsTest {
 
         // Then
         assertThat(result).isEqualTo(Path.of("/h/Documents/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_use_xdg_cache_home_when_set_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("XDG_CACHE_HOME", "/c", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.cacheDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/c/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_fallback_to_home_cache_when_xdg_is_unset_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("HOME", "/h");
+
+        // When
+        Path result = AppPaths.cacheDir(env, "Mac OS X");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/.cache/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_put_cache_beside_config_on_windows() {
+        // Given
+        Map<String, String> env = Map.of("LOCALAPPDATA", "C:\\local");
+
+        // When
+        Path result = AppPaths.cacheDir(env, "Windows 11");
+
+        // Then
+        assertThat(result.toString())
+                .startsWith("C:\\local")
+                .contains("wiktionary-to-kindle")
+                .contains("Cache");
+    }
+
+    @Test
+    void should_use_xdg_state_home_when_set_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("XDG_STATE_HOME", "/s", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.stateDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/s/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_fallback_to_local_state_when_xdg_is_unset_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("HOME", "/h");
+
+        // When
+        Path result = AppPaths.stateDir(env, "Mac OS X");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/.local/state/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_put_state_beside_config_on_windows() {
+        // Given
+        Map<String, String> env = Map.of("LOCALAPPDATA", "C:\\local");
+
+        // When
+        Path result = AppPaths.stateDir(env, "Windows 11");
+
+        // Then
+        assertThat(result.toString())
+                .startsWith("C:\\local")
+                .contains("wiktionary-to-kindle")
+                .contains("State");
+    }
+
+    @Test
+    void should_prefer_xdg_documents_dir_from_the_environment() {
+        // Given
+        Map<String, String> env = Map.of("XDG_DOCUMENTS_DIR", "/h/Documenten", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.defaultDataDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/Documenten/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_expand_home_in_xdg_documents_dir(@TempDir Path config) throws IOException {
+        // Given xdg-user-dirs writes the value as "$HOME/…"
+        Files.writeString(config.resolve("user-dirs.dirs"), """
+                XDG_DESKTOP_DIR="$HOME/Bureau"
+                XDG_DOCUMENTS_DIR="$HOME/Documents perso"
+                """);
+        Map<String, String> env = Map.of("XDG_CONFIG_HOME", config.toString(), "HOME", "/h");
+
+        // When
+        Path result = AppPaths.defaultDataDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/Documents perso/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_fallback_to_documents_when_user_dirs_has_no_documents_entry(@TempDir Path config)
+            throws IOException {
+        // Given
+        Files.writeString(config.resolve("user-dirs.dirs"), "XDG_DESKTOP_DIR=\"$HOME/Bureau\"\n");
+        Map<String, String> env = Map.of("XDG_CONFIG_HOME", config.toString(), "HOME", "/h");
+
+        // When
+        Path result = AppPaths.defaultDataDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/Documents/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_ignore_user_dirs_on_windows() {
+        // Given a Windows environment that happens to carry XDG variables, e.g. under Git Bash
+        Map<String, String> env = Map.of("XDG_DOCUMENTS_DIR", "/h/Documenten",
+                                         "USERPROFILE", "C:\\Users\\me");
+
+        // When
+        Path result = AppPaths.defaultDataDir(env, "Windows 11");
+
+        // Then
+        assertThat(result.toString()).startsWith("C:\\Users\\me").contains("Documents");
     }
 }

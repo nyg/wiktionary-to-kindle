@@ -242,9 +242,10 @@ icon_argument() {
 platform_arguments() {
   case "$(uname -s)" in
     Darwin)
-      # --mac-package-name is the menu-bar name and must stay within 16 characters, which the full
-      # app name exceeds.
-      echo "--mac-package-identifier $BUNDLE_ID --mac-package-name WiktionaryKindle"
+      # --mac-package-name is left unset so CFBundleName falls back to --name: Apple suggests
+      # keeping the menu-bar name within 16 characters, which "Wiktionary to Kindle" exceeds, but a
+      # sixth spelling of the app's own name costs more than a long menu-bar title does.
+      echo "--mac-package-identifier $BUNDLE_ID"
       ;;
     MINGW* | MSYS* | CYGWIN*)
       if [[ "$PACKAGE_TYPE" == "msi" ]]; then

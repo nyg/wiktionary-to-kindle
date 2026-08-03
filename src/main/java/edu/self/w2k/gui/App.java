@@ -8,6 +8,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.core.FileAppender;
+import edu.self.w2k.config.AppInfo;
 import edu.self.w2k.config.AppPaths;
 import edu.self.w2k.config.AppVersion;
 import javafx.application.Application;
@@ -38,7 +39,7 @@ public class App extends Application {
         Scene scene = new Scene(loader.load());
         scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
 
-        stage.setTitle("Wiktionary to Kindle " + AppVersion.get());
+        stage.setTitle(AppInfo.DISPLAY_NAME + " " + AppVersion.get());
         stage.setScene(scene);
         stage.setMinWidth(720);
         stage.setMinHeight(560);
@@ -47,7 +48,8 @@ public class App extends Application {
 
         // Logged after the appenders are installed, so both the console pane and the log file always
         // open with the environment details a bug report needs.
-        log.info("wiktionary-to-kindle {} started — Java {}, {} {}, max heap {} MB",
+        log.info("{} {} started — Java {}, {} {}, max heap {} MB",
+                 AppInfo.SLUG,
                  AppVersion.get(),
                  Runtime.version(),
                  System.getProperty("os.name"),
@@ -82,7 +84,7 @@ public class App extends Application {
     /** A log file gives users something concrete to attach to a bug report. */
     private static void addFileAppender(LoggerContext context, ch.qos.logback.classic.Logger root) {
         try {
-            Path logFile = AppPaths.configDir().resolve("logs").resolve("app.log");
+            Path logFile = AppPaths.stateDir().resolve("logs").resolve("app.log");
             Files.createDirectories(logFile.getParent());
 
             PatternLayoutEncoder encoder = new PatternLayoutEncoder();
