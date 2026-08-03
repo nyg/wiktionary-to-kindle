@@ -38,6 +38,7 @@
         <sonar-maven-plugin.version>5.7.0.6970</sonar-maven-plugin.version>
         <javafx-maven-plugin.version>0.0.8</javafx-maven-plugin.version>
         <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
+        <exec-maven-plugin.version>3.6.3</exec-maven-plugin.version>
 
         <!-- SonarCloud -->
         <sonar.organization>nyg</sonar.organization>
@@ -205,6 +206,17 @@
                 </configuration>
             </plugin>
 
+            <!-- Runs scripts/generate-changelog.sh, invoked as exec:exec from the release
+                 plugin's preparationGoals below. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec-maven-plugin.version}</version>
+                <configuration>
+                    <executable>./scripts/generate-changelog.sh</executable>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
@@ -212,6 +224,12 @@
                 <configuration>
                     <tagNameFormat>v@{project.version}</tagNameFormat>
                     <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <!-- exec:exec regenerates and stages CHANGELOG.md, so it lands in the
+                         tagged "prepare release" commit rather than a separate one. -->
+                    <preparationGoals>clean verify exec:exec</preparationGoals>
+                    <!-- @formatter:off -->
+                    <scmCommentPrefix>chore(release): </scmCommentPrefix>
+                    <!-- @formatter:on -->
                 </configuration>
             </plugin>
 

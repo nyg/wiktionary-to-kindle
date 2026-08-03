@@ -99,16 +99,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      # Committed before release:prepare so the changelog is part of the tagged tree rather than
-      # landing a commit after it.
-      - name: Update changelog
-        run: |
-          git cliff --tag "v${{ env.RELEASE_VERSION }}" -o CHANGELOG.md
-          git add CHANGELOG.md
-          git commit -m "chore(release): update changelog for v${{ env.RELEASE_VERSION }}"
-
-      # Runs the full test suite as part of its own verification. Xvfb is needed for the FXML load
-      # test, exactly as in java-ci.
+      # Runs the full test suite as part of its own verification, then scripts/generate-changelog.sh
+      # (exec:exec in preparationGoals), which stages CHANGELOG.md into the tagged commit. Xvfb is
+      # needed for the FXML load test, exactly as in java-ci.
       - name: Install Xvfb
         run: sudo apt-get update && sudo apt-get install -y xvfb
 

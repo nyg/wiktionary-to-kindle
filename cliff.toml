@@ -62,6 +62,8 @@ commit_parsers = [
     { message = "^perf", group = "<!-- 5 -->⚡ Performance" },
     { message = "^style", group = "<!-- 6 -->🎨 Styling" },
     { message = "^test", group = "<!-- 7 -->🧪 Testing" },
+    # Legacy release commits, from before scmCommentPrefix was set on maven-release-plugin.
+    { message = "^\\[maven-release-plugin\\]", skip = true },
     { message = "^chore\\(release\\):", skip = true },
     { message = "^(chore|ci|build)", group = "<!-- 8 -->⚙️ Miscellaneous" },
     { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
