@@ -3,14 +3,14 @@
 
     <groupId>edu.self</groupId>
     <artifactId>wiktionary-to-kindle</artifactId>
-    <version>2.0.2</version>
+    <version>2.0.3-SNAPSHOT</version>
 
     <!-- Required by maven-release-plugin, which the release workflow drives. -->
     <scm>
         <connection>scm:git:https://github.com/nyg/wiktionary-to-kindle.git</connection>
         <developerConnection>scm:git:git@github.com:nyg/wiktionary-to-kindle.git</developerConnection>
         <url>https://github.com/nyg/wiktionary-to-kindle</url>
-        <tag>v2.0.2</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
