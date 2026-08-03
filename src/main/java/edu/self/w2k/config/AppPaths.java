@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,11 +24,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class AppPaths {
 
+    /** Read from the environment first, then from {@code user-dirs.dirs}, where it is an assignment. */
+    private static final String DOCUMENTS_KEY = "XDG_DOCUMENTS_DIR";
+
     private AppPaths() {}
 
     /** Where {@code preferences.properties} lives. */
     public static Path configDir() {
-        return configDir(System.getenv(), System.getProperty("os.name", ""));
+        return configDir(System.getenv(), osName());
     }
 
     static Path configDir(Map<String, String> env, String osName) {
@@ -40,7 +43,7 @@ public final class AppPaths {
 
     /** Where downloaded {@code kindling-cli} binaries are kept — re-fetchable, so cache and not data. */
     public static Path cacheDir() {
-        return cacheDir(System.getenv(), System.getProperty("os.name", ""));
+        return cacheDir(System.getenv(), osName());
     }
 
     static Path cacheDir(Map<String, String> env, String osName) {
@@ -55,7 +58,7 @@ public final class AppPaths {
      * the user, and losing it costs nothing.
      */
     public static Path stateDir() {
-        return stateDir(System.getenv(), System.getProperty("os.name", ""));
+        return stateDir(System.getenv(), osName());
     }
 
     static Path stateDir(Map<String, String> env, String osName) {
@@ -76,7 +79,7 @@ public final class AppPaths {
      * preferences.
      */
     public static Path defaultDataDir() {
-        return defaultDataDir(System.getenv(), System.getProperty("os.name", ""));
+        return defaultDataDir(System.getenv(), osName());
     }
 
     static Path defaultDataDir(Map<String, String> env, String osName) {
@@ -88,11 +91,11 @@ public final class AppPaths {
         if (isWindows(osName)) {
             return home.resolve("Documents");
         }
-        String fromEnv = env.get("XDG_DOCUMENTS_DIR");
+        String fromEnv = env.get(DOCUMENTS_KEY);
         if (isSet(fromEnv)) {
             return Path.of(expandHome(fromEnv, home));
         }
-        return readUserDirs(env, osName, home).orElseGet(() -> home.resolve("Documents"));
+        return readUserDirs(env, home).orElseGet(() -> home.resolve("Documents"));
     }
 
     /**
@@ -100,28 +103,31 @@ public final class AppPaths {
      * {@code xdg-user-dirs} generates. Any problem — absent, unreadable, no such key — falls through
      * to the caller's default rather than failing the launch.
      */
-    private static Optional<Path> readUserDirs(Map<String, String> env, String osName, Path home) {
+    private static Optional<Path> readUserDirs(Map<String, String> env, Path home) {
         Path userDirs = unixBase(env, "XDG_CONFIG_HOME", ".config").resolve("user-dirs.dirs");
         if (!Files.isReadable(userDirs)) {
             return Optional.empty();
         }
-        try {
-            List<String> lines = Files.readAllLines(userDirs, StandardCharsets.UTF_8);
-            for (String line : lines) {
-                String trimmed = line.strip();
-                if (!trimmed.startsWith("XDG_DOCUMENTS_DIR=")) continue;
-                String value = trimmed.substring("XDG_DOCUMENTS_DIR=".length()).strip();
-                if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
-                    value = value.substring(1, value.length() - 1);
-                }
-                if (!isSet(value)) continue;
-                return Optional.of(Path.of(expandHome(value, home)));
-            }
+        String assignment = DOCUMENTS_KEY + "=";
+        try (Stream<String> lines = Files.lines(userDirs, StandardCharsets.UTF_8)) {
+            return lines.map(String::strip)
+                        .filter(line -> line.startsWith(assignment))
+                        .map(line -> unquote(line.substring(assignment.length()).strip()))
+                        .filter(AppPaths::isSet)
+                        .findFirst()
+                        .map(value -> Path.of(expandHome(value, home)));
         }
         catch (IOException | RuntimeException e) {
             log.warn("Could not read {}: {}", userDirs, e.getLocalizedMessage());
+            return Optional.empty();
         }
-        return Optional.empty();
+    }
+
+    private static String unquote(String value) {
+        if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+            return value.substring(1, value.length() - 1);
+        }
+        return value;
     }
 
     /** {@code user-dirs.dirs} writes paths as {@code "$HOME/Documents"}; nothing else is expanded. */
@@ -129,6 +135,10 @@ public final class AppPaths {
         if (value.equals("$HOME")) return home.toString();
         if (value.startsWith("$HOME/")) return home + value.substring("$HOME".length());
         return value;
+    }
+
+    private static String osName() {
+        return System.getProperty("os.name", "");
     }
 
     private static boolean isWindows(String osName) {
