@@ -67,7 +67,7 @@ class MainViewModelTest {
         unit.wordLanguageProperty().set(Language.of("fr"));
 
         // Then — argument order matches the CLI: word language first, edition second
-        assertThat(unit.titleProperty().get()).isEqualTo("French–Greek Dictionary");
+        assertThat(unit.titleProperty().get()).isEqualTo("W2K French–Greek Dictionary");
     }
 
     @Test
@@ -89,7 +89,7 @@ class MainViewModelTest {
         unit.wordLanguageProperty().set(Language.of("de"));
 
         // Then
-        assertThat(unit.titleProperty().get()).isEqualTo("German–Greek Dictionary");
+        assertThat(unit.titleProperty().get()).isEqualTo("W2K German–Greek Dictionary");
     }
 
     @Test

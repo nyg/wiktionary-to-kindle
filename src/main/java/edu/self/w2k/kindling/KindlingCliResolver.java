@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import edu.self.w2k.config.AppPaths;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +60,7 @@ public class KindlingCliResolver {
     }
 
     private Path resolveFromCacheOrDownload(KindlingPlatform platform) throws IOException, KindlingException {
-        Path cacheDir = XdgCachePaths.kindlingCacheDir().resolve(version);
+        Path cacheDir = AppPaths.cacheDir().resolve("kindling").resolve(version);
         Path cached = cacheDir.resolve(platform.assetName());
 
         if (Files.exists(cached)) {

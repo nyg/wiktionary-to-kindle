@@ -55,7 +55,7 @@ class KindlingDictionaryConverterTest {
     @Test
     void should_run_kindling_cli_and_return_mobi_path_when_write() throws Exception {
         // Given
-        Path opfPath = outputDir.resolve("dictionary-en-fr.opf");
+        Path opfPath = outputDir.resolve("w2k-dictionary-en-fr.opf");
         Path binPath = outputDir.resolve("kindling-cli");
         when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(outputDir))).thenReturn(opfPath);
         when(resolver.resolve()).thenReturn(binPath);
@@ -65,21 +65,21 @@ class KindlingDictionaryConverterTest {
         Path result = unit.write(new TreeMap<>(), "en", "fr", "Title", outputDir);
 
         // Then
-        assertThat(result).isEqualTo(outputDir.resolve("dictionary-en-fr.mobi"));
+        assertThat(result).isEqualTo(outputDir.resolve("w2k-dictionary-en-fr.mobi"));
 
         ArgumentCaptor<List<String>> commandCaptor = ArgumentCaptor.captor();
         verify(runner).run(commandCaptor.capture());
         assertThat(commandCaptor.getValue())
                 .contains("build")
                 .contains("-o")
-                .anyMatch(s -> s.endsWith("dictionary-en-fr.opf"))
-                .anyMatch(s -> s.endsWith("dictionary-en-fr.mobi"));
+                .anyMatch(s -> s.endsWith("w2k-dictionary-en-fr.opf"))
+                .anyMatch(s -> s.endsWith("w2k-dictionary-en-fr.mobi"));
     }
 
     @Test
     void should_throw_io_exception_when_runner_returns_non_zero_exit_code() throws Exception {
         // Given
-        Path opfPath = outputDir.resolve("dictionary-en-fr.opf");
+        Path opfPath = outputDir.resolve("w2k-dictionary-en-fr.opf");
         Path binPath = outputDir.resolve("kindling-cli");
         when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(outputDir))).thenReturn(opfPath);
         when(resolver.resolve()).thenReturn(binPath);
@@ -95,7 +95,7 @@ class KindlingDictionaryConverterTest {
     void should_report_kindling_stage_when_invoking_the_binary() throws Exception {
         // Given
         when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(outputDir)))
-                .thenReturn(outputDir.resolve("dictionary-en-fr.opf"));
+                .thenReturn(outputDir.resolve("w2k-dictionary-en-fr.opf"));
         when(resolver.resolve()).thenReturn(outputDir.resolve("kindling-cli"));
         when(runner.run(anyList())).thenReturn(0);
 

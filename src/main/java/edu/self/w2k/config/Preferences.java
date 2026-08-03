@@ -41,8 +41,9 @@ public record Preferences(Path dumpsDir,
     private static final String KEY_KINDLING_VERSION = "kindlingVersion";
 
     private static final String FILE_COMMENT = """
-            wiktionary-to-kindle preferences. Blank or missing values fall back to the defaults.
-            kindlingVersion accepts a release tag such as v0.28.0; blank uses the pinned default.""";
+            %s preferences. Blank or missing values fall back to the defaults.
+            kindlingVersion accepts a release tag such as v0.28.0; blank uses the pinned default."""
+            .formatted(AppInfo.SLUG);
 
     public static Preferences defaults() {
         Path dataDir = AppPaths.defaultDataDir();

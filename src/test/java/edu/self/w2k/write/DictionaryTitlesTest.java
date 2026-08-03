@@ -28,6 +28,24 @@ class DictionaryTitlesTest {
         String result = DictionaryTitles.autoTitle("xx", "yy");
 
         // Then
-        assertThat(result).startsWith("XX").endsWith("Dictionary");
+        assertThat(result).startsWith("W2K XX").endsWith("Dictionary");
+    }
+
+    @Test
+    void should_prefix_the_title_so_kindle_settings_can_tell_it_apart() {
+        // When
+        String result = DictionaryTitles.autoTitle("el", "en");
+
+        // Then
+        assertThat(result).startsWith("W2K ");
+    }
+
+    @Test
+    void should_build_a_lowercase_prefixed_base_name() {
+        // When
+        String result = DictionaryTitles.baseName("EN", "el");
+
+        // Then
+        assertThat(result).isEqualTo("w2k-dictionary-en-el");
     }
 }

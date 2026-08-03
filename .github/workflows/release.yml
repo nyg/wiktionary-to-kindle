@@ -158,20 +158,27 @@ jobs:
         shell: bash
         run: mvn -B -q --no-transfer-progress -DskipTests package
 
+      # jpackage names the DMG after the display name; the release asset uses the kebab-case name
+      # instead, and says which OS, CPU and version it is for, so a download is unambiguous once it
+      # sits in a Downloads folder. The runner is macos-15, i.e. Apple Silicon only.
       - name: Package macOS DMG
         if: matrix.artifact == 'macos'
         shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.release_version }}
         run: |
           set -euo pipefail
           scripts/package.sh dmg
           mkdir -p artifacts
-          mv "target/dist/"*.dmg "artifacts/WiktionaryToKindle.dmg"
+          mv "target/dist/"*.dmg "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg"
 
       # Scoop consumes a flat ZIP whose root holds the launcher, so the app-image directory is
       # zipped from the inside. The directory name contains spaces, hence the quoting.
       - name: Package Windows ZIP for Scoop
         if: matrix.artifact == 'windows'
         shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.release_version }}
         run: |
           set -euo pipefail
           scripts/package.sh app-image
@@ -188,7 +195,8 @@ jobs:
             exit 1
           fi
 
-          ( cd "$app_dir" && 7z a -tzip -mx=7 "$GITHUB_WORKSPACE/artifacts/WiktionaryToKindle-Scoop.zip" . )
+          ( cd "$app_dir" && 7z a -tzip -mx=7 \
+              "$GITHUB_WORKSPACE/artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip" . )
 
       - name: Collect portable JAR
         if: matrix.artifact == 'jar'
@@ -279,8 +287,8 @@ jobs:
       - name: Create GitHub release
         run: |
           gh release create "v${VERSION}" \
-            'artifacts/WiktionaryToKindle.dmg' \
-            'artifacts/WiktionaryToKindle-Scoop.zip' \
+            "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg" \
+            "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip" \
             "artifacts/wiktionary-to-kindle-${VERSION}.jar" \
             --title "v${VERSION}" \
             --verify-tag \
@@ -292,8 +300,8 @@ jobs:
         id: sha
         run: |
           set -euo pipefail
-          dmg_sha=$(sha256sum 'artifacts/WiktionaryToKindle.dmg' | awk '{print $1}')
-          zip_sha=$(sha256sum 'artifacts/WiktionaryToKindle-Scoop.zip' | awk '{print $1}')
+          dmg_sha=$(sha256sum "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg" | awk '{print $1}')
+          zip_sha=$(sha256sum "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip" | awk '{print $1}')
           echo "dmg_sha256=$dmg_sha" >> "$GITHUB_OUTPUT"
           echo "zip_sha256=$zip_sha" >> "$GITHUB_OUTPUT"
 
@@ -325,7 +333,7 @@ jobs:
           # `wiktionary-to-kindle` shim rather than one with spaces in its name.
           jq -n \
             --arg version "$VERSION" \
-            --arg url "https://github.com/nyg/wiktionary-to-kindle/releases/download/v${VERSION}/WiktionaryToKindle-Scoop.zip" \
+            --arg url "https://github.com/nyg/wiktionary-to-kindle/releases/download/v${VERSION}/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip" \
             --arg hash "sha256:${ZIP_SHA256}" \
             '{
               version: $version,

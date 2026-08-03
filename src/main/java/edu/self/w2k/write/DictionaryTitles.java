@@ -2,16 +2,36 @@ package edu.self.w2k.write;
 
 import java.util.Locale;
 
+import edu.self.w2k.config.AppInfo;
+
 public final class DictionaryTitles {
 
     private DictionaryTitles() {}
 
     /**
      * Builds an auto-generated title from the source and target language codes.
-     * Example: {@code "fr"} + {@code "en"} → {@code "French–English Dictionary"}.
+     * Example: {@code "fr"} + {@code "en"} → {@code "W2K French–English Dictionary"}.
+     * <p>
+     * The prefix is what makes the dictionary identifiable in the Kindle settings list, where every
+     * installed dictionary is listed by this title alone.
      */
     public static String autoTitle(String srcLang, String trgLang) {
-        return displayName(srcLang) + "–" + displayName(trgLang) + " Dictionary";
+        return AppInfo.DICTIONARY_PREFIX + " "
+                + displayName(srcLang) + "–" + displayName(trgLang) + " Dictionary";
+    }
+
+    /**
+     * Shared stem of every file a single generation produces — {@code .mobi}, {@code .opf}, the
+     * chapter {@code .html} files, the NCX and the cover.
+     * Example: {@code "en"} + {@code "el"} → {@code "w2k-dictionary-en-el"}.
+     * <p>
+     * All of them are named from this one stem because several dictionaries share a single output
+     * directory: fixed names would have each run overwrite the previous one's side-artefacts.
+     */
+    public static String baseName(String srcLang, String trgLang) {
+        return "%s-dictionary-%s-%s"
+                .formatted(AppInfo.DICTIONARY_PREFIX, srcLang, trgLang)
+                .toLowerCase(Locale.ROOT);
     }
 
     /**

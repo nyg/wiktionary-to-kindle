@@ -11,13 +11,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import javax.imageio.ImageIO;
 
 import edu.self.w2k.model.LexiconEntry;
+import edu.self.w2k.write.DictionaryTitles;
 import edu.self.w2k.write.DictionaryWriter;
 import edu.self.w2k.progress.ProgressListener;
 import edu.self.w2k.progress.ProgressListener.Stage;
@@ -44,24 +45,40 @@ public class OpfDictionaryWriter implements DictionaryWriter {
         log.info("{} unique keys loaded from lexicon", defs.size());
 
         List<Map.Entry<String, List<LexiconEntry>>> entries = new ArrayList<>(defs.entrySet());
-        List<String> htmlFileNames = new ArrayList<>();
         int totalChapters = chapterCount(entries.size());
+        OutputNames names = OutputNames.of(srcLang, trgLang, totalChapters);
 
         for (int start = 0, idx = 0; start < entries.size(); start += HtmlChapterRenderer.ENTRIES_PER_CHAPTER, idx++) {
             int end = Math.min(start + HtmlChapterRenderer.ENTRIES_PER_CHAPTER, entries.size());
-            String fileName = htmlFileName(srcLang, trgLang, idx);
+            String fileName = names.chapters().get(idx);
             Files.write(outputDir.resolve(fileName), HtmlChapterRenderer.render(entries.subList(start, end)));
-            htmlFileNames.add(fileName);
             log.debug("Wrote {} ({} entries)", fileName, end - start);
             progress.onProgress(Stage.WRITE_HTML, idx + 1L, totalChapters);
         }
 
-        writeCoverImage(outputDir);
+        writeCoverImage(outputDir, names.cover());
         String uid = UUID.randomUUID().toString();
-        writeTocNcx(outputDir, uid, title, htmlFileNames.getFirst());
-        Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, htmlFileNames, uid);
-        log.info("OPF generation complete: {} HTML file(s) + 1 OPF + NCX", htmlFileNames.size());
+        writeTocNcx(outputDir, names, uid, title);
+        Path opfPath = writeOpfFile(outputDir, srcLang, trgLang, title, uid, names);
+        log.info("OPF generation complete: {} HTML file(s) + 1 OPF + NCX", names.chapters().size());
         return opfPath;
+    }
+
+    /**
+     * Every file one generation produces, all named from a single stem.
+     * <p>
+     * Several dictionaries share one output directory, so a fixed {@code toc.ncx} or {@code cover.jpg}
+     * would have each run overwrite the previous one's side-artefacts.
+     */
+    private record OutputNames(String opf, String cover, String ncx, List<String> chapters) {
+
+        static OutputNames of(String srcLang, String trgLang, int chapterCount) {
+            String base = DictionaryTitles.baseName(srcLang, trgLang);
+            return new OutputNames(base + ".opf", base + "-cover.jpg", base + "-toc.ncx",
+                                   IntStream.range(0, chapterCount)
+                                            .mapToObj(i -> "%s-%d.html".formatted(base, i))
+                                            .toList());
+        }
     }
 
     /** Number of chapter files {@code entryCount} entries will be chunked into. */
@@ -69,19 +86,19 @@ public class OpfDictionaryWriter implements DictionaryWriter {
         return Math.ceilDiv(entryCount, HtmlChapterRenderer.ENTRIES_PER_CHAPTER);
     }
 
-    private static void writeCoverImage(Path outputDir) throws IOException {
+    private static void writeCoverImage(Path outputDir, String fileName) throws IOException {
         BufferedImage img = new BufferedImage(600, 800, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = img.createGraphics();
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, 600, 800);
         g.dispose();
-        ImageIO.write(img, "JPEG", outputDir.resolve("cover.jpg").toFile());
+        ImageIO.write(img, "JPEG", outputDir.resolve(fileName).toFile());
     }
 
-    private static void writeTocNcx(Path outputDir, String uid, String title, String firstHtmlFile)
+    private static void writeTocNcx(Path outputDir, OutputNames names, String uid, String title)
             throws IOException {
         try (BufferedWriter w = new BufferedWriter(
-                new OutputStreamWriter(Files.newOutputStream(outputDir.resolve("toc.ncx")),
+                new OutputStreamWriter(Files.newOutputStream(outputDir.resolve(names.ncx())),
                         StandardCharsets.UTF_8))) {
             w.write("""
                     <?xml version="1.0" encoding="UTF-8"?>
@@ -101,18 +118,14 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                         </navPoint>
                     </navMap>
                     </ncx>
-                    """.formatted(uid, title, title, firstHtmlFile));
+                    """.formatted(uid, title, title, names.chapters().getFirst()));
         }
     }
 
-    private static String htmlFileName(String srcLang, String trgLang, int index) {
-        return "dictionary-%s-%s-%d.html".formatted(srcLang, trgLang, index).toLowerCase(Locale.ROOT);
-    }
-
     private static Path writeOpfFile(Path outputDir, String srcLang, String trgLang,
-                                     String title, List<String> htmlFileNames, String uid) throws IOException {
-        Path opfPath = outputDir.resolve(
-                "dictionary-%s-%s.opf".formatted(srcLang, trgLang).toLowerCase(Locale.ROOT));
+                                     String title, String uid, OutputNames names) throws IOException {
+        List<String> htmlFileNames = names.chapters();
+        Path opfPath = outputDir.resolve(names.opf());
 
         try (BufferedWriter w = new BufferedWriter(
                 new OutputStreamWriter(Files.newOutputStream(opfPath), StandardCharsets.UTF_8))) {
@@ -132,9 +145,9 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                         </x-metadata>
                     </metadata>
                     <manifest>
-                        <item id="cover-image" href="cover.jpg" media-type="image/jpeg"/>
-                        <item id="toc" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
-                    """.formatted(uid, title, srcLang, srcLang, trgLang));
+                        <item id="cover-image" href="%s" media-type="image/jpeg"/>
+                        <item id="toc" href="%s" media-type="application/x-dtbncx+xml"/>
+                    """.formatted(uid, title, srcLang, srcLang, trgLang, names.cover(), names.ncx()));
 
             for (int i = 0; i < htmlFileNames.size(); i++) {
                 w.write("    <item id=\"dictionary%d\" href=\"%s\" media-type=\"application/xhtml+xml\"/>%n"
