@@ -263,10 +263,7 @@ jobs:
 
           ### Manual install on macOS
 
-          The app is ad-hoc signed but **not notarized**, so macOS quarantines it after download and
-          blocks the first launch (*"is damaged"* or *"Apple could not verify…"* — both mean the same
-          thing; the app is not corrupted). Homebrew handles this for you. For the DMG, after copying
-          the app to Applications, clear the quarantine flag once:
+          The app is ad-hoc signed but **not notarized**, so macOS quarantines it after download and blocks the first launch (*"is damaged"* or *"Apple could not verify…"* — both mean the same thing; the app is not corrupted). Homebrew handles this for you. For the DMG, after copying the app to Applications, clear the quarantine flag once:
 
           ```sh
           xattr -dr com.apple.quarantine "/Applications/Wiktionary to Kindle.app"
@@ -274,8 +271,7 @@ jobs:
 
           ### Linux and scripted use
 
-          There is no Linux desktop package — Homebrew casks are macOS-only. Linux users and anyone
-          scripting the pipeline can use the portable JAR, which needs Java 25:
+          There is no Linux desktop package — Homebrew casks are macOS-only. Linux users and anyone scripting the pipeline can use the portable JAR, which needs Java 25:
 
           ```sh
           java -jar wiktionary-to-kindle-VERSION.jar download el
@@ -286,13 +282,35 @@ jobs:
 
       - name: Create GitHub release
         run: |
-          gh release create "v${VERSION}" \
-            "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg" \
-            "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip" \
-            "artifacts/wiktionary-to-kindle-${VERSION}.jar" \
-            --title "v${VERSION}" \
-            --verify-tag \
-            -F git-cliff/CHANGELOG.md
+          set -uo pipefail
+          assets=(
+            "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg"
+            "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip"
+            "artifacts/wiktionary-to-kindle-${VERSION}.jar"
+          )
+
+          for attempt in 1 2 3 4 5; do
+            if gh release view "v${VERSION}" >/dev/null 2>&1; then
+              echo "Release v${VERSION} already exists; uploading assets to it."
+              if gh release upload "v${VERSION}" "${assets[@]}" --clobber; then
+                exit 0
+              fi
+            elif gh release create "v${VERSION}" "${assets[@]}" \
+                   --title "v${VERSION}" \
+                   --verify-tag \
+                   -F git-cliff/CHANGELOG.md; then
+              exit 0
+            fi
+
+            if (( attempt < 5 )); then
+              delay=$(( attempt * 15 ))
+              echo "::warning::Release publication attempt ${attempt} failed, retrying in ${delay}s"
+              sleep "$delay"
+            fi
+          done
+
+          echo "::error::Could not publish release v${VERSION} after 5 attempts"
+          exit 1
         env:
           GH_TOKEN: ${{ github.token }}
 
