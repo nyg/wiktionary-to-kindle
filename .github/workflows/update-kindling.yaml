@@ -45,12 +45,9 @@ jobs:
           delete-branch: true
           title: 'chore(deps): update kindling-cli to ${{ steps.release.outputs.tag }}'
           body: |
-            Updates the pinned kindling-cli release to
-            [${{ steps.release.outputs.tag }}](https://github.com/ciscoriordan/kindling/releases/tag/${{ steps.release.outputs.tag }}).
+            Updates the pinned kindling-cli release to [${{ steps.release.outputs.tag }}](https://github.com/ciscoriordan/kindling/releases/tag/${{ steps.release.outputs.tag }}).
 
-            Per-platform SHA-256 digests are taken from the GitHub release API `digest`
-            field — the same source `KindlingDownloader.resolveDigest()` trusts for
-            non-pinned versions. No binaries are downloaded by this workflow.
+            Per-platform SHA-256 digests are taken from the GitHub release API `digest` field — the same source `KindlingDownloader.resolveDigest()` trusts for non-pinned versions. No binaries are downloaded by this workflow.
 
             Automated by `.github/workflows/update-kindling.yaml`.
 
