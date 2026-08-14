@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Properties;
 
 import edu.self.w2k.write.DictionaryTitles;
@@ -91,5 +92,13 @@ public final class LanguageCatalog {
                 .map(Language::of)
                 .sorted(Comparator.naturalOrder())
                 .toList();
+    }
+
+    public static Optional<Language> findEdition(String input) {
+        return editions().stream()
+            .filter(language -> 
+                language.code().equalsIgnoreCase(input)
+                || language.displayName().equalsIgnoreCase(input)
+            ).findFirst();
     }
 }
