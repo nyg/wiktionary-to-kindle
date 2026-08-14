@@ -28,6 +28,11 @@ public class LanguageConverter extends StringConverter<Language> {
         String code = open >= 0 && close > open
                 ? trimmed.substring(open + 1, close).strip()
                 : trimmed;
+
+        if (code.isBlank()) {
+            return null;
+        }
+        
         return LanguageCatalog.findEdition(code).orElseGet(() -> Language.of(code));
     }
 }
