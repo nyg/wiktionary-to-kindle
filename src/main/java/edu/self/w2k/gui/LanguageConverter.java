@@ -1,5 +1,6 @@
 package edu.self.w2k.gui;
 
+import edu.self.w2k.config.LanguageCatalog;
 import edu.self.w2k.config.LanguageCatalog.Language;
 import javafx.util.StringConverter;
 
@@ -27,6 +28,6 @@ public class LanguageConverter extends StringConverter<Language> {
         String code = open >= 0 && close > open
                 ? trimmed.substring(open + 1, close).strip()
                 : trimmed;
-        return code.isEmpty() ? null : Language.of(code);
+        return LanguageCatalog.findEdition(code).orElseGet(() -> Language.of(code));
     }
 }
