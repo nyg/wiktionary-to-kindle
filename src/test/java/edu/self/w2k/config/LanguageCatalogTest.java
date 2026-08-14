@@ -3,6 +3,8 @@ package edu.self.w2k.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import edu.self.w2k.config.LanguageCatalog.Language;
+import edu.self.w2k.gui.LanguageConverter;
+
 import org.junit.jupiter.api.Test;
 
 class LanguageCatalogTest {
@@ -84,5 +86,28 @@ class LanguageCatalogTest {
         // When / Then
         assertThat(LanguageCatalog.parseCodes(null)).isEmpty();
         assertThat(LanguageCatalog.parseCodes("   ")).isEmpty();
+    }
+
+    @Test
+    void should_resolve_edition_by_display_name() {
+        // When
+        var edition = LanguageCatalog.findEdition("english");
+
+        // Then 
+        assertThat(edition).isNotNull();
+        assertThat(edition).isPresent().get().extracting(Language::code).isEqualTo("en");
+    }
+
+    @Test
+    void should_keep_unknown_edition() {
+        // Given
+        var input = "Not listed language";
+
+        // When
+        var result = new LanguageConverter().fromString(input);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.code()).isEqualTo(input);
     }
 }
