@@ -73,7 +73,7 @@ Once the `.mobi` is on the device, set it as the default dictionary for its lang
 
 | What | Location |
 |------|----------|
-| Dumps and dictionaries | `~/Documents/wiktionary-to-kindle/` (change in Preferences) |
+| Dumps and dictionaries | `~/Documents/wiktionary-to-kindle/` (change in Preferences; the CLI uses the same folders) |
 | Settings | `~/.config/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Config` on Windows |
 | Log file | `~/.local/state/wiktionary-to-kindle/logs/app.log` — `%LOCALAPPDATA%\wiktionary-to-kindle\State` on Windows |
 | Cached `kindling-cli` | `~/.cache/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Cache` on Windows |
@@ -87,12 +87,16 @@ Preferences also lets you point at a pre-installed `kindling-cli` or pin a speci
 The same pipeline, for scripting and for Linux. Every release ships a portable JAR that runs anywhere with Java 25.
 
 ```sh
-# Download a dump to ./dumps (skipped if one for that edition already exists)
+# Download a dump to the dumps folder (skipped if one for that edition already exists)
 java -jar wiktionary-to-kindle-<version>.jar download el
 
-# Generate into ./dictionaries
+# Generate into the dictionaries folder
 # DUMP_LANG = which Wiktionary edition to read; WORD_LANG = ISO 639-1 filter
 java -jar wiktionary-to-kindle-<version>.jar generate el en
+
+# Read from and write to somewhere else, for one invocation
+java -jar wiktionary-to-kindle-<version>.jar download el --dumps-dir ./dumps
+java -jar wiktionary-to-kindle-<version>.jar generate el en --dumps-dir ./dumps --dictionaries-dir ./dictionaries
 
 # Pin a kindling release, or use one already installed
 java -jar wiktionary-to-kindle-<version>.jar generate el en --kindling-version vX.Y.Z
@@ -102,7 +106,9 @@ java -jar wiktionary-to-kindle-<version>.jar --help
 java -jar wiktionary-to-kindle-<version>.jar --version
 ```
 
-`dl` and `gen` are short aliases. The CLI resolves `dumps/` and `dictionaries/` relative to the working directory, and does not read the app's preferences. `download` exits non-zero if the transfer fails.
+`dl` and `gen` are short aliases. The CLI reads the same preferences file as the desktop app, so both front-ends share one dumps folder and one dictionaries folder: download in the app and generate from the command line, or the reverse, and the dump is found either way. `--dumps-dir` and `--dictionaries-dir` override that per invocation, for scripts that want their own working folders. `download` exits non-zero if the transfer fails.
+
+Up to and including 2.0.3 the CLI resolved `dumps/` and `dictionaries/` relative to the working directory and ignored the app's preferences. To keep that behaviour, pass `--dumps-dir ./dumps --dictionaries-dir ./dictionaries`, or move the existing folders into `~/Documents/wiktionary-to-kindle/`.
 
 ## How it works
 

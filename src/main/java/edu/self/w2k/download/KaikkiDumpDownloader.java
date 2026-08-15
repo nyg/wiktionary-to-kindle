@@ -46,10 +46,6 @@ public class KaikkiDumpDownloader implements DumpDownloader {
     private final Path dumpsDir;
     private final ProgressListener progress;
 
-    public KaikkiDumpDownloader(String lang) {
-        this(lang, Path.of("dumps"), ProgressListener.NOOP);
-    }
-
     public KaikkiDumpDownloader(String lang, Path dumpsDir, ProgressListener progress) {
         this(lang, defaultHttpClient(), dumpsDir, progress);
     }

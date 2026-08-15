@@ -32,15 +32,17 @@ The version comes from `${project.version}` via a filtered `application.properti
 The CLI entry point is `edu.self.w2k.CLI`; the GUI's is `edu.self.w2k.gui.Launcher`.
 
 ```sh
-# Download kaikki.org dump to dumps/ (skips if a dump for that lang already exists)
+# Download kaikki.org dump to the dumps folder (skips if a dump for that lang already exists)
 java -jar target/wiktionary-to-kindle-<version>.jar download        # English (default)
 java -jar target/wiktionary-to-kindle-<version>.jar download fr     # French edition
+java -jar target/wiktionary-to-kindle-<version>.jar download fr --dumps-dir ./dumps
 # dl is a short alias for download
 
 # Generate Kindle dictionary from a downloaded dump.
 # DUMP_LANG = which Wiktionary edition to read; WORD_LANG = ISO 639-1 filter.
-# The latest dump matching DUMP_LANG in dumps/ is auto-discovered.
+# The latest dump matching DUMP_LANG in the dumps folder is auto-discovered.
 java -jar target/wiktionary-to-kindle-<version>.jar generate <DUMP_LANG> <WORD_LANG>
+java -jar target/wiktionary-to-kindle-<version>.jar generate el en --dumps-dir ./dumps --dictionaries-dir ./dictionaries
 java -jar target/wiktionary-to-kindle-<version>.jar generate el en --kindling-version vX.Y.Z
 java -jar target/wiktionary-to-kindle-<version>.jar generate el en --kindling-cli /usr/local/bin/kindling-cli
 # gen is a short alias for generate
@@ -49,7 +51,7 @@ java -jar target/wiktionary-to-kindle-<version>.jar --help
 java -jar target/wiktionary-to-kindle-<version>.jar --version
 ```
 
-`download` exits 1 when the transfer fails. The CLI keeps CWD-relative `dumps/` and `dictionaries/` and does **not** read the GUI's preferences.
+`download` exits 1 when the transfer fails. The CLI reads the **same** `preferences.properties` as the GUI, so both front-ends share one dumps folder and one dictionaries folder; `--dumps-dir` / `--dictionaries-dir` override it per invocation.
 
 ## Architecture
 
@@ -79,8 +81,9 @@ The two front-ends resolve these differently, deliberately.
 | `dumps/`  | Downloaded `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` from kaikki.org |
 | `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf`, `-N.html`, `-toc.ncx` and `-cover.jpg` |
 
-- **CLI**: CWD-relative, via the `CLI.DUMPS_DIR` / `CLI.DICTIONARIES_DIR` constants. Unchanged from before the GUI existed.
-- **GUI**: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice.
+Both front-ends resolve them the same way: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice.
+
+The CLI additionally accepts `--dumps-dir` and `--dictionaries-dir`, overriding the preferences for that invocation. `CLI.Download.dumpsDir(Preferences)` and the matching pair on `CLI.Generate` are the single resolution point, and take the loaded preferences as an argument so they stay testable without touching the real config file. Up to 2.0.3 the CLI was CWD-relative via `CLI.DUMPS_DIR` / `CLI.DICTIONARIES_DIR` and never read preferences; both constants are gone, as is the `KaikkiDumpDownloader(String)` constructor that hardcoded `Path.of("dumps")`.
 
 `AppPaths` resolves four roles, all named `AppInfo.SLUG`. Unix-likes — **macOS included** — follow the XDG Base Directory spec; Windows gets sibling directories under `%LOCALAPPDATA%\wiktionary-to-kindle\`:
 
@@ -131,7 +134,7 @@ Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`; inte
 - **Jackson** is used for JSONL parsing. Model records carry `@JsonIgnoreProperties(ignoreUnknown = true)`. `ObjectMapper` is configured with `Nulls.AS_EMPTY` so missing collection fields default to empty lists. The `ObjectReader` is reused across all lines for efficiency.
 - **Parser streaming**: `JsonlDictionaryParser.parse()` returns a lazy `Stream<WiktionaryEntry>` backed by a `BufferedReader.lines()` pipeline. Callers must close the stream (use try-with-resources).
 - **Download** uses `java.net.http.HttpClient` and an atomic `.part` file rename to avoid corrupt downloads on failure. A HEAD request (30 s timeout) reads `last-modified` and `content-length` first, so the target filename and the skip-if-already-downloaded check resolve before any body transfer; the GET that follows carries a deliberately generous 6 h ceiling because dumps are multi-gigabyte (a request-level timeout bounds the *whole* exchange, not just the headers). URL is computed per lang: `en` → `/dictionary/`, others → `/{lang}wiktionary/`.
-- **Dump file path**: dumps are named `dumps/raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz`. `generate` resolves the file via `CLI.findLatestDump(lang)` → `DumpCatalog.latestFor`, which globs the dumps dir for that prefix and picks the lexicographically latest filename (ISO date format sorts correctly). If no dump matches, generate exits 1. Discovery stays filename-based rather than going through `DumpFile.parse`, so a dump named `-unknown` (kaikki omitted `last-modified`) is still usable even though it cannot be listed in the dumps pane.
+- **Dump file path**: dumps are named `dumps/raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz`. `generate` resolves the file via `CLI.findLatestDump(lang, dumpsDir)` → `DumpCatalog.latestFor`, which globs the dumps dir for that prefix and picks the lexicographically latest filename (ISO date format sorts correctly). If no dump matches, generate exits 1. Discovery stays filename-based rather than going through `DumpFile.parse`, so a dump named `-unknown` (kaikki omitted `last-modified`) is still usable even though it cannot be listed in the dumps pane.
 
 ## Packaging
 
