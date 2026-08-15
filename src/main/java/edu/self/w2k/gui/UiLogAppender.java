@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -37,6 +38,8 @@ public class UiLogAppender extends AppenderBase<ILoggingEvent> {
     private final BlockingQueue<String> queue;
     private final AtomicLong dropped = new AtomicLong();
 
+    private final AtomicReference<Runnable> wakeListener = new AtomicReference<>(() -> {});
+
     public UiLogAppender() {
         this(DEFAULT_CAPACITY);
     }
@@ -51,6 +54,11 @@ public class UiLogAppender extends AppenderBase<ILoggingEvent> {
         if (!queue.offer(format(event))) {
             dropped.incrementAndGet();
         }
+        wakeListener.get().run();
+    }
+
+    public void setWakeListener(Runnable listener) {
+        wakeListener.set(listener == null ? () -> {} : listener);
     }
 
     /**

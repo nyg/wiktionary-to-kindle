@@ -3,18 +3,24 @@ package edu.self.w2k.gui;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.abort;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import edu.self.w2k.dump.DumpFile;
+import edu.self.w2k.kaikki.KaikkiCatalog;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
+import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import org.junit.jupiter.api.BeforeAll;
@@ -97,7 +103,12 @@ class MainFxmlLoadTest {
         var dumpsTable = readField(controller, "dumpsTable", TableView.class);
 
         assertThat(editionCombo.getItems()).isNotEmpty();
-        assertThat(editionCombo.isEditable()).as("edition box must accept a hand-typed code").isTrue();
+        assertThat(editionCombo.isEditable())
+                .as("edition box must accept typing so its list can be filtered")
+                .isTrue();
+        assertThat(wordCombo.isEditable())
+                .as("word language box must accept typing so its list can be filtered")
+                .isTrue();
         assertThat(wordCombo.getItems()).hasSizeGreaterThan(150);
         assertThat(dumpsTable.getColumns()).hasSize(3);
     }
@@ -145,6 +156,108 @@ class MainFxmlLoadTest {
         return observable == null ? null : observable.getValue();
     }
 
+    @Test
+    void should_narrow_the_list_as_the_user_types_into_a_picker() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        int all = editionCombo.getItems().size();
+
+        onFxThread(() -> editionCombo.getEditor().setText("gr"));
+
+        assertThat(editionCombo.getItems())
+                .as("\"gr\" should leave only Greek")
+                .hasSizeLessThan(all)
+                .allSatisfy(item -> assertThat(item).hasToString("Greek (el)"));
+        assertThat(editionCombo.getValue())
+                .as("a partial name identifies nothing yet")
+                .isNull();
+
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
+
+        assertThat(editionCombo.getValue())
+                .as("an exact code should select the language it names")
+                .hasToString("Greek (el)");
+    }
+
+    @Test
+    void should_empty_the_list_and_select_nothing_when_the_text_matches_no_language() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
+        assertThat(editionCombo.getValue()).isNotNull();
+
+        onFxThread(() -> editionCombo.getEditor().setText("nds"));
+
+        assertThat(editionCombo.getItems())
+                .as("an edition kaikki does not serve must offer nothing to pick")
+                .isEmpty();
+        assertThat(editionCombo.getValue())
+                .as("and must not survive as a value, or it would reach the downloader")
+                .isNull();
+    }
+
+    @Test
+    void should_restore_the_selected_language_when_escape_is_pressed() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        int all = editionCombo.getItems().size();
+
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
+        onFxThread(() -> Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_PRESSED, "", "",
+                                                                    KeyCode.ESCAPE, false, false, false, false)));
+
+        assertThat(editionCombo.getEditor().getText()).isEqualTo("Greek (el)");
+        assertThat(editionCombo.getItems()).hasSize(all);
+    }
+
+    @Test
+    void should_explain_an_empty_dumps_table_when_the_folder_is_absent_or_unreadable() {
+        // When / Then
+        assertThat(MainController.dumpsPlaceholder(Path.of("/nowhere/w2k/dumps")))
+                .contains("created on the first download");
+        assertThat(MainController.dumpsPlaceholder(Path.of(System.getProperty("java.io.tmpdir"))))
+                .isEqualTo("No dumps downloaded yet.");
+    }
+
+    private static void onFxThread(Runnable action) throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                action.run();
+            }
+            finally {
+                done.countDown();
+            }
+        });
+        assertThat(done.await(30, TimeUnit.SECONDS)).as("FX action timed out").isTrue();
+    }
+
+    /**
+     * A catalog that can neither reach kaikki nor read a cache, so loading the window exercises the
+     * bundled fallback and the suite stays free of network calls.
+     */
+    private static KaikkiCatalog offlineCatalog() {
+        return new KaikkiCatalog(
+                uri -> {
+                    throw new IOException("offline");
+                },
+                Path.of(System.getProperty("java.io.tmpdir"), "w2k-test-cache-absent"),
+                Duration.ofDays(7));
+    }
+
     private static MainController loadOnFxThread(AtomicReference<Parent> root) throws Exception {
         AtomicReference<MainController> controller = new AtomicReference<>();
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -153,7 +266,7 @@ class MainFxmlLoadTest {
         Platform.runLater(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(App.class.getResource(App.MAIN_FXML));
-                loader.setControllerFactory(_ -> new MainController(new UiLogAppender()));
+                loader.setControllerFactory(_ -> new MainController(new UiLogAppender(), offlineCatalog()));
                 root.set(loader.load());
                 controller.set(loader.getController());
             }
