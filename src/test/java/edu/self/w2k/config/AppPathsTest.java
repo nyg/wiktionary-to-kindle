@@ -261,6 +261,79 @@ class AppPathsTest {
     }
 
     @Test
+    void should_ignore_a_relative_xdg_config_home() {
+        // Given the XDG spec calls a relative value invalid, rather than resolving it against the CWD
+        Map<String, String> env = Map.of("XDG_CONFIG_HOME", "relative/config", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.configDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/.config/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_ignore_a_relative_xdg_cache_home() {
+        // Given
+        Map<String, String> env = Map.of("XDG_CACHE_HOME", "relative/cache", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.cacheDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/.cache/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_ignore_a_relative_xdg_state_home() {
+        // Given
+        Map<String, String> env = Map.of("XDG_STATE_HOME", "relative/state", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.stateDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/.local/state/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_ignore_a_relative_xdg_documents_dir() {
+        // Given
+        Map<String, String> env = Map.of("XDG_DOCUMENTS_DIR", "Documenten", "HOME", "/h");
+
+        // When
+        Path result = AppPaths.defaultDataDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/Documents/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_ignore_a_relative_documents_entry_in_user_dirs(@TempDir Path config) throws IOException {
+        // Given a hand-edited user-dirs.dirs whose value is neither absolute nor $HOME-prefixed
+        Files.writeString(config.resolve("user-dirs.dirs"), "XDG_DOCUMENTS_DIR=\"Documenten\"\n");
+        Map<String, String> env = Map.of("XDG_CONFIG_HOME", config.toString(), "HOME", "/h");
+
+        // When
+        Path result = AppPaths.defaultDataDir(env, "Linux");
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/h/Documents/wiktionary-to-kindle"));
+    }
+
+    @Test
+    void should_ignore_a_relative_home_on_unix() {
+        // Given
+        Map<String, String> env = Map.of("HOME", "relative/home");
+
+        // When
+        Path result = AppPaths.configDir(env, "Linux");
+
+        // Then — the tmpdir fallback, exactly as if HOME had been unset
+        assertThat(result.toString()).startsWith(System.getProperty("java.io.tmpdir"));
+    }
+
+    @Test
     void should_ignore_user_dirs_on_windows() {
         // Given a Windows environment that happens to carry XDG variables, e.g. under Git Bash
         Map<String, String> env = Map.of("XDG_DOCUMENTS_DIR", "/h/Documenten",
