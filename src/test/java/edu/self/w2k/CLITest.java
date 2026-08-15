@@ -1,19 +1,34 @@
 package edu.self.w2k;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
 import edu.self.w2k.config.Preferences;
+import edu.self.w2k.download.DumpDownloader;
+import edu.self.w2k.pipeline.DictionaryPipeline;
+import edu.self.w2k.progress.ProgressListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import picocli.CommandLine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CLITest {
+
+    @Mock
+    private DumpDownloader downloader;
+
+    @Mock
+    private DictionaryPipeline.DownloaderFactory downloaderFactory;
 
     @Test
     void should_report_the_build_version_when_version_is_requested() {
@@ -144,5 +159,75 @@ class CLITest {
         // When / Then
         assertThat(unit.dumpsDir(preferences)).isEqualTo(Path.of("/override/dumps"));
         assertThat(unit.dictionariesDir(preferences)).isEqualTo(Path.of("/override/dictionaries"));
+    }
+
+    @Test
+    void should_pick_the_most_recent_dump_when_the_language_has_several(@TempDir Path dumpsDir) throws IOException {
+        // Given
+        Files.createFile(dumpsDir.resolve("raw-wiktextract-data-el-2026-01-09.jsonl.gz"));
+        Files.createFile(dumpsDir.resolve("raw-wiktextract-data-el-2026-05-31.jsonl.gz"));
+        Files.createFile(dumpsDir.resolve("raw-wiktextract-data-fr-2026-08-12.jsonl.gz"));
+
+        // When
+        Optional<Path> result = CLI.findLatestDump("el", dumpsDir);
+
+        // Then
+        assertThat(result).contains(dumpsDir.resolve("raw-wiktextract-data-el-2026-05-31.jsonl.gz"));
+    }
+
+    @Test
+    void should_find_nothing_when_the_dumps_directory_holds_no_dump_for_the_language(@TempDir Path dumpsDir)
+            throws IOException {
+        // Given
+        Files.createFile(dumpsDir.resolve("raw-wiktextract-data-fr-2026-08-12.jsonl.gz"));
+
+        // When
+        Optional<Path> result = CLI.findLatestDump("el", dumpsDir);
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void should_exit_with_one_when_generate_finds_no_dump(@TempDir Path dumpsDir) {
+        // Given
+        CommandLine unit = new CommandLine(new CLI());
+
+        // When
+        int result = unit.execute("generate", "el", "en", "--dumps-dir", dumpsDir.toString());
+
+        // Then — the missing dump is reported before any kindling-cli resolution is attempted
+        assertThat(result).isEqualTo(1);
+    }
+
+    @Test
+    void should_download_into_the_resolved_dumps_directory_when_download_is_run(@TempDir Path dumpsDir)
+            throws IOException {
+        // Given
+        CommandLine.ParseResult parsed =
+                new CommandLine(new CLI()).parseArgs("download", "fr", "--dumps-dir", dumpsDir.toString());
+        CLI.Download unit = (CLI.Download) parsed.subcommand().commandSpec().userObject();
+        unit.downloaderFactory = downloaderFactory;
+        when(downloaderFactory.create("fr", dumpsDir, ProgressListener.NOOP)).thenReturn(downloader);
+
+        // When
+        int result = unit.call();
+
+        // Then
+        assertThat(result).isZero();
+        verify(downloader).download();
+    }
+
+    @Test
+    void should_exit_with_one_when_the_download_fails() throws IOException {
+        // Given
+        CLI.Download unit = new CLI.Download();
+        when(downloader.download()).thenThrow(new IOException("HTTP 503"));
+
+        // When
+        int result = unit.run(downloader);
+
+        // Then — the README documents this exit code for scripts that chain download into generate
+        assertThat(result).isEqualTo(1);
     }
 }

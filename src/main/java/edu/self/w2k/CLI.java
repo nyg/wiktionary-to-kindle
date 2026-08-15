@@ -10,6 +10,7 @@ import edu.self.w2k.command.GenerateCommand;
 import edu.self.w2k.config.AppInfo;
 import edu.self.w2k.config.AppVersion;
 import edu.self.w2k.config.Preferences;
+import edu.self.w2k.download.DumpDownloader;
 import edu.self.w2k.download.KaikkiDumpDownloader;
 import edu.self.w2k.dump.DumpCatalog;
 import edu.self.w2k.kindling.KindlingCliResolver;
@@ -17,6 +18,8 @@ import edu.self.w2k.kindling.KindlingDictionaryConverter;
 import edu.self.w2k.kindling.KindlingDownloader;
 import edu.self.w2k.kindling.KindlingRelease;
 import edu.self.w2k.parse.JsonlDictionaryParser;
+import edu.self.w2k.pipeline.DictionaryPipeline;
+import edu.self.w2k.pipeline.DictionaryPipeline.DownloaderFactory;
 import edu.self.w2k.progress.ProgressListener;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import edu.self.w2k.write.DictionaryTitles;
@@ -85,11 +88,21 @@ public class CLI implements Callable<Integer> {
         @Option(names = "--dumps-dir", paramLabel = "DIR", description = DUMPS_DIR_DESCRIPTION)
         private Path dumpsDir;
 
+        /**
+         * Injectable so tests can drive {@link #call()} without the real downloader reaching
+         * kaikki.org, the same seam {@link DictionaryPipeline} uses.
+         */
+        DownloaderFactory downloaderFactory = KaikkiDumpDownloader::new;
+
         @Override
         public Integer call() {
+            Path dumps = dumpsDir(Preferences.load());
+            return run(downloaderFactory.create(lang, dumps, ProgressListener.NOOP));
+        }
+
+        int run(DumpDownloader downloader) {
             try {
-                Path dumps = dumpsDir(Preferences.load());
-                new DownloadCommand(new KaikkiDumpDownloader(lang, dumps, ProgressListener.NOOP)).run();
+                new DownloadCommand(downloader).run();
                 return 0;
             }
             catch (IOException e) {
@@ -154,6 +167,7 @@ public class CLI implements Callable<Integer> {
         public Integer call() throws Exception {
             Preferences preferences = Preferences.load();
             Path dumps = dumpsDir(preferences);
+            Path dictionaries = dictionariesDir(preferences);
 
             Optional<Path> dumpFile = findLatestDump(dumpLang, dumps);
             if (dumpFile.isEmpty()) {
@@ -173,7 +187,7 @@ public class CLI implements Callable<Integer> {
                     new HtmlDefinitionRenderer(),
                     writer,
                     dumpFile.get(),
-                    dictionariesDir(preferences),
+                    dictionaries,
                     wordLang, dumpLang, title
             ).run();
             return 0;
