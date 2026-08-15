@@ -1,0 +1,16 @@
+.warning-label {
+    -fx-text-fill: -color-warning-fg;
+}
+
+.log-view .list-cell {
+    -fx-cell-size: 16px;
+}
+
+.combo-box-popup .list-view {
+    -fx-fixed-cell-size: 30px;
+}
+
+.log-view .list-cell:filled:selected {
+    -fx-background-color: -color-accent-subtle;
+    -fx-text-fill: -color-fg-default;
+}

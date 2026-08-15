@@ -186,6 +186,7 @@ public class RuntimeProbe {
         requireClass("javafx.fxml.FXMLLoader");
         requireClass("javafx.scene.control.ComboBox");
         requireClass("javax.imageio.ImageIO");
+        requireClass("atlantafx.base.theme.CupertinoDark");
         requireClass("edu.self.w2k.gui.Launcher");
         requireClass("edu.self.w2k.CLI");
 

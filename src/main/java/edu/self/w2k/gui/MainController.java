@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import edu.self.w2k.config.AppTheme;
 import edu.self.w2k.config.LanguageCatalog;
 import edu.self.w2k.config.LanguageCatalog.Language;
 import edu.self.w2k.config.Preferences;
@@ -23,6 +24,7 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -347,10 +349,20 @@ public class MainController {
         return new DumpCatalog(viewModel.preferencesProperty().get().dumpsDir());
     }
 
+    /** The theme the window should wear, tracking whatever Preferences last saved. */
+    ObservableValue<AppTheme> themeChoice() {
+        return viewModel.preferencesProperty().map(Preferences::theme);
+    }
+
     @FXML
     void onPreferences() {
-        new PreferencesDialog(viewModel.preferencesProperty().get())
-                .showAndWait()
+        PreferencesDialog dialog = new PreferencesDialog(viewModel.preferencesProperty().get());
+        dialog.initOwner(startButton.getScene().getWindow());
+        // The dialog gets its own scene, which would otherwise carry the theme's user agent
+        // stylesheet but none of the app's own classes.
+        dialog.getDialogPane().getStylesheets().addAll(startButton.getScene().getStylesheets());
+
+        dialog.showAndWait()
                 .ifPresent(updated -> {
                     viewModel.preferencesProperty().set(updated);
                     dumpsLocationLabel.setText(updated.dumpsDir().toString());
