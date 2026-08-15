@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Optional;
 
 import edu.self.w2k.config.LanguageCatalog.Language;
-import edu.self.w2k.gui.LanguageConverter;
 
 import org.junit.jupiter.api.Test;
 
@@ -99,19 +98,6 @@ class LanguageCatalogTest {
         // Then 
         assertThat(edition).isNotNull();
         assertThat(edition).isPresent().get().extracting(Language::code).isEqualTo("en");
-    }
-
-    @Test
-    void should_keep_unknown_edition() {
-        // Given
-        var input = "Not listed language";
-
-        // When
-        var result = new LanguageConverter().fromString(input);
-
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.code()).isEqualTo(input);
     }
 
     @Test

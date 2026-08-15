@@ -2,6 +2,8 @@ package edu.self.w2k.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import edu.self.w2k.config.LanguageCatalog.Language;
 
 import org.junit.jupiter.api.Test;
@@ -54,7 +56,28 @@ class WordLanguageConverterTest {
 
         // When / Then
         assertThat(unit.toString(null)).isEmpty();
-        assertThat(unit.fromString("French (fr)")).isNull();
+    }
+
+    @Test
+    void should_resolve_its_own_decorated_form_back_to_the_language() {
+        // Given
+        Language french = Language.of("fr", "French", 2653194);
+        WordLanguageConverter unit = new WordLanguageConverter(() -> List.of(french));
+
+        // When
+        Language parsed = unit.fromString(unit.toString(french));
+
+        // Then
+        assertThat(parsed).isEqualTo(french);
+    }
+
+    @Test
+    void should_resolve_nothing_when_the_code_is_outside_the_selected_edition() {
+        // Given
+        WordLanguageConverter unit = new WordLanguageConverter(() -> List.of(Language.of("fr")));
+
+        // When / Then
+        assertThat(unit.fromString("Klingon (tlh)")).isNull();
     }
 
     @Test

@@ -1,11 +1,27 @@
 package edu.self.w2k.gui;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 
+import edu.self.w2k.config.LanguageCatalog;
 import edu.self.w2k.config.LanguageCatalog.Language;
-import javafx.util.StringConverter;
 
-public class WordLanguageConverter extends StringConverter<Language> {
+/**
+ * The word language picker's renderer: {@code "French (fr) — 2.7M senses"}.
+ * <p>
+ * The sense count trails the code, so the inherited {@code fromString} still finds the code in the
+ * last parenthesised group and resolves the decorated form back.
+ */
+public class WordLanguageConverter extends LanguageConverter {
+
+    public WordLanguageConverter() {
+        super(LanguageCatalog::wordLanguages);
+    }
+
+    public WordLanguageConverter(Supplier<List<Language>> candidates) {
+        super(candidates);
+    }
 
     @Override
     public String toString(Language language) {
@@ -16,11 +32,6 @@ public class WordLanguageConverter extends StringConverter<Language> {
             return language.toString();
         }
         return "%s — %s senses".formatted(language, formatSenses(language.senses()));
-    }
-
-    @Override
-    public Language fromString(String text) {
-        return null;
     }
 
     static String formatSenses(long senses) {

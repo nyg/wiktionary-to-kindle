@@ -57,6 +57,8 @@ public class MainController {
 
     private static final int VISIBLE_ROWS = 12;
 
+    private static final String FILTER_PROMPT = "Type to filter";
+
     @FXML private ComboBox<Language> editionCombo;
     @FXML private ComboBox<Language> wordLanguageCombo;
     @FXML private Label titlePreview;
@@ -124,12 +126,15 @@ public class MainController {
         editionCombo.setItems(FXCollections.observableArrayList(LanguageCatalog.editions()));
         wordLanguageCombo.setItems(FXCollections.observableArrayList(LanguageCatalog.wordLanguages()));
 
-        editionCombo.setConverter(new LanguageConverter());
-        wordLanguageCombo.setConverter(new WordLanguageConverter());
+        ComboBoxFilter.install(editionCombo);
+        ComboBoxFilter.install(wordLanguageCombo);
+        editionCombo.setConverter(new LanguageConverter(() -> ComboBoxFilter.sourceOf(editionCombo)));
+        wordLanguageCombo.setConverter(
+                new WordLanguageConverter(() -> ComboBoxFilter.sourceOf(wordLanguageCombo)));
         editionCombo.setVisibleRowCount(VISIBLE_ROWS);
         wordLanguageCombo.setVisibleRowCount(VISIBLE_ROWS);
-        ComboBoxSearch.install(editionCombo);
-        ComboBoxSearch.install(wordLanguageCombo);
+        editionCombo.setPromptText(FILTER_PROMPT);
+        wordLanguageCombo.setPromptText(FILTER_PROMPT);
 
         viewModel.editionProperty().bind(editionCombo.valueProperty());
         viewModel.wordLanguageProperty().bind(wordLanguageCombo.valueProperty());
@@ -170,7 +175,7 @@ public class MainController {
 
     private static void replaceItems(ComboBox<Language> combo, List<Language> items) {
         Language previous = combo.getValue();
-        combo.getItems().setAll(items);
+        ComboBoxFilter.sourceOf(combo).setAll(items);
         if (previous != null) {
             LanguageCatalog.find(items, previous.code()).ifPresent(combo::setValue);
         }

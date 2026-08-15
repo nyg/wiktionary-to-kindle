@@ -104,11 +104,11 @@ class MainFxmlLoadTest {
 
         assertThat(editionCombo.getItems()).isNotEmpty();
         assertThat(editionCombo.isEditable())
-                .as("edition box must not accept free text — an unserved code is a later HTTP 404")
-                .isFalse();
+                .as("edition box must accept typing so its list can be filtered")
+                .isTrue();
         assertThat(wordCombo.isEditable())
-                .as("word language box must not accept free text")
-                .isFalse();
+                .as("word language box must accept typing so its list can be filtered")
+                .isTrue();
         assertThat(wordCombo.getItems()).hasSizeGreaterThan(150);
         assertThat(dumpsTable.getColumns()).hasSize(3);
     }
@@ -157,7 +157,34 @@ class MainFxmlLoadTest {
     }
 
     @Test
-    void should_select_a_language_when_the_user_types_into_a_picker() throws Exception {
+    void should_narrow_the_list_as_the_user_types_into_a_picker() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        int all = editionCombo.getItems().size();
+
+        onFxThread(() -> editionCombo.getEditor().setText("gr"));
+
+        assertThat(editionCombo.getItems())
+                .as("\"gr\" should leave only Greek")
+                .hasSizeLessThan(all)
+                .allSatisfy(item -> assertThat(item).hasToString("Greek (el)"));
+        assertThat(editionCombo.getValue())
+                .as("a partial name identifies nothing yet")
+                .isNull();
+
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
+
+        assertThat(editionCombo.getValue())
+                .as("an exact code should select the language it names")
+                .hasToString("Greek (el)");
+    }
+
+    @Test
+    void should_empty_the_list_and_select_nothing_when_the_text_matches_no_language() throws Exception {
         if (!toolkitReady) {
             abort("No JavaFX toolkit available");
         }
@@ -165,23 +192,35 @@ class MainFxmlLoadTest {
         MainController controller = loadOnFxThread(new AtomicReference<>());
         ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
 
-        onFxThread(() -> {
-            Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_TYPED, "g", "",
-                                                       KeyCode.UNDEFINED, false, false, false, false));
-            Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_TYPED, "r", "",
-                                                       KeyCode.UNDEFINED, false, false, false, false));
-        });
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
+        assertThat(editionCombo.getValue()).isNotNull();
 
+        onFxThread(() -> editionCombo.getEditor().setText("nds"));
+
+        assertThat(editionCombo.getItems())
+                .as("an edition kaikki does not serve must offer nothing to pick")
+                .isEmpty();
         assertThat(editionCombo.getValue())
-                .as("typing \"gr\" should land on Greek")
-                .hasToString("Greek (el)");
+                .as("and must not survive as a value, or it would reach the downloader")
+                .isNull();
+    }
 
+    @Test
+    void should_restore_the_selected_language_when_escape_is_pressed() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        int all = editionCombo.getItems().size();
+
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
         onFxThread(() -> Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_PRESSED, "", "",
-                                                                    KeyCode.BACK_SPACE, false, false, false, false)));
+                                                                    KeyCode.ESCAPE, false, false, false, false)));
 
-        assertThat(editionCombo.getValue())
-                .as("deleting back to \"g\" should land on German")
-                .hasToString("German (de)");
+        assertThat(editionCombo.getEditor().getText()).isEqualTo("Greek (el)");
+        assertThat(editionCombo.getItems()).hasSize(all);
     }
 
     @Test

@@ -1,17 +1,32 @@
 package edu.self.w2k.gui;
 
+import java.util.List;
+import java.util.function.Supplier;
+
 import edu.self.w2k.config.LanguageCatalog;
 import edu.self.w2k.config.LanguageCatalog.Language;
 import javafx.util.StringConverter;
 
 /**
- * Renders a language as {@code "Name (code)"} and parses either that form or a bare code back.
+ * Renders a language as {@code "Name (code)"}, and resolves that form, a bare code or a display name
+ * back to one of the languages the picker currently offers.
  * <p>
- * Neither picker is editable, so {@code fromString} is not on the path of anything a user types. It
- * stays because {@code StringConverter} requires it, and because FXML and tests round-trip through
- * it.
+ * Text matching none of them resolves to {@code null}. Both pickers accept typing so their lists can
+ * be filtered, which puts this on the path of everything a user types: minting a {@code Language} from
+ * an unrecognised code here is what once let an edition kaikki does not serve reach the downloader and
+ * fail at the HTTP 404.
  */
 public class LanguageConverter extends StringConverter<Language> {
+
+    private final Supplier<List<Language>> candidates;
+
+    public LanguageConverter() {
+        this(LanguageCatalog::editions);
+    }
+
+    public LanguageConverter(Supplier<List<Language>> candidates) {
+        this.candidates = candidates;
+    }
 
     @Override
     public String toString(Language language) {
@@ -33,7 +48,7 @@ public class LanguageConverter extends StringConverter<Language> {
         if (code.isBlank()) {
             return null;
         }
-        
-        return LanguageCatalog.findEdition(code).orElseGet(() -> Language.of(code));
+
+        return LanguageCatalog.find(candidates.get(), code).orElse(null);
     }
 }

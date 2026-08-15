@@ -2,6 +2,8 @@ package edu.self.w2k.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import edu.self.w2k.config.LanguageCatalog.Language;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,12 +39,23 @@ class LanguageConverterTest {
     }
 
     @Test
-    void should_accept_a_bare_code_when_typed_by_hand() {
-        // Given kaikki adds editions between releases, so a code absent from the list must still work
+    void should_return_null_when_the_code_is_not_one_of_the_offered_languages() {
+        // When
         Language parsed = unit.fromString("nds");
 
         // Then
-        assertThat(parsed.code()).isEqualTo("nds");
+        assertThat(parsed).isNull();
+    }
+
+    @Test
+    void should_resolve_against_the_languages_it_is_given() {
+        // Given
+        LanguageConverter scoped = new LanguageConverter(() -> List.of(Language.of("grc", "Ancient Greek", 89814)));
+
+        // When / Then
+        assertThat(scoped.fromString("grc")).isNotNull().extracting(Language::displayName)
+                .isEqualTo("Ancient Greek");
+        assertThat(scoped.fromString("fr")).isNull();
     }
 
     @ParameterizedTest
