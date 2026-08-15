@@ -1,5 +1,7 @@
 package edu.self.w2k.gui;
 
+import java.util.Optional;
+
 import atlantafx.base.theme.CupertinoDark;
 import atlantafx.base.theme.CupertinoLight;
 import atlantafx.base.theme.Theme;
@@ -26,15 +28,8 @@ public final class SystemTheme {
     public static void install(Scene scene, ObservableValue<AppTheme> choice) {
         apply(scene, choice.getValue());
         choice.addListener((_, _, updated) -> apply(scene, updated));
-
-        try {
-            Platform.getPreferences()
-                    .colorSchemeProperty()
-                    .addListener((_, _, _) -> apply(scene, choice.getValue()));
-        }
-        catch (RuntimeException e) {
-            log.debug("Could not follow the system colour scheme: {}", e.toString());
-        }
+        systemPreferences().ifPresent(preferences -> preferences.colorSchemeProperty()
+                                                                .addListener((_, _, _) -> apply(scene, choice.getValue())));
     }
 
     public static void apply(Scene scene, AppTheme choice) {
@@ -59,12 +54,20 @@ public final class SystemTheme {
     }
 
     private static ColorScheme systemColorScheme() {
+        return systemPreferences().map(Platform.Preferences::getColorScheme).orElse(ColorScheme.LIGHT);
+    }
+
+    /**
+     * Empty when the platform reports nothing, which leaves the window on the light variant rather
+     * than on a dialog: a theme is never worth failing a launch over.
+     */
+    private static Optional<Platform.Preferences> systemPreferences() {
         try {
-            return Platform.getPreferences().getColorScheme();
+            return Optional.of(Platform.getPreferences());
         }
         catch (RuntimeException e) {
             log.debug("Could not read the system colour scheme: {}", e.toString());
-            return ColorScheme.LIGHT;
+            return Optional.empty();
         }
     }
 }

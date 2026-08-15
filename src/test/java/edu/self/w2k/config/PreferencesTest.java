@@ -171,7 +171,8 @@ class PreferencesTest {
         Preferences unit = new Preferences(Path.of("dumps"),
                                            Path.of("dictionaries"),
                                            Optional.empty(),
-                                           Optional.empty());
+                                           Optional.empty(),
+                                           AppTheme.JAVAFX);
 
         // Then
         assertThat(unit.dumpsDir()).isAbsolute();
