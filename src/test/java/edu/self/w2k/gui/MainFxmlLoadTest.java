@@ -27,8 +27,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ListCell;
@@ -43,6 +45,8 @@ import javafx.scene.text.Text;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -217,6 +221,98 @@ class MainFxmlLoadTest {
         assertThat(wordCombo.getValue())
                 .as("a language from a list that no longer applies must not survive the edition")
                 .isNull();
+    }
+
+    @Test
+    void should_open_the_drop_down_as_soon_as_a_picker_takes_focus() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        AtomicReference<Stage> stage = new AtomicReference<>();
+        Button elsewhere = new Button("elsewhere");
+
+        try {
+            onFxThread(() -> {
+                stage.set(new Stage());
+                stage.get().setScene(new Scene(new VBox(editionCombo, elsewhere), 480, 320));
+                stage.get().show();
+            });
+
+            onFxThread(() -> {
+                elsewhere.requestFocus();
+                editionCombo.getEditor().setText("gr");
+                editionCombo.hide();
+            });
+            assertThat(editionCombo.isShowing()).as("test setup: the list starts closed").isFalse();
+
+            onFxThread(() -> editionCombo.getEditor().requestFocus());
+
+            assertThat(editionCombo.isShowing())
+                    .as("the list should be offered before the user types anything")
+                    .isTrue();
+            assertThat(editionCombo.getItems())
+                    .as("focus offers the whole list, not what a previous search narrowed it to")
+                    .hasSizeGreaterThan(1);
+        }
+        finally {
+            onFxThread(() -> {
+                editionCombo.hide();
+                if (stage.get() != null) {
+                    stage.get().hide();
+                }
+            });
+        }
+    }
+
+    /** The arrow toggles the popup itself, so focus must not open it underneath and cancel the toggle. */
+    @Test
+    void should_leave_the_drop_down_to_the_arrow_when_the_arrow_is_what_was_pressed() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        AtomicReference<Stage> stage = new AtomicReference<>();
+
+        try {
+            onFxThread(() -> {
+                stage.set(new Stage());
+                stage.get().setScene(new Scene(new VBox(editionCombo), 480, 320));
+                stage.get().show();
+                editionCombo.applyCss();
+                editionCombo.layout();
+            });
+
+            AtomicReference<Node> arrow = new AtomicReference<>();
+            onFxThread(() -> arrow.set(editionCombo.lookup(".arrow-button")));
+            assertThat(arrow.get()).as("the picker has no arrow button").isNotNull();
+
+            onFxThread(() -> {
+                Event.fireEvent(arrow.get(), mousePress(arrow.get()));
+                editionCombo.getEditor().requestFocus();
+            });
+
+            assertThat(editionCombo.isShowing())
+                    .as("focus must stand aside so the arrow's own toggle decides")
+                    .isFalse();
+        }
+        finally {
+            onFxThread(() -> {
+                editionCombo.hide();
+                if (stage.get() != null) {
+                    stage.get().hide();
+                }
+            });
+        }
+    }
+
+    private static MouseEvent mousePress(Node target) {
+        return new MouseEvent(null, target, MouseEvent.MOUSE_PRESSED, 1, 1, 1, 1, MouseButton.PRIMARY, 1,
+                              false, false, false, false, true, false, false, true, false, false, null);
     }
 
     @Test

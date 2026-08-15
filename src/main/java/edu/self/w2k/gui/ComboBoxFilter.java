@@ -8,6 +8,8 @@ import edu.self.w2k.config.LanguageCatalog.Language;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.event.EventTarget;
+import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Skin;
@@ -16,6 +18,7 @@ import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.util.StringConverter;
 
@@ -57,9 +60,18 @@ public final class ComboBoxFilter {
             }
         });
 
+        AtomicBoolean arrowPressed = new AtomicBoolean();
+        combo.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> arrowPressed.set(onArrow(event.getTarget())));
+        combo.addEventFilter(MouseEvent.MOUSE_RELEASED, _ -> arrowPressed.set(false));
+
         editor.focusedProperty().addListener((_, _, focused) -> {
-            if (Boolean.TRUE.equals(focused)) {
-                editor.selectAll();
+            if (Boolean.FALSE.equals(focused)) {
+                return;
+            }
+            editor.selectAll();
+            if (!arrowPressed.getAndSet(false)) {
+                combo.show();
+                filtered.setPredicate(null);
             }
         });
 
@@ -71,6 +83,15 @@ public final class ComboBoxFilter {
 
         combo.skinProperty().addListener((_, _, skin) -> keepScrollingWhereverThePointerIs(skin));
         keepScrollingWhereverThePointerIs(combo.getSkin());
+    }
+
+    private static boolean onArrow(EventTarget target) {
+        for (Node node = target instanceof Node n ? n : null; node != null; node = node.getParent()) {
+            if (node.getStyleClass().contains("arrow-button") || node.getStyleClass().contains("arrow")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void keepScrollingWhereverThePointerIs(Skin<?> skin) {

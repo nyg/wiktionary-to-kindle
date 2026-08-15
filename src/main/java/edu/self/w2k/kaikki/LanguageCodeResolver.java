@@ -86,7 +86,7 @@ public final class LanguageCodeResolver {
 
     static String normalise(String name) {
         String withoutMarks = Normalizer.normalize(name, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
-        return withoutMarks.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "");
+        return withoutMarks.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", "");
     }
 
     private static String displayNameFor(String code, String kaikkiName) {
