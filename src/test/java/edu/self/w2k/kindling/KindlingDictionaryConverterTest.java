@@ -1,6 +1,7 @@
 package edu.self.w2k.kindling;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.TreeMap;
 
 import edu.self.w2k.kindling.KindlingDictionaryConverter.ProcessRunner;
 import edu.self.w2k.progress.ProgressListener.Stage;
+import edu.self.w2k.write.IntermediateFiles;
 import edu.self.w2k.write.opf.OpfDictionaryWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,16 +57,17 @@ class KindlingDictionaryConverterTest {
     @Test
     void should_run_kindling_cli_and_return_mobi_path_when_write() throws Exception {
         // Given
-        Path opfPath = outputDir.resolve("w2k-dictionary-en-fr.opf");
+        Path workDir = IntermediateFiles.dirFor(outputDir, "en", "fr");
+        Path opfPath = workDir.resolve("w2k-dictionary-en-fr.opf");
         Path binPath = outputDir.resolve("kindling-cli");
-        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(outputDir))).thenReturn(opfPath);
+        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(workDir))).thenReturn(opfPath);
         when(resolver.resolve()).thenReturn(binPath);
         when(runner.run(anyList())).thenReturn(0);
 
         // When
         Path result = unit.write(new TreeMap<>(), "en", "fr", "Title", outputDir);
 
-        // Then
+        // Then — the mobi sits in the dictionaries folder itself, the working files a level down
         assertThat(result).isEqualTo(outputDir.resolve("w2k-dictionary-en-fr.mobi"));
 
         ArgumentCaptor<List<String>> commandCaptor = ArgumentCaptor.captor();
@@ -72,8 +75,68 @@ class KindlingDictionaryConverterTest {
         assertThat(commandCaptor.getValue())
                 .contains("build")
                 .contains("-o")
-                .anyMatch(s -> s.endsWith("w2k-dictionary-en-fr.opf"))
+                .anyMatch(s -> s.equals(opfPath.toAbsolutePath().toString()))
                 .anyMatch(s -> s.endsWith("w2k-dictionary-en-fr.mobi"));
+    }
+
+    @Test
+    void should_delete_the_working_directory_when_the_preference_asks_for_it() throws Exception {
+        // Given a writer that leaves real files behind, as the OPF writer does
+        Path workDir = IntermediateFiles.dirFor(outputDir, "en", "fr");
+        unit = new KindlingDictionaryConverter(opfWriter, resolver, runner,
+                                               (stage, _, _) -> stages.add(stage), true);
+        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(workDir))).thenAnswer(_ -> {
+            Files.createDirectories(workDir);
+            Files.writeString(workDir.resolve("w2k-dictionary-en-fr-0.html"), "<html/>");
+            return Files.writeString(workDir.resolve("w2k-dictionary-en-fr.opf"), "<package/>");
+        });
+        when(resolver.resolve()).thenReturn(outputDir.resolve("kindling-cli"));
+        when(runner.run(anyList())).thenReturn(0);
+
+        // When
+        Path result = unit.write(new TreeMap<>(), "en", "fr", "Title", outputDir);
+
+        // Then — the shared parent goes too, since nothing else is using it
+        assertThat(result).isEqualTo(outputDir.resolve("w2k-dictionary-en-fr.mobi"));
+        assertThat(workDir).doesNotExist();
+        assertThat(outputDir.resolve(IntermediateFiles.DIR_NAME)).doesNotExist();
+    }
+
+    @Test
+    void should_keep_the_working_directory_when_the_preference_is_unset() throws Exception {
+        // Given
+        Path workDir = IntermediateFiles.dirFor(outputDir, "en", "fr");
+        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(workDir))).thenAnswer(_ -> {
+            Files.createDirectories(workDir);
+            return Files.writeString(workDir.resolve("w2k-dictionary-en-fr.opf"), "<package/>");
+        });
+        when(resolver.resolve()).thenReturn(outputDir.resolve("kindling-cli"));
+        when(runner.run(anyList())).thenReturn(0);
+
+        // When
+        unit.write(new TreeMap<>(), "en", "fr", "Title", outputDir);
+
+        // Then
+        assertThat(workDir).isDirectoryContaining(path -> path.getFileName().toString().endsWith(".opf"));
+    }
+
+    @Test
+    void should_keep_the_working_directory_when_kindling_cli_fails() throws Exception {
+        // Given — the files are the only way to diagnose a failed build
+        Path workDir = IntermediateFiles.dirFor(outputDir, "en", "fr");
+        unit = new KindlingDictionaryConverter(opfWriter, resolver, runner,
+                                               (stage, _, _) -> stages.add(stage), true);
+        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(workDir))).thenAnswer(_ -> {
+            Files.createDirectories(workDir);
+            return Files.writeString(workDir.resolve("w2k-dictionary-en-fr.opf"), "<package/>");
+        });
+        when(resolver.resolve()).thenReturn(outputDir.resolve("kindling-cli"));
+        when(runner.run(anyList())).thenReturn(1);
+
+        // When / Then
+        assertThatThrownBy(() -> unit.write(new TreeMap<>(), "en", "fr", "Title", outputDir))
+                .isInstanceOf(IOException.class);
+        assertThat(workDir).exists();
     }
 
     @Test
@@ -81,7 +144,8 @@ class KindlingDictionaryConverterTest {
         // Given
         Path opfPath = outputDir.resolve("w2k-dictionary-en-fr.opf");
         Path binPath = outputDir.resolve("kindling-cli");
-        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(outputDir))).thenReturn(opfPath);
+        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"),
+                             eq(IntermediateFiles.dirFor(outputDir, "en", "fr")))).thenReturn(opfPath);
         when(resolver.resolve()).thenReturn(binPath);
         when(runner.run(anyList())).thenReturn(1);
 
@@ -94,7 +158,8 @@ class KindlingDictionaryConverterTest {
     @Test
     void should_report_kindling_stage_when_invoking_the_binary() throws Exception {
         // Given
-        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"), eq(outputDir)))
+        when(opfWriter.write(any(), eq("en"), eq("fr"), eq("Title"),
+                             eq(IntermediateFiles.dirFor(outputDir, "en", "fr"))))
                 .thenReturn(outputDir.resolve("w2k-dictionary-en-fr.opf"));
         when(resolver.resolve()).thenReturn(outputDir.resolve("kindling-cli"));
         when(runner.run(anyList())).thenReturn(0);

@@ -1,13 +1,9 @@
 package edu.self.w2k.gui;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
-import ch.qos.logback.core.FileAppender;
 import edu.self.w2k.config.AppInfo;
 import edu.self.w2k.config.AppPaths;
 import edu.self.w2k.config.AppVersion;
@@ -25,8 +21,6 @@ public class App extends Application {
     static final String MAIN_FXML = "/edu/self/w2k/gui/main.fxml";
     static final String STYLESHEET = "/edu/self/w2k/gui/app.css";
     static final String ICON = "/edu/self/w2k/gui/icon.png";
-
-    private static final String LOG_PATTERN = "%d{HH:mm:ss} %-5level - %msg%n";
 
     private UiLogAppender uiAppender;
 
@@ -85,23 +79,7 @@ public class App extends Application {
     /** A log file gives users something concrete to attach to a bug report. */
     private static void addFileAppender(LoggerContext context, ch.qos.logback.classic.Logger root) {
         try {
-            Path logFile = AppPaths.stateDir().resolve("logs").resolve("app.log");
-            Files.createDirectories(logFile.getParent());
-
-            PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-            encoder.setContext(context);
-            encoder.setPattern(LOG_PATTERN);
-            encoder.start();
-
-            FileAppender<ch.qos.logback.classic.spi.ILoggingEvent> fileAppender = new FileAppender<>();
-            fileAppender.setContext(context);
-            fileAppender.setName("file");
-            fileAppender.setFile(logFile.toString());
-            fileAppender.setAppend(false);
-            fileAppender.setEncoder(encoder);
-            fileAppender.start();
-
-            root.addAppender(fileAppender);
+            LogFile.install(context, root, AppPaths.stateDir().resolve("logs"));
             root.setLevel(Level.INFO);
         }
         catch (IOException e) {

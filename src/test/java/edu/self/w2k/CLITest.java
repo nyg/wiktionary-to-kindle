@@ -101,7 +101,7 @@ class CLITest {
                                                   Path.of("/prefs/dictionaries"),
                                                   Optional.empty(),
                                                   Optional.empty(),
-                                                  AppTheme.JAVAFX);
+                                                  AppTheme.JAVAFX, false);
         CommandLine.ParseResult parsed = new CommandLine(new CLI()).parseArgs("download", "fr");
         CLI.Download unit = (CLI.Download) parsed.subcommand().commandSpec().userObject();
 
@@ -119,7 +119,7 @@ class CLITest {
                                                   Path.of("/prefs/dictionaries"),
                                                   Optional.empty(),
                                                   Optional.empty(),
-                                                  AppTheme.JAVAFX);
+                                                  AppTheme.JAVAFX, false);
         CommandLine.ParseResult parsed =
                 new CommandLine(new CLI()).parseArgs("download", "fr", "--dumps-dir", "/override/dumps");
         CLI.Download unit = (CLI.Download) parsed.subcommand().commandSpec().userObject();
@@ -138,7 +138,7 @@ class CLITest {
                                                   Path.of("/prefs/dictionaries"),
                                                   Optional.empty(),
                                                   Optional.empty(),
-                                                  AppTheme.JAVAFX);
+                                                  AppTheme.JAVAFX, false);
         CommandLine.ParseResult parsed = new CommandLine(new CLI()).parseArgs("generate", "el", "en");
         CLI.Generate unit = (CLI.Generate) parsed.subcommand().commandSpec().userObject();
 
@@ -154,7 +154,7 @@ class CLITest {
                                                   Path.of("/prefs/dictionaries"),
                                                   Optional.empty(),
                                                   Optional.empty(),
-                                                  AppTheme.JAVAFX);
+                                                  AppTheme.JAVAFX, false);
         CommandLine.ParseResult parsed = new CommandLine(new CLI())
                 .parseArgs("generate", "el", "en",
                            "--dumps-dir", "/override/dumps",

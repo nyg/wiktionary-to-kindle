@@ -7,10 +7,12 @@ import java.util.Optional;
 import edu.self.w2k.config.AppTheme;
 import edu.self.w2k.config.Preferences;
 import edu.self.w2k.kindling.KindlingRelease;
+import edu.self.w2k.write.IntermediateFiles;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
@@ -24,7 +26,7 @@ import javafx.stage.FileChooser;
 /**
  * Modal preferences editor, returning the edited {@link Preferences} on OK.
  * <p>
- * Built in code rather than FXML: it is a four-row form, and a second FXML file plus controller would
+ * Built in code rather than FXML: it is a short form, and a second FXML file plus controller would
  * add wiring to get wrong without making the form any clearer.
  * <p>
  * Max heap is shown read-only. It cannot be a setting — the heap is fixed when the JVM starts, so a
@@ -45,6 +47,8 @@ public class PreferencesDialog extends Dialog<Preferences> {
     private final TextField kindlingVersion = new TextField();
     private final ComboBox<AppTheme> theme =
             new ComboBox<>(FXCollections.observableArrayList(AppTheme.values()));
+    private final CheckBox deleteIntermediateFiles =
+            new CheckBox("Delete intermediate files after the dictionary is built");
 
     public PreferencesDialog(Preferences current) {
         setTitle("Preferences");
@@ -59,6 +63,7 @@ public class PreferencesDialog extends Dialog<Preferences> {
         kindlingVersion.setPromptText(KindlingRelease.load().version() + " (pinned default)");
         theme.setValue(current.theme());
         theme.setMaxWidth(Double.MAX_VALUE);
+        deleteIntermediateFiles.setSelected(current.deleteIntermediateFiles());
 
         getDialogPane().setContent(buildForm());
         setResultConverter(button -> button == ButtonType.OK ? toPreferences() : null);
@@ -77,7 +82,9 @@ public class PreferencesDialog extends Dialog<Preferences> {
         grid.addRow(3, new Label("kindling version"), kindlingVersion);
         grid.addRow(4, new Label("Theme"), theme);
         grid.add(themeHint(), 1, 5);
-        grid.add(memoryLabel(), 1, 6);
+        grid.add(deleteIntermediateFiles, 1, 6);
+        grid.add(intermediateFilesHint(), 1, 7);
+        grid.add(memoryLabel(), 1, 8);
 
         GridPane.setHgrow(dumpsDir, Priority.ALWAYS);
         return grid;
@@ -133,6 +140,15 @@ public class PreferencesDialog extends Dialog<Preferences> {
         return label;
     }
 
+    private static Label intermediateFilesHint() {
+        Label label = new Label("The HTML, OPF, NCX and cover files a build feeds to kindling-cli are "
+                                + "written to the dictionaries folder's \"%s\" sub-folder."
+                                        .formatted(IntermediateFiles.DIR_NAME));
+        label.setWrapText(true);
+        label.getStyleClass().add("path-label");
+        return label;
+    }
+
     private static Label memoryLabel() {
         long maxHeapMb = Runtime.getRuntime().maxMemory() / BYTES_PER_MB;
         Label label = new Label(memoryText(maxHeapMb));
@@ -156,7 +172,8 @@ public class PreferencesDialog extends Dialog<Preferences> {
                                Path.of(dictionariesDir.getText().strip()),
                                optionalPath(kindlingCliPath.getText()),
                                optionalText(kindlingVersion.getText()),
-                               theme.getValue());
+                               theme.getValue(),
+                               deleteIntermediateFiles.isSelected());
     }
 
     private static Optional<String> optionalText(String text) {
