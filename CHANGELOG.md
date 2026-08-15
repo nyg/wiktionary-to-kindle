@@ -1,6 +1,27 @@
 # Changelog
 
 
+## [2.1.0](https://github.com/nyg/wiktionary-to-kindle/compare/v2.0.3..v2.1.0) - 2026-08-15
+
+### ⛰️  Features
+
+- [`b3272a1`](https://github.com/nyg/wiktionary-to-kindle/commit/b3272a1289a7d4a3727f99634db41d016fdf8c4a) Tidy the dictionaries folder and roll the log daily ([#91](https://github.com/nyg/wiktionary-to-kindle/issues/91))
+- [`aae8822`](https://github.com/nyg/wiktionary-to-kindle/commit/aae8822b54ebce57739ae3dd58cfa0dadb85f517) *(gui)* Add AtlantaFX Cupertino themes ([#89](https://github.com/nyg/wiktionary-to-kindle/issues/89))
+- [`e1a6e16`](https://github.com/nyg/wiktionary-to-kindle/commit/e1a6e1682b148a0db0567526901fac57f1d2e649) Source both language pickers from kaikki and stop accepting free text ([#84](https://github.com/nyg/wiktionary-to-kindle/issues/84))
+- [`da77960`](https://github.com/nyg/wiktionary-to-kindle/commit/da77960b6faaa777b5242518bc0aac4a6f3f64b4) *(cli)* **[breaking]** Share the desktop app's data folders ([#87](https://github.com/nyg/wiktionary-to-kindle/issues/87))
+
+### 🐛 Bug Fixes
+
+- [`0e819bf`](https://github.com/nyg/wiktionary-to-kindle/commit/0e819bf7af38173aec2a4de2bcc9b8fe4adc18db) *(gui)* Resolve misc UI defects ([#90](https://github.com/nyg/wiktionary-to-kindle/issues/90))
+- [`540a9dd`](https://github.com/nyg/wiktionary-to-kindle/commit/540a9dd1423b491db2ffbe8da413ee27b773f69a) *(config)* Enforce the absolute-path invariant on data directories ([#88](https://github.com/nyg/wiktionary-to-kindle/issues/88))
+- [`990da1a`](https://github.com/nyg/wiktionary-to-kindle/commit/990da1afbd027ee1e2d0ef3bd402d0ec78e2ae65) *(gui)* Resolve typed edition names to codes ([#83](https://github.com/nyg/wiktionary-to-kindle/issues/83))
+
+### ⚙️ Miscellaneous
+
+- [`6000655`](https://github.com/nyg/wiktionary-to-kindle/commit/6000655e0c4e0c9fc6e07675cc749d7ee644ba99) Improve PR body for kindling-cli update ([#82](https://github.com/nyg/wiktionary-to-kindle/issues/82))
+- [`a28f73e`](https://github.com/nyg/wiktionary-to-kindle/commit/a28f73e8c4179d3c07d08d3daf3310ebe543a000) *(deps)* Update kindling-cli to v0.31.0 ([#81](https://github.com/nyg/wiktionary-to-kindle/issues/81))
+- [`5c82aed`](https://github.com/nyg/wiktionary-to-kindle/commit/5c82aed02507e23835263a15dd2a37c8dfc6aa9c) Retry GitHub release creation on transient API failures ([#78](https://github.com/nyg/wiktionary-to-kindle/issues/78))
+
 ## [2.0.3](https://github.com/nyg/wiktionary-to-kindle/compare/v2.0.2..v2.0.3) - 2026-08-03
 
 ### ⚙️ Miscellaneous
