@@ -78,7 +78,7 @@ sequenceDiagram
     Note over GenerateCommand: post-passes:<br/>1. foldFormOfEntries()<br/>2. filterFormsCollidingWithHeadwords()
 
     GenerateCommand->>KindlingDictionaryConverter: write(grouped, srcLang, trgLang, title, outputDir)
-    KindlingDictionaryConverter->>OpfDictionaryWriter: write(...)
+    KindlingDictionaryConverter->>OpfDictionaryWriter: write(..., outputDir/intermediate/{base name})
 
     loop for each chunk of up to 10 000 entries
         OpfDictionaryWriter->>FileSystem: write dictionary-{src}-{trg}-N.html
@@ -95,6 +95,10 @@ sequenceDiagram
     Note over KindlingDictionaryConverter,kindling: merged stdout/stderr pumped through SLF4J
     kindling->>FileSystem: write dictionary-{src}-{trg}.mobi
     kindling-->>KindlingDictionaryConverter: exit 0
+
+    opt preferences.deleteIntermediateFiles
+        KindlingDictionaryConverter->>FileSystem: delete outputDir/intermediate/{base name}
+    end
 
     KindlingDictionaryConverter-->>GenerateCommand: MOBI path
     GenerateCommand-->>Generate: Path

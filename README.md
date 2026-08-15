@@ -76,13 +76,14 @@ Once the `.mobi` is on the device, set it as the default dictionary for its lang
 | What | Location |
 |------|----------|
 | Dumps and dictionaries | `~/Documents/wiktionary-to-kindle/` (change in Preferences; the CLI uses the same folders) |
+| Build leftovers | `dictionaries/intermediate/` — the HTML, OPF, NCX and cover files each build feeds to `kindling-cli`, one sub-folder per dictionary |
 | Settings | `~/.config/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Config` on Windows |
-| Log file | `~/.local/state/wiktionary-to-kindle/logs/app.log` — `%LOCALAPPDATA%\wiktionary-to-kindle\State` on Windows |
+| Log file | `~/.local/state/wiktionary-to-kindle/logs/app.log`, rolled daily to `app-YYYY-MM-DD.log.gz` and kept 14 days — `%LOCALAPPDATA%\wiktionary-to-kindle\State` on Windows |
 | Cached `kindling-cli` | `~/.cache/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Cache` on Windows |
 
 macOS included, these follow the [XDG Base Directory specification](https://specifications.freedesktop.org/basedir-spec/latest/) and honour `XDG_CONFIG_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME`. Dumps and dictionaries deliberately sit in your documents folder instead — they are multi-gigabyte and the `.mobi` has to be found and copied to a Kindle, so both belong somewhere a file manager shows by default. That folder is still resolved the XDG way, via `XDG_DOCUMENTS_DIR`.
 
-Preferences also lets you point at a pre-installed `kindling-cli` or pin a specific version. Maximum heap is shown there but cannot be changed: it is fixed when the app starts, and the bundle sizes it at 75% of your machine's RAM.
+Preferences also lets you delete the build leftovers as soon as a dictionary is built, point at a pre-installed `kindling-cli`, or pin a specific version. Maximum heap is shown there but cannot be changed: it is fixed when the app starts, and the bundle sizes it at 75% of your machine's RAM.
 
 ## Command line
 
