@@ -101,7 +101,8 @@ public class DictionaryPipeline {
                 new OpfDictionaryWriter(progress),
                 resolver,
                 KindlingDictionaryConverter.defaultRunner(onKindlingStart),
-                progress);
+                progress,
+                prefs.deleteIntermediateFiles());
 
         return new GenerateCommand(
                 new JsonlDictionaryParser(progress),

@@ -29,18 +29,21 @@ import lombok.extern.slf4j.Slf4j;
  * the rest of the code already assumes, and shows the user the resolved path when the dialog
  * reopens.
  *
- * @param dumpsDir        where downloaded kaikki.org dumps are kept
- * @param dictionariesDir where generated dictionaries are written
- * @param kindlingCliPath explicit kindling-cli binary, bypassing PATH/cache/download resolution
- * @param kindlingVersion kindling release tag to download; empty means the pinned default
- * @param theme           look of the desktop window; read by the GUI only, ignored by the CLI
+ * @param dumpsDir                 where downloaded kaikki.org dumps are kept
+ * @param dictionariesDir          where generated dictionaries are written
+ * @param kindlingCliPath          explicit kindling-cli binary, bypassing PATH/cache/download resolution
+ * @param kindlingVersion          kindling release tag to download; empty means the pinned default
+ * @param theme                    look of the desktop window; read by the GUI only, ignored by the CLI
+ * @param deleteIntermediateFiles  whether to drop the HTML/OPF/NCX/cover working files once the
+ *                                 {@code .mobi} they produced has been built
  */
 @Slf4j
 public record Preferences(Path dumpsDir,
                           Path dictionariesDir,
                           Optional<Path> kindlingCliPath,
                           Optional<String> kindlingVersion,
-                          AppTheme theme) {
+                          AppTheme theme,
+                          boolean deleteIntermediateFiles) {
 
     public Preferences {
         dumpsDir = absolute(dumpsDir);
@@ -55,11 +58,13 @@ public record Preferences(Path dumpsDir,
     private static final String KEY_KINDLING_CLI_PATH = "kindlingCliPath";
     private static final String KEY_KINDLING_VERSION = "kindlingVersion";
     private static final String KEY_THEME = "theme";
+    private static final String KEY_DELETE_INTERMEDIATE_FILES = "deleteIntermediateFiles";
 
     private static final String FILE_COMMENT = """
             %s preferences. Blank or missing values fall back to the defaults.
             kindlingVersion accepts a release tag such as v0.28.0; blank uses the pinned default.
-            theme accepts javafx or cupertino, and only the desktop app reads it."""
+            theme accepts javafx or cupertino, and only the desktop app reads it.
+            deleteIntermediateFiles accepts true or false, and both front-ends read it."""
             .formatted(AppInfo.SLUG);
 
     public static Preferences defaults() {
@@ -68,7 +73,8 @@ public record Preferences(Path dumpsDir,
                                dataDir.resolve("dictionaries"),
                                Optional.empty(),
                                Optional.empty(),
-                               AppTheme.defaultForThisPlatform());
+                               AppTheme.defaultForThisPlatform(),
+                               false);
     }
 
     /** Loads from the standard location, falling back to {@link #defaults()} if unreadable. */
@@ -100,7 +106,10 @@ public record Preferences(Path dumpsDir,
                 path(props, KEY_DICTIONARIES_DIR).orElse(defaults.dictionariesDir()),
                 path(props, KEY_KINDLING_CLI_PATH),
                 value(props, KEY_KINDLING_VERSION),
-                value(props, KEY_THEME).flatMap(AppTheme::fromKey).orElse(defaults.theme()));
+                value(props, KEY_THEME).flatMap(AppTheme::fromKey).orElse(defaults.theme()),
+                value(props, KEY_DELETE_INTERMEDIATE_FILES)
+                        .map(Boolean::parseBoolean)
+                        .orElse(defaults.deleteIntermediateFiles()));
     }
 
     /** Writes to the standard location, creating the config directory if needed. */
@@ -115,6 +124,7 @@ public record Preferences(Path dumpsDir,
         props.setProperty(KEY_KINDLING_CLI_PATH, kindlingCliPath.map(Path::toString).orElse(""));
         props.setProperty(KEY_KINDLING_VERSION, kindlingVersion.orElse(""));
         props.setProperty(KEY_THEME, theme.key());
+        props.setProperty(KEY_DELETE_INTERMEDIATE_FILES, Boolean.toString(deleteIntermediateFiles));
 
         Path parent = file.getParent();
         if (parent != null) {

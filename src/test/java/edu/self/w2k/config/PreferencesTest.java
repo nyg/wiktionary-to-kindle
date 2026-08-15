@@ -22,7 +22,8 @@ class PreferencesTest {
                                                Path.of("/data/dictionaries"),
                                                Optional.of(Path.of("/usr/local/bin/kindling-cli")),
                                                Optional.of("v0.28.0"),
-                                               AppTheme.CUPERTINO);
+                                               AppTheme.CUPERTINO,
+                                               true);
         Path file = tmp.resolve("preferences.properties");
 
         // When
@@ -40,7 +41,7 @@ class PreferencesTest {
                                                Path.of("/data/dictionaries"),
                                                Optional.empty(),
                                                Optional.empty(),
-                                               AppTheme.JAVAFX);
+                                               AppTheme.JAVAFX, false);
         Path file = tmp.resolve("preferences.properties");
 
         // When
@@ -51,6 +52,25 @@ class PreferencesTest {
         assertThat(loaded.kindlingCliPath()).isEmpty();
         assertThat(loaded.kindlingVersion()).isEmpty();
         assertThat(loaded.dumpsDir()).isEqualTo(Path.of("/data/dumps"));
+    }
+
+    @Test
+    void should_keep_intermediate_files_by_default() {
+        // Then — the working files stay unless the user asks for them to go
+        assertThat(Preferences.defaults().deleteIntermediateFiles()).isFalse();
+    }
+
+    @Test
+    void should_read_the_intermediate_files_flag_when_set() throws Exception {
+        // Given
+        Path file = tmp.resolve("preferences.properties");
+        Files.writeString(file, "deleteIntermediateFiles=true\n", StandardCharsets.UTF_8);
+
+        // When
+        Preferences loaded = Preferences.load(file);
+
+        // Then
+        assertThat(loaded.deleteIntermediateFiles()).isTrue();
     }
 
     @Test
@@ -172,7 +192,7 @@ class PreferencesTest {
                                            Path.of("dictionaries"),
                                            Optional.empty(),
                                            Optional.empty(),
-                                           AppTheme.JAVAFX);
+                                           AppTheme.JAVAFX, false);
 
         // Then
         assertThat(unit.dumpsDir()).isAbsolute();

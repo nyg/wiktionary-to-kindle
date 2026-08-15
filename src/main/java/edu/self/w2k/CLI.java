@@ -180,7 +180,8 @@ public class CLI implements Callable<Integer> {
             KindlingCliResolver resolver = new KindlingCliResolver(
                     kindlingVersion, Optional.ofNullable(kindlingCliPath), downloader);
             DictionaryWriter writer = new KindlingDictionaryConverter(
-                    new OpfDictionaryWriter(), resolver, KindlingDictionaryConverter.defaultRunner());
+                    new OpfDictionaryWriter(), resolver, KindlingDictionaryConverter.defaultRunner(),
+                    ProgressListener.NOOP, preferences.deleteIntermediateFiles());
 
             new GenerateCommand(
                     new JsonlDictionaryParser(),

@@ -25,7 +25,7 @@ class PipelineTaskTest {
                                                              Path.of("/data/dictionaries"),
                                                              Optional.empty(),
                                                              Optional.empty(),
-                                                             AppTheme.JAVAFX);
+                                                             AppTheme.JAVAFX, false);
 
     private static final Path DUMP = Path.of("/data/dumps/raw-wiktextract-data-el-2026-07-24.jsonl.gz");
     private static final Path MOBI = Path.of("/data/dictionaries/w2k-dictionary-en-el.mobi");
