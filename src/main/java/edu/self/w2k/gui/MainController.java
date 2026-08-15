@@ -6,12 +6,16 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import edu.self.w2k.config.LanguageCatalog;
 import edu.self.w2k.config.LanguageCatalog.Language;
 import edu.self.w2k.config.Preferences;
 import edu.self.w2k.dump.DumpCatalog;
 import edu.self.w2k.dump.DumpFile;
+import edu.self.w2k.kaikki.KaikkiCatalog;
+import edu.self.w2k.kaikki.LanguageCodeResolver;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -23,11 +27,13 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,6 +51,10 @@ public class MainController {
     private static final Duration LOG_DRAIN_INTERVAL = Duration.millis(100);
 
     private static final int MAX_LINES_PER_DRAIN = 500;
+
+    private static final int IDLE_TICKS_BEFORE_PARKING = 20;
+
+    private static final int VISIBLE_ROWS = 12;
 
     @FXML private ComboBox<Language> editionCombo;
     @FXML private ComboBox<Language> wordLanguageCombo;
@@ -64,13 +74,24 @@ public class MainController {
     @FXML private Label dumpsLocationLabel;
 
     private final UiLogAppender logAppender;
+    private final KaikkiCatalog catalog;
     private final MainViewModel viewModel = new MainViewModel();
+    private final AtomicLong wordLanguageRequests = new AtomicLong();
+    private final AtomicBoolean wakePending = new AtomicBoolean();
 
     private PipelineService pipeline;
     private Timeline logDrain;
+    private VirtualFlow<?> logFlow;
+    private String loadedWordLanguageEdition;
+    private int idleTicks;
 
     public MainController(UiLogAppender logAppender) {
+        this(logAppender, new KaikkiCatalog());
+    }
+
+    public MainController(UiLogAppender logAppender, KaikkiCatalog catalog) {
         this.logAppender = logAppender;
+        this.catalog = catalog;
     }
 
     @FXML
@@ -99,14 +120,56 @@ public class MainController {
         editionCombo.setItems(FXCollections.observableArrayList(LanguageCatalog.editions()));
         wordLanguageCombo.setItems(FXCollections.observableArrayList(LanguageCatalog.wordLanguages()));
 
-        // Editable so an edition kaikki added since this build can still be entered by hand.
-        editionCombo.setEditable(true);
         editionCombo.setConverter(new LanguageConverter());
-        wordLanguageCombo.setConverter(new LanguageConverter());
+        wordLanguageCombo.setConverter(new WordLanguageConverter());
+        editionCombo.setVisibleRowCount(VISIBLE_ROWS);
+        wordLanguageCombo.setVisibleRowCount(VISIBLE_ROWS);
+        ComboBoxSearch.install(editionCombo);
+        ComboBoxSearch.install(wordLanguageCombo);
 
         viewModel.editionProperty().bind(editionCombo.valueProperty());
         viewModel.wordLanguageProperty().bind(wordLanguageCombo.valueProperty());
         titlePreview.textProperty().bind(viewModel.titleProperty());
+
+        editionCombo.valueProperty().addListener((_, _, edition) -> loadWordLanguages(edition));
+        refreshEditions();
+    }
+
+    private void refreshEditions() {
+        Thread.ofVirtual().start(() -> {
+            List<Language> editions = catalog.editions().stream().map(Language::of).sorted().toList();
+            if (editions.isEmpty()) {
+                return;
+            }
+            Platform.runLater(() -> replaceItems(editionCombo, editions));
+        });
+    }
+
+    private void loadWordLanguages(Language edition) {
+        if (edition == null || edition.code().equals(loadedWordLanguageEdition)) {
+            return;
+        }
+        loadedWordLanguageEdition = edition.code();
+        String code = edition.code();
+        long request = wordLanguageRequests.incrementAndGet();
+
+        Thread.ofVirtual().start(() -> {
+            List<Language> scoped = LanguageCodeResolver.toLanguages(code, catalog.languagesFor(code));
+            List<Language> items = scoped.isEmpty() ? LanguageCatalog.wordLanguages() : scoped;
+            Platform.runLater(() -> {
+                if (request == wordLanguageRequests.get()) {
+                    replaceItems(wordLanguageCombo, items);
+                }
+            });
+        });
+    }
+
+    private static void replaceItems(ComboBox<Language> combo, List<Language> items) {
+        Language previous = combo.getValue();
+        combo.getItems().setAll(items);
+        if (previous != null) {
+            LanguageCatalog.find(items, previous.code()).ifPresent(combo::setValue);
+        }
     }
 
     private void setUpProgressBindings() {
@@ -122,14 +185,46 @@ public class MainController {
         logDrain = new Timeline(new KeyFrame(LOG_DRAIN_INTERVAL, _ -> drainLog()));
         logDrain.setCycleCount(Animation.INDEFINITE);
         logDrain.play();
+        logAppender.setWakeListener(this::wakeLogDrain);
+    }
+
+    private void wakeLogDrain() {
+        if (wakePending.compareAndSet(false, true)) {
+            Platform.runLater(() -> {
+                wakePending.set(false);
+                idleTicks = 0;
+                if (logDrain.getStatus() != Animation.Status.RUNNING) {
+                    logDrain.play();
+                }
+            });
+        }
     }
 
     private void drainLog() {
         List<String> batch = new ArrayList<>();
-        if (logAppender.drainTo(batch, MAX_LINES_PER_DRAIN) > 0) {
-            viewModel.appendLog(batch);
+        if (logAppender.drainTo(batch, MAX_LINES_PER_DRAIN) == 0) {
+            if (++idleTicks >= IDLE_TICKS_BEFORE_PARKING && !viewModel.runningProperty().get()) {
+                logDrain.stop();
+            }
+            return;
+        }
+        idleTicks = 0;
+        boolean wasAtTail = isLogAtTail();
+        viewModel.appendLog(batch);
+        if (wasAtTail) {
             logView.scrollTo(viewModel.getLogLines().size() - 1);
         }
+    }
+
+    private boolean isLogAtTail() {
+        if (logFlow == null) {
+            logFlow = (VirtualFlow<?>) logView.lookup(".virtual-flow");
+        }
+        if (logFlow == null) {
+            return true;
+        }
+        IndexedCell<?> last = logFlow.getLastVisibleCell();
+        return last == null || last.getIndex() >= viewModel.getLogLines().size() - 2;
     }
 
     /**
@@ -161,6 +256,8 @@ public class MainController {
     void onStart() {
         viewModel.lastOutputProperty().set(null);
         viewModel.clearLog();
+        idleTicks = 0;
+        logDrain.play();
         pipeline.reset();
         pipeline.start();
     }

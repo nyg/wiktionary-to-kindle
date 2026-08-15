@@ -2,6 +2,9 @@ package edu.self.w2k.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import java.util.Optional;
+
 import edu.self.w2k.config.LanguageCatalog.Language;
 import edu.self.w2k.gui.LanguageConverter;
 
@@ -109,5 +112,60 @@ class LanguageCatalogTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.code()).isEqualTo(input);
+    }
+
+    @Test
+    void should_list_only_editions_kaikki_serves() {
+        // When
+        List<String> codes = LanguageCatalog.editions().stream().map(Language::code).toList();
+
+        // Then
+        assertThat(codes).containsExactlyInAnyOrder("cs", "de", "el", "en", "es", "fr", "id", "it",
+                "ja", "ko", "ku", "ms", "nl", "pl", "pt", "ru", "simple", "th", "tr", "vi", "zh");
+    }
+
+    @Test
+    void should_not_offer_editions_kaikki_stopped_serving() {
+        // When
+        List<String> codes = LanguageCatalog.editions().stream().map(Language::code).toList();
+
+        // Then
+        assertThat(codes).doesNotContain("sv", "la", "eo", "fi", "uk", "da", "ar", "hu", "no", "ro");
+    }
+
+    @Test
+    void should_use_the_bundled_override_when_a_code_is_not_a_language_tag() {
+        // When / Then
+        assertThat(LanguageCatalog.displayNameFor("simple")).isEqualTo("Simple English");
+        assertThat(LanguageCatalog.displayNameFor("fr")).isEqualTo("French");
+    }
+
+    @Test
+    void should_find_a_language_by_code_when_searching_a_list() {
+        // Given
+        List<Language> languages = List.of(Language.of("fr"), Language.of("de"));
+
+        // When
+        Optional<Language> found = LanguageCatalog.find(languages, "DE");
+
+        // Then
+        assertThat(found).isPresent().get().extracting(Language::code).isEqualTo("de");
+    }
+
+    @Test
+    void should_find_nothing_when_the_query_matches_no_language() {
+        // Given
+        List<Language> languages = List.of(Language.of("fr"));
+
+        // When / Then
+        assertThat(LanguageCatalog.find(languages, "Klingon")).isEmpty();
+        assertThat(LanguageCatalog.find(languages, "  ")).isEmpty();
+        assertThat(LanguageCatalog.find(languages, null)).isEmpty();
+    }
+
+    @Test
+    void should_report_no_senses_when_a_language_comes_from_the_bundled_list() {
+        // When / Then
+        assertThat(Language.of("fr").senses()).isZero();
     }
 }

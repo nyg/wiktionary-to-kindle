@@ -37,6 +37,8 @@ public class UiLogAppender extends AppenderBase<ILoggingEvent> {
     private final BlockingQueue<String> queue;
     private final AtomicLong dropped = new AtomicLong();
 
+    private volatile Runnable wakeListener = () -> {};
+
     public UiLogAppender() {
         this(DEFAULT_CAPACITY);
     }
@@ -51,6 +53,11 @@ public class UiLogAppender extends AppenderBase<ILoggingEvent> {
         if (!queue.offer(format(event))) {
             dropped.incrementAndGet();
         }
+        wakeListener.run();
+    }
+
+    public void setWakeListener(Runnable wakeListener) {
+        this.wakeListener = wakeListener == null ? () -> {} : wakeListener;
     }
 
     /**

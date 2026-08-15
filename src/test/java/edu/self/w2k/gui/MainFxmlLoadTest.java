@@ -3,13 +3,16 @@ package edu.self.w2k.gui;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.abort;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import edu.self.w2k.dump.DumpFile;
+import edu.self.w2k.kaikki.KaikkiCatalog;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXMLLoader;
@@ -97,7 +100,12 @@ class MainFxmlLoadTest {
         var dumpsTable = readField(controller, "dumpsTable", TableView.class);
 
         assertThat(editionCombo.getItems()).isNotEmpty();
-        assertThat(editionCombo.isEditable()).as("edition box must accept a hand-typed code").isTrue();
+        assertThat(editionCombo.isEditable())
+                .as("edition box must not accept free text — an unserved code is a later HTTP 404")
+                .isFalse();
+        assertThat(wordCombo.isEditable())
+                .as("word language box must not accept free text")
+                .isFalse();
         assertThat(wordCombo.getItems()).hasSizeGreaterThan(150);
         assertThat(dumpsTable.getColumns()).hasSize(3);
     }
@@ -145,6 +153,19 @@ class MainFxmlLoadTest {
         return observable == null ? null : observable.getValue();
     }
 
+    /**
+     * A catalog that can neither reach kaikki nor read a cache, so loading the window exercises the
+     * bundled fallback and the suite stays free of network calls.
+     */
+    private static KaikkiCatalog offlineCatalog() {
+        return new KaikkiCatalog(
+                uri -> {
+                    throw new IOException("offline");
+                },
+                Path.of(System.getProperty("java.io.tmpdir"), "w2k-test-cache-absent"),
+                Duration.ofDays(7));
+    }
+
     private static MainController loadOnFxThread(AtomicReference<Parent> root) throws Exception {
         AtomicReference<MainController> controller = new AtomicReference<>();
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -153,7 +174,7 @@ class MainFxmlLoadTest {
         Platform.runLater(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(App.class.getResource(App.MAIN_FXML));
-                loader.setControllerFactory(_ -> new MainController(new UiLogAppender()));
+                loader.setControllerFactory(_ -> new MainController(new UiLogAppender(), offlineCatalog()));
                 root.set(loader.load());
                 controller.set(loader.getController());
             }

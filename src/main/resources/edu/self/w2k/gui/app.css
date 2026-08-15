@@ -44,3 +44,7 @@
 .progress-bar {
     -fx-pref-height: 14px;
 }
+
+.combo-box-popup .list-view {
+    -fx-fixed-cell-size: 24px;
+}

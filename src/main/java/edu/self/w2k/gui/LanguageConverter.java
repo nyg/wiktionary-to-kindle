@@ -7,8 +7,9 @@ import javafx.util.StringConverter;
 /**
  * Renders a language as {@code "Name (code)"} and parses either that form or a bare code back.
  * <p>
- * The bare-code path is what makes the edition combo usefully editable: kaikki.org adds editions
- * between releases, so a code absent from the bundled list can still be typed in directly.
+ * Neither picker is editable, so {@code fromString} is not on the path of anything a user types. It
+ * stays because {@code StringConverter} requires it, and because FXML and tests round-trip through
+ * it.
  */
 public class LanguageConverter extends StringConverter<Language> {
 
