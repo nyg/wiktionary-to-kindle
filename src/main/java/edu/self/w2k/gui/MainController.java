@@ -107,7 +107,10 @@ public class MainController {
         viewModel.runningProperty().bind(pipeline.runningProperty());
         pipeline.setOnSucceeded(_ -> onFinished(pipeline.getValue()));
         pipeline.setOnFailed(_ -> onFailed(pipeline.getException()));
-        pipeline.setOnCancelled(_ -> viewModel.report(new ProgressSnapshot(0, "Cancelled")));
+        pipeline.setOnCancelled(_ -> {
+            viewModel.report(new ProgressSnapshot(0, "Cancelled"));
+            refreshDumps();
+        });
 
         startButton.disableProperty().bind(viewModel.startableProperty().not());
         cancelButton.disableProperty().bind(viewModel.runningProperty().not());
@@ -355,5 +358,6 @@ public class MainController {
     private void onFailed(Throwable error) {
         log.error("Pipeline failed", error);
         viewModel.report(new ProgressSnapshot(0, "Failed — " + error.getLocalizedMessage()));
+        refreshDumps();
     }
 }
