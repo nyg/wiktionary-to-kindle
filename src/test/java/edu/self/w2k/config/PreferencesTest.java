@@ -146,6 +146,39 @@ class PreferencesTest {
     }
 
     @Test
+    void should_make_relative_directories_absolute_when_loading() throws Exception {
+        // Given a hand-edited file, which would otherwise mean the filesystem root to the bundled app
+        Path file = tmp.resolve("preferences.properties");
+        Files.writeString(file, """
+                dumpsDir=dumps
+                dictionariesDir=./out/../dictionaries
+                kindlingCliPath=bin/kindling-cli
+                """, StandardCharsets.UTF_8);
+
+        // When
+        Preferences loaded = Preferences.load(file);
+
+        // Then — compared by file name because the directories need not exist, and AssertJ's
+        // Path.endsWith resolves the real path on disk
+        assertThat(loaded.dumpsDir()).isAbsolute().hasFileName("dumps");
+        assertThat(loaded.dictionariesDir()).isAbsolute().hasFileName("dictionaries");
+        assertThat(loaded.kindlingCliPath()).hasValueSatisfying(path -> assertThat(path).isAbsolute());
+    }
+
+    @Test
+    void should_make_relative_directories_absolute_when_constructed_directly() {
+        // Given the preferences dialog hands over whatever text the user typed
+        Preferences unit = new Preferences(Path.of("dumps"),
+                                           Path.of("dictionaries"),
+                                           Optional.empty(),
+                                           Optional.empty());
+
+        // Then
+        assertThat(unit.dumpsDir()).isAbsolute();
+        assertThat(unit.dictionariesDir()).isAbsolute();
+    }
+
+    @Test
     void should_default_dumps_and_dictionaries_under_a_common_parent() {
         // When
         Preferences defaults = Preferences.defaults();

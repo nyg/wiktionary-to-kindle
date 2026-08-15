@@ -22,6 +22,13 @@ import lombok.extern.slf4j.Slf4j;
  * invalidate the macOS ad-hoc signature. The bundle instead ships
  * {@code -XX:MaxRAMPercentage=75}, which scales with the machine.
  *
+ * Every path is made absolute on construction, wherever it came from — the properties file, the
+ * preferences dialog, or a caller. A relative path would otherwise mean two different directories to
+ * the two front-ends: a bundled {@code .app} launches with the working directory set to {@code /},
+ * while the CLI inherits the shell's. Normalising here rather than at each use keeps the invariant
+ * the rest of the code already assumes, and shows the user the resolved path when the dialog
+ * reopens.
+ *
  * @param dumpsDir        where downloaded kaikki.org dumps are kept
  * @param dictionariesDir where generated dictionaries are written
  * @param kindlingCliPath explicit kindling-cli binary, bypassing PATH/cache/download resolution
@@ -34,6 +41,12 @@ public record Preferences(Path dumpsDir,
                           Optional<Path> kindlingCliPath,
                           Optional<String> kindlingVersion,
                           AppTheme theme) {
+
+    public Preferences {
+        dumpsDir = absolute(dumpsDir);
+        dictionariesDir = absolute(dictionariesDir);
+        kindlingCliPath = kindlingCliPath.map(Preferences::absolute);
+    }
 
     static final String FILE_NAME = "preferences.properties";
 
@@ -121,5 +134,9 @@ public record Preferences(Path dumpsDir,
 
     private static Optional<Path> path(Properties props, String key) {
         return value(props, key).map(Path::of);
+    }
+
+    private static Path absolute(Path path) {
+        return path.toAbsolutePath().normalize();
     }
 }
