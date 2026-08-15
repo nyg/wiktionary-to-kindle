@@ -3,6 +3,7 @@ package edu.self.w2k.gui;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 
 import edu.self.w2k.config.LanguageCatalog;
@@ -13,7 +14,7 @@ import javafx.scene.input.KeyEvent;
 
 public final class ComboBoxSearch {
 
-    private static final long RESET_AFTER_NANOS = 1_000_000_000L;
+    static final long RESET_AFTER_NANOS = 1_000_000_000L;
 
     private ComboBoxSearch() {}
 
@@ -22,8 +23,7 @@ public final class ComboBoxSearch {
 
         combo.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.BACK_SPACE) {
-                buffer.backspace();
-                select(combo, buffer.text());
+                select(combo, backspaced(buffer, combo.getItems()));
                 event.consume();
             }
             else if (event.getCode() == KeyCode.ESCAPE) {
@@ -32,24 +32,23 @@ public final class ComboBoxSearch {
         });
 
         combo.addEventHandler(KeyEvent.KEY_TYPED, event -> {
-            String typed = event.getCharacter();
-            if (typed == null || typed.isEmpty() || typed.charAt(0) < ' ') {
-                return;
-            }
-            buffer.append(typed);
-            if (select(combo, buffer.text())) {
+            if (select(combo, typed(buffer, combo.getItems(), event.getCharacter()))) {
                 event.consume();
             }
         });
     }
 
-    private static boolean select(ComboBox<Language> combo, String query) {
-        Optional<Language> match = match(combo.getItems(), query);
-        match.ifPresent(language -> {
-            combo.setValue(language);
-            combo.getSelectionModel().select(language);
-        });
-        return match.isPresent();
+    static Optional<Language> typed(Buffer buffer, List<Language> items, String character) {
+        if (!isPrintable(character)) {
+            return Optional.empty();
+        }
+        buffer.append(character);
+        return match(items, buffer.text());
+    }
+
+    static Optional<Language> backspaced(Buffer buffer, List<Language> items) {
+        buffer.backspace();
+        return match(items, buffer.text());
     }
 
     static Optional<Language> match(List<Language> items, String query) {
@@ -60,6 +59,18 @@ public final class ComboBoxSearch {
                 .or(() -> firstMatching(items, language -> startsWith(language.displayName(), query)))
                 .or(() -> firstMatching(items, language -> startsWith(language.code(), query)))
                 .or(() -> firstMatching(items, language -> contains(language.displayName(), query)));
+    }
+
+    private static boolean select(ComboBox<Language> combo, Optional<Language> match) {
+        match.ifPresent(language -> {
+            combo.setValue(language);
+            combo.getSelectionModel().select(language);
+        });
+        return match.isPresent();
+    }
+
+    private static boolean isPrintable(String character) {
+        return character != null && !character.isEmpty() && character.charAt(0) >= ' ';
     }
 
     private static Optional<Language> firstMatching(List<Language> items, Predicate<Language> predicate) {
@@ -74,15 +85,24 @@ public final class ComboBoxSearch {
         return value.toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT));
     }
 
-    private static final class Buffer {
+    static final class Buffer {
 
         private final StringBuilder text = new StringBuilder();
+        private final LongSupplier clock;
         private long lastKeystroke;
+
+        Buffer() {
+            this(System::nanoTime);
+        }
+
+        Buffer(LongSupplier clock) {
+            this.clock = clock;
+        }
 
         void append(String typed) {
             expireIfStale();
             text.append(typed);
-            lastKeystroke = System.nanoTime();
+            lastKeystroke = now();
         }
 
         void backspace() {
@@ -90,7 +110,7 @@ public final class ComboBoxSearch {
             if (!text.isEmpty()) {
                 text.setLength(text.length() - 1);
             }
-            lastKeystroke = System.nanoTime();
+            lastKeystroke = now();
         }
 
         void clear() {
@@ -101,8 +121,12 @@ public final class ComboBoxSearch {
             return text.toString();
         }
 
+        private long now() {
+            return clock.getAsLong();
+        }
+
         private void expireIfStale() {
-            if (System.nanoTime() - lastKeystroke > RESET_AFTER_NANOS) {
+            if (now() - lastKeystroke > RESET_AFTER_NANOS) {
                 clear();
             }
         }

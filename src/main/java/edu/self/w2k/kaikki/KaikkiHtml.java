@@ -43,14 +43,12 @@ public final class KaikkiHtml {
         List<KaikkiLanguage> languages = new ArrayList<>();
         for (String line : html.lines().toList()) {
             Matcher matcher = LANGUAGE_ENTRY.matcher(line.strip());
-            if (!matcher.matches()) {
-                continue;
+            if (matcher.matches()) {
+                String name = StringEscapeUtils.unescapeHtml4(matcher.group(1)).strip();
+                if (!name.isEmpty() && !name.equals(COMBINED_PSEUDO_LANGUAGE)) {
+                    languages.add(new KaikkiLanguage(name, parseSenses(matcher.group(2))));
+                }
             }
-            String name = StringEscapeUtils.unescapeHtml4(matcher.group(1)).strip();
-            if (name.isEmpty() || name.equals(COMBINED_PSEUDO_LANGUAGE)) {
-                continue;
-            }
-            languages.add(new KaikkiLanguage(name, parseSenses(matcher.group(2))));
         }
         return List.copyOf(languages);
     }
@@ -63,7 +61,7 @@ public final class KaikkiHtml {
         try {
             return Long.parseLong(digits);
         }
-        catch (NumberFormatException e) {
+        catch (NumberFormatException _) {
             return 0;
         }
     }

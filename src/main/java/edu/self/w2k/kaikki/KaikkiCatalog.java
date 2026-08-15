@@ -91,7 +91,7 @@ public class KaikkiCatalog {
             Instant modified = Files.getLastModifiedTime(cacheFile).toInstant();
             return modified.plus(ttl).isAfter(Instant.now());
         }
-        catch (IOException e) {
+        catch (IOException _) {
             return false;
         }
     }
@@ -159,12 +159,12 @@ public class KaikkiCatalog {
             return new KaikkiLanguage(line.substring(0, separator),
                     Long.parseLong(line.substring(separator + 1).strip()));
         }
-        catch (NumberFormatException e) {
+        catch (NumberFormatException _) {
             return null;
         }
     }
 
-    private record HttpPageFetcher(HttpClient client) implements PageFetcher {
+    record HttpPageFetcher(HttpClient client) implements PageFetcher {
 
         @Override
         public String fetch(URI uri) throws IOException {

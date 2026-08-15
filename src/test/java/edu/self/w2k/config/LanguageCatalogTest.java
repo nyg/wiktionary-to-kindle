@@ -130,7 +130,8 @@ class LanguageCatalogTest {
         List<String> codes = LanguageCatalog.editions().stream().map(Language::code).toList();
 
         // Then
-        assertThat(codes).doesNotContain("sv", "la", "eo", "fi", "uk", "da", "ar", "hu", "no", "ro");
+        assertThat(codes).isNotEmpty()
+                .doesNotContain("sv", "la", "eo", "fi", "uk", "da", "ar", "hu", "no", "ro");
     }
 
     @Test

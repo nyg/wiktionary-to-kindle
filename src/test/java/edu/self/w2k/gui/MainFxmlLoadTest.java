@@ -15,9 +15,12 @@ import edu.self.w2k.dump.DumpFile;
 import edu.self.w2k.kaikki.KaikkiCatalog;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
+import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import org.junit.jupiter.api.BeforeAll;
@@ -151,6 +154,47 @@ class MainFxmlLoadTest {
         ObservableValue<?> observable = (ObservableValue<?>)
                 factory.call(new TableColumn.CellDataFeatures<>(table, column, dump));
         return observable == null ? null : observable.getValue();
+    }
+
+    @Test
+    void should_select_a_language_when_the_user_types_into_a_picker() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+
+        onFxThread(() -> {
+            Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_TYPED, "g", "",
+                                                       KeyCode.UNDEFINED, false, false, false, false));
+            Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_TYPED, "r", "",
+                                                       KeyCode.UNDEFINED, false, false, false, false));
+        });
+
+        assertThat(editionCombo.getValue())
+                .as("typing \"gr\" should land on Greek")
+                .hasToString("Greek (el)");
+
+        onFxThread(() -> Event.fireEvent(editionCombo, new KeyEvent(KeyEvent.KEY_PRESSED, "", "",
+                                                                    KeyCode.BACK_SPACE, false, false, false, false)));
+
+        assertThat(editionCombo.getValue())
+                .as("deleting back to \"g\" should land on German")
+                .hasToString("German (de)");
+    }
+
+    private static void onFxThread(Runnable action) throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                action.run();
+            }
+            finally {
+                done.countDown();
+            }
+        });
+        assertThat(done.await(30, TimeUnit.SECONDS)).as("FX action timed out").isTrue();
     }
 
     /**

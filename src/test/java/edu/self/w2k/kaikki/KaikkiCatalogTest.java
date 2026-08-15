@@ -143,6 +143,51 @@ class KaikkiCatalogTest {
     }
 
     @Test
+    void should_skip_cache_lines_that_no_longer_parse() throws Exception {
+        // Given
+        Files.writeString(cacheRoot.resolve("languages-fr.txt"),
+                "Français\t2653194\nbroken line with no count\nAllemand\tnot-a-number\n\nRusse\t363095\n",
+                StandardCharsets.UTF_8);
+        KaikkiCatalog unit = new KaikkiCatalog(fetcher, cacheRoot, Duration.ofDays(7));
+
+        // When
+        List<KaikkiLanguage> languages = unit.languagesFor("fr");
+
+        // Then
+        assertThat(languages).containsExactly(
+                new KaikkiLanguage("Français", 2653194),
+                new KaikkiLanguage("Russe", 363095));
+    }
+
+    @Test
+    void should_drop_cached_edition_codes_that_are_not_plausible() throws Exception {
+        // Given
+        Files.writeString(cacheRoot.resolve("editions.txt"), "fr\n../etc\nde\n", StandardCharsets.UTF_8);
+        KaikkiCatalog unit = new KaikkiCatalog(fetcher, cacheRoot, Duration.ofDays(7));
+
+        // When
+        List<String> editions = unit.editions();
+
+        // Then
+        assertThat(editions).containsExactly("fr", "de");
+    }
+
+    @Test
+    void should_still_return_the_fetched_list_when_the_cache_cannot_be_written() throws Exception {
+        // Given
+        Path unwritable = cacheRoot.resolve("blocked");
+        Files.writeString(unwritable, "not a directory");
+        when(fetcher.fetch(any())).thenReturn("<li><a href=\"plwiktionary/\">Polish</a></li>");
+        KaikkiCatalog unit = new KaikkiCatalog(fetcher, unwritable.resolve("catalog"), Duration.ofDays(7));
+
+        // When
+        List<String> editions = unit.editions();
+
+        // Then
+        assertThat(editions).containsExactly("pl");
+    }
+
+    @Test
     void should_refuse_an_edition_code_that_could_escape_the_cache_directory() throws Exception {
         // Given
         KaikkiCatalog unit = new KaikkiCatalog(fetcher, cacheRoot, Duration.ofDays(7));
