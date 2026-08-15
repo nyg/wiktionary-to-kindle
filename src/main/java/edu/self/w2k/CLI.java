@@ -9,6 +9,7 @@ import edu.self.w2k.command.DownloadCommand;
 import edu.self.w2k.command.GenerateCommand;
 import edu.self.w2k.config.AppInfo;
 import edu.self.w2k.config.AppVersion;
+import edu.self.w2k.config.Preferences;
 import edu.self.w2k.download.KaikkiDumpDownloader;
 import edu.self.w2k.dump.DumpCatalog;
 import edu.self.w2k.kindling.KindlingCliResolver;
@@ -16,6 +17,7 @@ import edu.self.w2k.kindling.KindlingDictionaryConverter;
 import edu.self.w2k.kindling.KindlingDownloader;
 import edu.self.w2k.kindling.KindlingRelease;
 import edu.self.w2k.parse.JsonlDictionaryParser;
+import edu.self.w2k.progress.ProgressListener;
 import edu.self.w2k.render.HtmlDefinitionRenderer;
 import edu.self.w2k.write.DictionaryTitles;
 import edu.self.w2k.write.DictionaryWriter;
@@ -36,8 +38,8 @@ import picocli.CommandLine.Spec;
          subcommands = {CLI.Download.class, CLI.Generate.class, CommandLine.HelpCommand.class})
 public class CLI implements Callable<Integer> {
 
-    static final Path DICTIONARIES_DIR = Path.of("dictionaries");
-    static final Path DUMPS_DIR = Path.of("dumps");
+    private static final String DUMPS_DIR_DESCRIPTION =
+            "Directory holding the kaikki.org dumps (default: the dumps folder from the app's preferences)";
 
     /**
      * Reports the version Maven filtered into the build, rather than a literal in this annotation
@@ -58,8 +60,8 @@ public class CLI implements Callable<Integer> {
         System.exit(new CommandLine(new CLI()).execute(args));
     }
 
-    static Optional<Path> findLatestDump(String lang) {
-        return new DumpCatalog(DUMPS_DIR).latestFor(lang);
+    static Optional<Path> findLatestDump(String lang, Path dumpsDir) {
+        return new DumpCatalog(dumpsDir).latestFor(lang);
     }
 
     @Override
@@ -80,16 +82,24 @@ public class CLI implements Callable<Integer> {
                     description = "Wiktionary edition language code (ISO 639-1, default: ${DEFAULT-VALUE})")
         private String lang;
 
+        @Option(names = "--dumps-dir", paramLabel = "DIR", description = DUMPS_DIR_DESCRIPTION)
+        private Path dumpsDir;
+
         @Override
         public Integer call() {
             try {
-                new DownloadCommand(new KaikkiDumpDownloader(lang)).run();
+                Path dumps = dumpsDir(Preferences.load());
+                new DownloadCommand(new KaikkiDumpDownloader(lang, dumps, ProgressListener.NOOP)).run();
                 return 0;
             }
             catch (IOException e) {
                 log.error("Download failed: {}", e.getLocalizedMessage());
                 return 1;
             }
+        }
+
+        Path dumpsDir(Preferences preferences) {
+            return dumpsDir != null ? dumpsDir : preferences.dumpsDir();
         }
     }
 
@@ -110,6 +120,15 @@ public class CLI implements Callable<Integer> {
                     arity = "1",
                     description = "Language to filter entries by (ISO 639-1)")
         private String wordLang;
+
+        @Option(names = "--dumps-dir", paramLabel = "DIR", description = DUMPS_DIR_DESCRIPTION)
+        private Path dumpsDir;
+
+        @Option(names = "--dictionaries-dir",
+                paramLabel = "DIR",
+                description = "Directory to write the dictionary into "
+                        + "(default: the dictionaries folder from the app's preferences)")
+        private Path dictionariesDir;
 
         @Option(names = "--kindling-cli",
                 description = "Path to a pre-installed kindling-cli binary. Skips download.")
@@ -133,9 +152,12 @@ public class CLI implements Callable<Integer> {
 
         @Override
         public Integer call() throws Exception {
-            Optional<Path> dumpFile = findLatestDump(dumpLang);
+            Preferences preferences = Preferences.load();
+            Path dumps = dumpsDir(preferences);
+
+            Optional<Path> dumpFile = findLatestDump(dumpLang, dumps);
             if (dumpFile.isEmpty()) {
-                log.error("No dump found for language {} in {}", dumpLang, DUMPS_DIR);
+                log.error("No dump found for language {} in {}", dumpLang, dumps);
                 return 1;
             }
 
@@ -151,10 +173,18 @@ public class CLI implements Callable<Integer> {
                     new HtmlDefinitionRenderer(),
                     writer,
                     dumpFile.get(),
-                    DICTIONARIES_DIR,
+                    dictionariesDir(preferences),
                     wordLang, dumpLang, title
             ).run();
             return 0;
+        }
+
+        Path dumpsDir(Preferences preferences) {
+            return dumpsDir != null ? dumpsDir : preferences.dumpsDir();
+        }
+
+        Path dictionariesDir(Preferences preferences) {
+            return dictionariesDir != null ? dictionariesDir : preferences.dictionariesDir();
         }
     }
 }

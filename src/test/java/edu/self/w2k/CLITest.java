@@ -1,5 +1,9 @@
 package edu.self.w2k;
 
+import java.nio.file.Path;
+import java.util.Optional;
+
+import edu.self.w2k.config.Preferences;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -72,5 +76,73 @@ class CLITest {
         // Then
         String version = result.subcommand().commandSpec().findOption("--kindling-version").getValue();
         assertThat(version).matches("v\\d+\\.\\d+\\.\\d+");
+    }
+
+    @Test
+    void should_download_into_the_preferences_dumps_directory_when_no_override_is_given() {
+        // Given
+        Preferences preferences = new Preferences(Path.of("/prefs/dumps"),
+                                                  Path.of("/prefs/dictionaries"),
+                                                  Optional.empty(),
+                                                  Optional.empty());
+        CommandLine.ParseResult parsed = new CommandLine(new CLI()).parseArgs("download", "fr");
+        CLI.Download unit = (CLI.Download) parsed.subcommand().commandSpec().userObject();
+
+        // When
+        Path result = unit.dumpsDir(preferences);
+
+        // Then — no longer the CWD-relative dumps/ the CLI used before it shared the GUI's locations
+        assertThat(result).isEqualTo(Path.of("/prefs/dumps"));
+    }
+
+    @Test
+    void should_download_into_the_given_directory_when_dumps_dir_is_overridden() {
+        // Given
+        Preferences preferences = new Preferences(Path.of("/prefs/dumps"),
+                                                  Path.of("/prefs/dictionaries"),
+                                                  Optional.empty(),
+                                                  Optional.empty());
+        CommandLine.ParseResult parsed =
+                new CommandLine(new CLI()).parseArgs("download", "fr", "--dumps-dir", "/override/dumps");
+        CLI.Download unit = (CLI.Download) parsed.subcommand().commandSpec().userObject();
+
+        // When
+        Path result = unit.dumpsDir(preferences);
+
+        // Then
+        assertThat(result).isEqualTo(Path.of("/override/dumps"));
+    }
+
+    @Test
+    void should_generate_from_and_into_the_preferences_directories_when_no_override_is_given() {
+        // Given
+        Preferences preferences = new Preferences(Path.of("/prefs/dumps"),
+                                                  Path.of("/prefs/dictionaries"),
+                                                  Optional.empty(),
+                                                  Optional.empty());
+        CommandLine.ParseResult parsed = new CommandLine(new CLI()).parseArgs("generate", "el", "en");
+        CLI.Generate unit = (CLI.Generate) parsed.subcommand().commandSpec().userObject();
+
+        // When / Then
+        assertThat(unit.dumpsDir(preferences)).isEqualTo(Path.of("/prefs/dumps"));
+        assertThat(unit.dictionariesDir(preferences)).isEqualTo(Path.of("/prefs/dictionaries"));
+    }
+
+    @Test
+    void should_generate_from_and_into_the_given_directories_when_both_are_overridden() {
+        // Given
+        Preferences preferences = new Preferences(Path.of("/prefs/dumps"),
+                                                  Path.of("/prefs/dictionaries"),
+                                                  Optional.empty(),
+                                                  Optional.empty());
+        CommandLine.ParseResult parsed = new CommandLine(new CLI())
+                .parseArgs("generate", "el", "en",
+                           "--dumps-dir", "/override/dumps",
+                           "--dictionaries-dir", "/override/dictionaries");
+        CLI.Generate unit = (CLI.Generate) parsed.subcommand().commandSpec().userObject();
+
+        // When / Then
+        assertThat(unit.dumpsDir(preferences)).isEqualTo(Path.of("/override/dumps"));
+        assertThat(unit.dictionariesDir(preferences)).isEqualTo(Path.of("/override/dictionaries"));
     }
 }
