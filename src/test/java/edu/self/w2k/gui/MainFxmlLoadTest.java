@@ -26,6 +26,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
+import javafx.event.EventType;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -277,11 +278,12 @@ class MainFxmlLoadTest {
         MainController controller = loadOnFxThread(new AtomicReference<>());
         ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
         AtomicReference<Stage> stage = new AtomicReference<>();
+        Button elsewhere = new Button("elsewhere");
 
         try {
             onFxThread(() -> {
                 stage.set(new Stage());
-                stage.get().setScene(new Scene(new VBox(editionCombo), 480, 320));
+                stage.get().setScene(new Scene(new VBox(editionCombo, elsewhere), 480, 320));
                 stage.get().show();
                 editionCombo.applyCss();
                 editionCombo.layout();
@@ -292,13 +294,25 @@ class MainFxmlLoadTest {
             assertThat(arrow.get()).as("the picker has no arrow button").isNotNull();
 
             onFxThread(() -> {
-                Event.fireEvent(arrow.get(), mousePress(arrow.get()));
+                Event.fireEvent(arrow.get(), mouse(arrow.get(), MouseEvent.MOUSE_PRESSED));
                 editionCombo.getEditor().requestFocus();
             });
 
             assertThat(editionCombo.isShowing())
                     .as("focus must stand aside so the arrow's own toggle decides")
                     .isFalse();
+
+            onFxThread(() -> {
+                Event.fireEvent(arrow.get(), mouse(arrow.get(), MouseEvent.MOUSE_RELEASED));
+                elsewhere.requestFocus();
+                Event.fireEvent(editionCombo.getEditor(),
+                                mouse(editionCombo.getEditor(), MouseEvent.MOUSE_PRESSED));
+                editionCombo.getEditor().requestFocus();
+            });
+
+            assertThat(editionCombo.isShowing())
+                    .as("a press on the editor is not the arrow, so focus opens the list")
+                    .isTrue();
         }
         finally {
             onFxThread(() -> {
@@ -310,8 +324,8 @@ class MainFxmlLoadTest {
         }
     }
 
-    private static MouseEvent mousePress(Node target) {
-        return new MouseEvent(null, target, MouseEvent.MOUSE_PRESSED, 1, 1, 1, 1, MouseButton.PRIMARY, 1,
+    private static MouseEvent mouse(Node target, EventType<MouseEvent> type) {
+        return new MouseEvent(null, target, type, 1, 1, 1, 1, MouseButton.PRIMARY, 1,
                               false, false, false, false, true, false, false, true, false, false, null);
     }
 
@@ -350,9 +364,19 @@ class MainFxmlLoadTest {
                     0, -120, 0, -120, ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
                     ScrollEvent.VerticalTextScrollUnits.NONE, 0, 0, null)));
 
-            assertThat(firstVisibleIndex(flow.get()))
+            int after = firstVisibleIndex(flow.get());
+            assertThat(after)
                     .as("a scroll over the popup must move the list, not fall through it")
                     .isGreaterThan(before);
+
+            onFxThread(() -> Event.fireEvent(popup.get(), new ScrollEvent(
+                    ScrollEvent.SCROLL, 5, 5, 5, 5, false, false, false, false, false, false,
+                    0, 0, 0, 0, ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
+                    ScrollEvent.VerticalTextScrollUnits.NONE, 0, 0, null)));
+
+            assertThat(firstVisibleIndex(flow.get()))
+                    .as("a scroll carrying no vertical movement must leave the list alone")
+                    .isEqualTo(after);
         }
         finally {
             onFxThread(() -> {
@@ -412,6 +436,17 @@ class MainFxmlLoadTest {
                 .as("Copy all takes the pane, not the selection")
                 .isEqualTo(String.join(System.lineSeparator(),
                                        "first line", "second line", "third line"));
+
+        AtomicReference<String> afterEmpty = new AtomicReference<>();
+        onFxThread(() -> {
+            logView.getSelectionModel().clearSelection();
+            LogClipboard.copySelectionOf(logView);
+            afterEmpty.set(Clipboard.getSystemClipboard().getString());
+        });
+
+        assertThat(afterEmpty.get())
+                .as("copying nothing must leave what is already on the clipboard")
+                .isEqualTo(everything.get());
     }
 
     private static KeyEvent copyShortcut() {
