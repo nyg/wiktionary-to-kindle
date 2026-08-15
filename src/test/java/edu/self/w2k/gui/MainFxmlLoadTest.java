@@ -13,12 +13,15 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import edu.self.w2k.dump.DumpFile;
 import edu.self.w2k.kaikki.KaikkiCatalog;
+import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.control.TableColumn;
@@ -221,6 +224,24 @@ class MainFxmlLoadTest {
 
         assertThat(editionCombo.getEditor().getText()).isEqualTo("Greek (el)");
         assertThat(editionCombo.getItems()).hasSize(all);
+    }
+
+    @Test
+    void should_apply_a_cupertino_theme_on_macos_and_nothing_elsewhere() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        Scene scene = new Scene(new BorderPane());
+        onFxThread(() -> SystemTheme.install(scene));
+
+        if (SystemTheme.appliesTo(System.getProperty("os.name"))) {
+            assertThat(Application.getUserAgentStylesheet()).contains("cupertino");
+            assertThat(scene.getStylesheets()).anyMatch(sheet -> sheet.endsWith("app-atlantafx.css"));
+        }
+        else {
+            assertThat(scene.getStylesheets()).isEmpty();
+        }
     }
 
     @Test

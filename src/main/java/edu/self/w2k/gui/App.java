@@ -38,6 +38,7 @@ public class App extends Application {
         loader.setControllerFactory(_ -> new MainController(uiAppender));
         Scene scene = new Scene(loader.load());
         scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
+        SystemTheme.install(scene);
 
         stage.setTitle(AppInfo.DISPLAY_NAME + " " + AppVersion.get());
         stage.setScene(scene);

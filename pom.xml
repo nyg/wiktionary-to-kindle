@@ -18,6 +18,7 @@
         <maven.compiler.release>25</maven.compiler.release>
 
         <!-- Third-party -->
+        <atlantafx-base.version>2.1.0</atlantafx-base.version>
         <commons-text.version>1.15.0</commons-text.version>
         <jackson-databind.version>2.22.1</jackson-databind.version>
         <javafx.version>26.0.2</javafx.version>
@@ -95,6 +96,17 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.mkpaz</groupId>
+            <artifactId>atlantafx-base</artifactId>
+            <version>${atlantafx-base.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -186,6 +198,14 @@
                             <exclude>org.openjfx:*</exclude>
                         </excludes>
                     </artifactSet>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>module-info.class</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
                 <executions>
                     <execution>
