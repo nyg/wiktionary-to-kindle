@@ -49,10 +49,12 @@ public class MainViewModel {
     private final ObservableList<DumpFile> dumps = FXCollections.observableArrayList();
 
     private final BooleanProperty startable = new SimpleBooleanProperty(false);
+    private final BooleanProperty wordLanguageSelectable = new SimpleBooleanProperty(false);
 
     public MainViewModel() {
         title.bind(Bindings.createStringBinding(this::computeTitle, edition, wordLanguage));
         startable.bind(edition.isNotNull().and(wordLanguage.isNotNull()).and(running.not()));
+        wordLanguageSelectable.bind(edition.isNotNull());
     }
 
     private String computeTitle() {
@@ -108,6 +110,10 @@ public class MainViewModel {
 
     public ReadOnlyBooleanProperty startableProperty() {
         return startable;
+    }
+
+    public ReadOnlyBooleanProperty wordLanguageSelectableProperty() {
+        return wordLanguageSelectable;
     }
 
     public ObjectProperty<Path> lastOutputProperty() {

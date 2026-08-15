@@ -44,6 +44,33 @@ class LanguageCodeResolverTest {
     }
 
     @Test
+    void should_resolve_names_written_in_a_non_latin_script() {
+        // When / Then
+        assertThat(LanguageCodeResolver.codeFor("zh", "漢語")).contains("zh");
+        assertThat(LanguageCodeResolver.codeFor("zh", "意大利語")).contains("it");
+        assertThat(LanguageCodeResolver.codeFor("ru", "Древнегреческий")).contains("grc");
+        assertThat(LanguageCodeResolver.codeFor("ja", "朝鮮語")).contains("ko");
+        assertThat(LanguageCodeResolver.codeFor("ko", "고대 그리스어")).contains("grc");
+        assertThat(LanguageCodeResolver.codeFor("th", "จีนกลาง")).contains("zh");
+    }
+
+    @Test
+    void should_keep_a_latin_letter_that_stripping_accents_does_not_reduce_to_ascii() {
+        // When / Then — ß, ł and ı survive NFD, so dropping them lost the name outright
+        assertThat(LanguageCodeResolver.codeFor("pl", "język włoski")).contains("it");
+        assertThat(LanguageCodeResolver.codeFor("tr", "Osmanlı Türkçesi")).contains("ota");
+        assertThat(LanguageCodeResolver.codeFor("vi", "Tiếng Quảng Đông")).contains("yue");
+        assertThat(LanguageCodeResolver.codeFor("de", "Weißrussisch")).contains("be");
+    }
+
+    @Test
+    void should_read_the_alias_table_as_utf_8() {
+        // When / Then
+        assertThat(LanguageCodeResolver.codeFor("fr", "Solrésol")).contains("solrésol");
+        assertThat(LanguageCodeResolver.codeFor("fr", "Tsolyáni")).contains("tsolyáni");
+    }
+
+    @Test
     void should_resolve_nothing_when_the_name_is_unknown() {
         // When
         Optional<String> code = LanguageCodeResolver.codeFor("fr", "Langue Imaginaire");
