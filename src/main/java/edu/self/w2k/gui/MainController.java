@@ -61,6 +61,8 @@ public class MainController {
 
     private static final String FILTER_PROMPT = "Type to filter";
 
+    private static final String EDITION_FIRST_PROMPT = "Pick a Wiktionary edition first";
+
     @FXML private ComboBox<Language> editionCombo;
     @FXML private ComboBox<Language> wordLanguageCombo;
     @FXML private Label titlePreview;
@@ -136,14 +138,27 @@ public class MainController {
         editionCombo.setVisibleRowCount(VISIBLE_ROWS);
         wordLanguageCombo.setVisibleRowCount(VISIBLE_ROWS);
         editionCombo.setPromptText(FILTER_PROMPT);
-        wordLanguageCombo.setPromptText(FILTER_PROMPT);
+        wordLanguageCombo.promptTextProperty()
+                .bind(Bindings.when(viewModel.wordLanguageSelectableProperty())
+                              .then(FILTER_PROMPT)
+                              .otherwise(EDITION_FIRST_PROMPT));
 
         viewModel.editionProperty().bind(editionCombo.valueProperty());
         viewModel.wordLanguageProperty().bind(wordLanguageCombo.valueProperty());
         titlePreview.textProperty().bind(viewModel.titleProperty());
+        wordLanguageCombo.disableProperty().bind(viewModel.wordLanguageSelectableProperty().not());
 
-        editionCombo.valueProperty().addListener((_, _, edition) -> loadWordLanguages(edition));
+        editionCombo.valueProperty().addListener((_, _, edition) -> onEditionChanged(edition));
         refreshEditions();
+    }
+
+    private void onEditionChanged(Language edition) {
+        if (edition == null) {
+            loadedWordLanguageEdition = null;
+            wordLanguageCombo.setValue(null);
+            return;
+        }
+        loadWordLanguages(edition);
     }
 
     private void refreshEditions() {
@@ -157,7 +172,7 @@ public class MainController {
     }
 
     private void loadWordLanguages(Language edition) {
-        if (edition == null || edition.code().equals(loadedWordLanguageEdition)) {
+        if (edition.code().equals(loadedWordLanguageEdition)) {
             return;
         }
         loadedWordLanguageEdition = edition.code();
@@ -192,6 +207,7 @@ public class MainController {
 
     private void setUpLogConsole() {
         logView.setItems(viewModel.getLogLines());
+        LogClipboard.install(logView);
         // A single timer draining in batches, rather than one runLater per log event.
         logDrain = new Timeline(new KeyFrame(LOG_DRAIN_INTERVAL, _ -> drainLog()));
         logDrain.setCycleCount(Animation.INDEFINITE);

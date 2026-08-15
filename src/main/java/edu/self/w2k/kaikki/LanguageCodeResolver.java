@@ -2,6 +2,8 @@ package edu.self.w2k.kaikki;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -37,7 +39,7 @@ public final class LanguageCodeResolver {
                             ALIASES_RESOURCE);
                     return properties;
                 }
-                properties.load(in);
+                properties.load(new InputStreamReader(in, StandardCharsets.UTF_8));
             }
             catch (IOException | IllegalArgumentException e) {
                 log.debug("Could not read {}: {}", ALIASES_RESOURCE, e.toString());

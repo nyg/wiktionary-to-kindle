@@ -42,6 +42,24 @@ class MainViewModelTest {
     }
 
     @Test
+    void should_not_offer_a_word_language_until_an_edition_is_chosen() {
+        // Then — the languages on offer are the edition's own, so there is nothing to pick from yet
+        assertThat(unit.wordLanguageSelectableProperty().get()).isFalse();
+
+        // When
+        unit.editionProperty().set(Language.of("el"));
+
+        // Then
+        assertThat(unit.wordLanguageSelectableProperty().get()).isTrue();
+
+        // When
+        unit.editionProperty().set(null);
+
+        // Then
+        assertThat(unit.wordLanguageSelectableProperty().get()).isFalse();
+    }
+
+    @Test
     void should_not_be_startable_while_running() {
         // Given
         unit.editionProperty().set(Language.of("el"));

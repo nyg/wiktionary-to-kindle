@@ -2,6 +2,8 @@ package edu.self.w2k.config;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -64,7 +66,7 @@ public final class LanguageCatalog {
                     log.warn("{} not found on the classpath; edition list will be empty", EDITIONS_RESOURCE);
                     return properties;
                 }
-                properties.load(in);
+                properties.load(new InputStreamReader(in, StandardCharsets.UTF_8));
             }
             catch (IOException | IllegalArgumentException e) {
                 log.warn("Could not read {}: {}", EDITIONS_RESOURCE, e.getLocalizedMessage());

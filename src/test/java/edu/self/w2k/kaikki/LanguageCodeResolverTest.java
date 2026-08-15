@@ -44,6 +44,13 @@ class LanguageCodeResolverTest {
     }
 
     @Test
+    void should_read_the_alias_table_as_utf_8() {
+        // When / Then
+        assertThat(LanguageCodeResolver.codeFor("fr", "Solrésol")).contains("solrésol");
+        assertThat(LanguageCodeResolver.codeFor("fr", "Tsolyáni")).contains("tsolyáni");
+    }
+
+    @Test
     void should_resolve_nothing_when_the_name_is_unknown() {
         // When
         Optional<String> code = LanguageCodeResolver.codeFor("fr", "Langue Imaginaire");

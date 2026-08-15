@@ -9,9 +9,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.util.StringConverter;
 
 /**
@@ -61,6 +66,25 @@ public final class ComboBoxFilter {
         combo.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 reset(combo, filtered, editor, syncing);
+            }
+        });
+
+        combo.skinProperty().addListener((_, _, skin) -> keepScrollingWhereverThePointerIs(skin));
+        keepScrollingWhereverThePointerIs(combo.getSkin());
+    }
+
+    private static void keepScrollingWhereverThePointerIs(Skin<?> skin) {
+        if (!(skin instanceof ComboBoxListViewSkin<?> comboSkin)
+                || !(comboSkin.getPopupContent() instanceof ListView<?> popup)) {
+            return;
+        }
+        popup.addEventHandler(ScrollEvent.SCROLL, event -> {
+            if (event.isConsumed() || event.getDeltaY() == 0
+                    || !(popup.lookup(".virtual-flow") instanceof VirtualFlow<?> flow)) {
+                return;
+            }
+            if (flow.scrollPixels(-event.getDeltaY()) != 0) {
+                event.consume();
             }
         });
     }

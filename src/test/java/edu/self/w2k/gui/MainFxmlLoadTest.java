@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -29,14 +30,20 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Stage;
@@ -177,6 +184,143 @@ class MainFxmlLoadTest {
         ObservableValue<?> observable = (ObservableValue<?>)
                 factory.call(new TableColumn.CellDataFeatures<>(table, column, dump));
         return observable == null ? null : observable.getValue();
+    }
+
+    @Test
+    void should_keep_the_word_language_picker_shut_until_an_edition_is_chosen() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        ComboBox<?> wordCombo = readField(controller, "wordLanguageCombo", ComboBox.class);
+
+        assertThat(wordCombo.isDisabled())
+                .as("no edition is selected on load")
+                .isTrue();
+        assertThat(wordCombo.getPromptText()).contains("edition");
+
+        onFxThread(() -> editionCombo.getEditor().setText("el"));
+
+        assertThat(editionCombo.getValue()).isNotNull();
+        assertThat(wordCombo.isDisabled())
+                .as("an edition is selected, so its languages can be picked")
+                .isFalse();
+
+        onFxThread(() -> wordCombo.getEditor().setText("en"));
+        assertThat(wordCombo.getValue()).isNotNull();
+
+        onFxThread(() -> editionCombo.getEditor().setText(""));
+
+        assertThat(wordCombo.isDisabled()).isTrue();
+        assertThat(wordCombo.getValue())
+                .as("a language from a list that no longer applies must not survive the edition")
+                .isNull();
+    }
+
+    @Test
+    void should_scroll_the_drop_down_from_anywhere_over_the_popup() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ComboBox<?> editionCombo = readField(controller, "editionCombo", ComboBox.class);
+        AtomicReference<ListView<?>> popup = new AtomicReference<>();
+        AtomicReference<VirtualFlow<?>> flow = new AtomicReference<>();
+        AtomicReference<Stage> stage = new AtomicReference<>();
+
+        try {
+            onFxThread(() -> {
+                stage.set(new Stage());
+                stage.get().setScene(new Scene(new VBox(editionCombo), 480, 320));
+                stage.get().show();
+                editionCombo.show();
+            });
+            onFxThread(() -> {
+                popup.set((ListView<?>)
+                        ((ComboBoxListViewSkin<?>) editionCombo.getSkin()).getPopupContent());
+                popup.get().applyCss();
+                popup.get().layout();
+                flow.set((VirtualFlow<?>) popup.get().lookup(".virtual-flow"));
+            });
+
+            assertThat(flow.get()).as("the drop-down has no virtual flow").isNotNull();
+            int before = firstVisibleIndex(flow.get());
+
+            onFxThread(() -> Event.fireEvent(popup.get(), new ScrollEvent(
+                    ScrollEvent.SCROLL, 5, 5, 5, 5, false, false, false, false, false, false,
+                    0, -120, 0, -120, ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
+                    ScrollEvent.VerticalTextScrollUnits.NONE, 0, 0, null)));
+
+            assertThat(firstVisibleIndex(flow.get()))
+                    .as("a scroll over the popup must move the list, not fall through it")
+                    .isGreaterThan(before);
+        }
+        finally {
+            onFxThread(() -> {
+                editionCombo.hide();
+                if (stage.get() != null) {
+                    stage.get().hide();
+                }
+            });
+        }
+    }
+
+    private static int firstVisibleIndex(VirtualFlow<?> flow) throws Exception {
+        AtomicReference<Integer> index = new AtomicReference<>(-1);
+        onFxThread(() -> {
+            IndexedCell<?> first = flow.getFirstVisibleCell();
+            index.set(first == null ? -1 : first.getIndex());
+        });
+        return index.get();
+    }
+
+    @Test
+    void should_copy_the_selected_log_lines() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ListView<String> logView = readLogView(controller);
+
+        assertThat(logView.getSelectionModel().getSelectionMode())
+                .as("a single line is rarely the whole story")
+                .isEqualTo(SelectionMode.MULTIPLE);
+        assertThat(logView.getContextMenu()).isNotNull();
+        assertThat(logView.getContextMenu().getItems()).extracting(MenuItem::getText)
+                .containsExactly("Copy", "Copy all");
+
+        AtomicReference<String> copied = new AtomicReference<>();
+        onFxThread(() -> {
+            logView.getItems().setAll("first line", "second line", "third line");
+            logView.getSelectionModel().clearSelection();
+            logView.getSelectionModel().selectIndices(0, 2);
+            Event.fireEvent(logView, copyShortcut());
+            copied.set(Clipboard.getSystemClipboard().getString());
+        });
+
+        assertThat(copied.get())
+                .as("the shortcut copies the selection, skipping the line between")
+                .isEqualTo("first line" + System.lineSeparator() + "third line");
+
+        AtomicReference<String> everything = new AtomicReference<>();
+        onFxThread(() -> {
+            logView.getContextMenu().getItems().getLast().fire();
+            everything.set(Clipboard.getSystemClipboard().getString());
+        });
+
+        assertThat(everything.get())
+                .as("Copy all takes the pane, not the selection")
+                .isEqualTo(String.join(System.lineSeparator(),
+                                       "first line", "second line", "third line"));
+    }
+
+    private static KeyEvent copyShortcut() {
+        boolean mac = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac");
+        return new KeyEvent(KeyEvent.KEY_PRESSED, "c", "c", KeyCode.C, false, !mac, false, mac);
     }
 
     @Test
@@ -451,5 +595,10 @@ class MainFxmlLoadTest {
         var field = MainController.class.getDeclaredField(name);
         field.setAccessible(true);
         return type.cast(field.get(controller));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static ListView<String> readLogView(MainController controller) throws Exception {
+        return readField(controller, "logView", ListView.class);
     }
 }
