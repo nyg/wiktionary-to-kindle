@@ -75,14 +75,12 @@ java -jar target/wiktionary-to-kindle-<version>.jar --version
 
 ### Data Directories
 
-The two front-ends resolve these differently, deliberately.
-
 | Directory | Purpose |
 |-----------|---------|
 | `dumps/`  | Downloaded `raw-wiktextract-data-{lang}-{YYYY-MM-DD}.jsonl.gz` from kaikki.org |
 | `dictionaries/` | Final `.mobi` dictionary files, plus side-artefacts `.opf`, `-N.html`, `-toc.ncx` and `-cover.jpg` |
 
-Both front-ends resolve them the same way: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice.
+Both front-ends resolve them the same way: absolute, from `Preferences`, defaulting under `AppPaths.defaultDataDir()` (`~/Documents/wiktionary-to-kindle`). A bundled `.app` launches with `cwd=/`, so relative paths would resolve at the filesystem root — this is not a stylistic choice. The `Preferences` compact constructor enforces it, calling `toAbsolutePath().normalize()` on all three paths, so a relative value from a hand-edited properties file or from text typed into `PreferencesDialog` is resolved once, at the boundary, and never reaches a collaborator. Do not re-normalise downstream, and do not weaken it to a `load()`-only check — the dialog constructs the record directly.
 
 The CLI additionally accepts `--dumps-dir` and `--dictionaries-dir`, overriding the preferences for that invocation. `CLI.Download.dumpsDir(Preferences)` and the matching pair on `CLI.Generate` are the single resolution point, and take the loaded preferences as an argument so they stay testable without touching the real config file. Up to 2.0.3 the CLI was CWD-relative via `CLI.DUMPS_DIR` / `CLI.DICTIONARIES_DIR` and never read preferences; both constants are gone, as is the `KaikkiDumpDownloader(String)` constructor that hardcoded `Path.of("dumps")`.
 
@@ -96,6 +94,8 @@ The CLI additionally accepts `--dumps-dir` and `--dictionaries-dir`, overriding 
 | `defaultDataDir()` | `$XDG_DOCUMENTS_DIR` → `~/Documents` | `%USERPROFILE%\Documents` | `dumps/`, `dictionaries/` |
 
 The data dir is under Documents rather than `$XDG_DATA_HOME` on purpose — see the note above — but resolves that folder the XDG way: the `XDG_DOCUMENTS_DIR` env var, then the same key in `$XDG_CONFIG_HOME/user-dirs.dirs` (a leading `$HOME` is expanded, any parse failure falls through), then `~/Documents`.
+
+A relative value in any of these variables — `HOME` included — is ignored with a warning and treated as unset, as the XDG spec requires. `AppPaths.absolutePath` is the check; it guards the Unix branch only, because `Path.isAbsolute()` answers for the filesystem the JVM runs on and would call a Windows `C:\local` relative on the Linux CI runner. The Windows variables are outside the spec anyway.
 
 ### Dictionary Output Format
 

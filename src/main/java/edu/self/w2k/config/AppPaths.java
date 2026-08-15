@@ -3,6 +3,7 @@ package edu.self.w2k.config;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
@@ -91,11 +92,8 @@ public final class AppPaths {
         if (isWindows(osName)) {
             return home.resolve("Documents");
         }
-        String fromEnv = env.get(DOCUMENTS_KEY);
-        if (isSet(fromEnv)) {
-            return Path.of(expandHome(fromEnv, home));
-        }
-        return readUserDirs(env, home).orElseGet(() -> home.resolve("Documents"));
+        Optional<Path> fromEnv = absolutePath(DOCUMENTS_KEY, expandHome(env.get(DOCUMENTS_KEY), home));
+        return fromEnv.or(() -> readUserDirs(env, home)).orElseGet(() -> home.resolve("Documents"));
     }
 
     /**
@@ -115,7 +113,7 @@ public final class AppPaths {
                         .map(line -> unquote(line.substring(assignment.length()).strip()))
                         .filter(AppPaths::isSet)
                         .findFirst()
-                        .map(value -> Path.of(expandHome(value, home)));
+                        .flatMap(value -> absolutePath(userDirs.toString(), expandHome(value, home)));
         }
         catch (IOException | RuntimeException e) {
             log.warn("Could not read {}: {}", userDirs, e.getLocalizedMessage());
@@ -132,6 +130,7 @@ public final class AppPaths {
 
     /** {@code user-dirs.dirs} writes paths as {@code "$HOME/Documents"}; nothing else is expanded. */
     private static String expandHome(String value, Path home) {
+        if (!isSet(value)) return value;
         if (value.equals("$HOME")) return home.toString();
         if (value.startsWith("$HOME/")) return home + value.substring("$HOME".length());
         return value;
@@ -146,10 +145,10 @@ public final class AppPaths {
     }
 
     private static Path unixBase(Map<String, String> env, String xdgVar, String... homeFallback) {
-        String xdg = env.get(xdgVar);
-        if (isSet(xdg)) return Path.of(xdg);
-        String home = env.get("HOME");
-        if (isSet(home)) return Path.of(home, homeFallback);
+        Optional<Path> xdg = absolutePath(xdgVar, env.get(xdgVar));
+        if (xdg.isPresent()) return xdg.get();
+        Optional<Path> home = absolutePath("HOME", env.get("HOME"));
+        if (home.isPresent()) return Path.of(home.get().toString(), homeFallback);
         return tmpFallback("HOME not set");
     }
 
@@ -162,9 +161,37 @@ public final class AppPaths {
     }
 
     private static Path homeDir(Map<String, String> env, String osName) {
-        String home = env.get(isWindows(osName) ? "USERPROFILE" : "HOME");
-        if (isSet(home)) return Path.of(home);
-        return tmpFallback("home directory not set");
+        if (isWindows(osName)) {
+            String profile = env.get("USERPROFILE");
+            return isSet(profile) ? Path.of(profile) : tmpFallback("home directory not set");
+        }
+        return absolutePath("HOME", env.get("HOME")).orElseGet(() -> tmpFallback("home directory not set"));
+    }
+
+    /**
+     * The XDG spec requires a relative path in one of its variables to be treated as invalid. Honouring
+     * that keeps a misconfigured environment on the documented default instead of resolving against
+     * whatever the working directory happens to be — which differs between the bundled app and the CLI.
+     * <p>
+     * Only the Unix branch uses this. {@link Path#isAbsolute()} answers for the filesystem the JVM is
+     * running on, so a Windows value such as {@code C:\local} would be judged relative everywhere else,
+     * and the Windows variables are not governed by the XDG spec in any case.
+     */
+    private static Optional<Path> absolutePath(String source, String value) {
+        if (!isSet(value)) {
+            return Optional.empty();
+        }
+        try {
+            Path path = Path.of(value);
+            if (path.isAbsolute()) {
+                return Optional.of(path);
+            }
+            log.warn("Ignoring {}: {} is not an absolute path", source, value);
+        }
+        catch (InvalidPathException e) {
+            log.warn("Ignoring {}: {}", source, e.getLocalizedMessage());
+        }
+        return Optional.empty();
     }
 
     private static boolean isSet(String value) {
