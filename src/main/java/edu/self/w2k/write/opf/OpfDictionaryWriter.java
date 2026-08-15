@@ -145,7 +145,7 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                         </x-metadata>
                     </metadata>
                     <manifest>
-                        <item id="cover-image" href="%s" media-type="image/jpeg"/>
+                        <item id="cover-image" href="%s" media-type="image/jpeg" properties="coverimage"/>
                         <item id="toc" href="%s" media-type="application/x-dtbncx+xml"/>
                     """.formatted(uid, title, srcLang, srcLang, trgLang, names.cover(), names.ncx()));
 
