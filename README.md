@@ -16,7 +16,7 @@ The desktop app is the recommended way to run this — it bundles its own Java r
 brew install --cask nyg/tap/wiktionary-to-kindle
 ```
 
-The macOS app is themed with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino themes and follows the system appearance, switching between light and dark as you do — no restart, and no setting of its own. Other platforms keep JavaFX's own look.
+On macOS the app opens themed with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino themes, following the system appearance and switching between light and dark as you do. Preferences has a Theme setting — *JavaFX* or *AtlantaFX — Cupertino* — that applies the moment you press OK, so either look is available on any platform; only the default differs.
 
 ### Windows
 

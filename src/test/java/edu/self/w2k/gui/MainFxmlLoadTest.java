@@ -14,11 +14,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import atlantafx.base.theme.CupertinoLight;
+import edu.self.w2k.config.AppTheme;
+import edu.self.w2k.config.Preferences;
 import edu.self.w2k.dump.DumpFile;
 import edu.self.w2k.kaikki.KaikkiCatalog;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.fxml.FXMLLoader;
@@ -242,22 +246,52 @@ class MainFxmlLoadTest {
         assertThat(editionCombo.getItems()).hasSize(all);
     }
 
+    /**
+     * Switching away from Cupertino has to take {@code app-atlantafx.css} off the scene as well as
+     * restore Modena: its rules are written against AtlantaFX's colour tokens, which resolve to
+     * nothing under Modena, and the log view's selection would go unpainted.
+     */
     @Test
-    void should_apply_a_cupertino_theme_on_macos_and_nothing_elsewhere() throws Exception {
+    void should_follow_the_theme_chosen_in_preferences() throws Exception {
         if (!toolkitReady) {
             abort("No JavaFX toolkit available");
         }
 
-        Scene scene = new Scene(new BorderPane());
-        onFxThread(() -> SystemTheme.install(scene));
+        String previous = Application.getUserAgentStylesheet();
+        try {
+            Scene scene = new Scene(new BorderPane());
+            ObjectProperty<AppTheme> choice = new SimpleObjectProperty<>(AppTheme.CUPERTINO);
+            onFxThread(() -> SystemTheme.install(scene, choice));
 
-        if (SystemTheme.appliesTo(System.getProperty("os.name"))) {
             assertThat(Application.getUserAgentStylesheet()).contains("cupertino");
             assertThat(scene.getStylesheets()).anyMatch(sheet -> sheet.endsWith("app-atlantafx.css"));
-        }
-        else {
+
+            onFxThread(() -> choice.set(AppTheme.JAVAFX));
+
+            assertThat(Application.getUserAgentStylesheet()).isEqualTo(Application.STYLESHEET_MODENA);
             assertThat(scene.getStylesheets()).isEmpty();
+
+            onFxThread(() -> choice.set(AppTheme.CUPERTINO));
+
+            assertThat(Application.getUserAgentStylesheet()).contains("cupertino");
+            assertThat(scene.getStylesheets()).hasSize(1);
         }
+        finally {
+            Application.setUserAgentStylesheet(previous);
+        }
+    }
+
+    @Test
+    void should_start_the_window_on_the_theme_the_saved_preferences_name() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+
+        assertThat(controller.themeChoice().getValue())
+                .as("the window must open on the saved theme, not on a hardcoded one")
+                .isEqualTo(Preferences.load().theme());
     }
 
     /**

@@ -4,11 +4,14 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import edu.self.w2k.config.AppTheme;
 import edu.self.w2k.config.Preferences;
 import edu.self.w2k.kindling.KindlingRelease;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -40,10 +43,12 @@ public class PreferencesDialog extends Dialog<Preferences> {
     private final TextField dictionariesDir = new TextField();
     private final TextField kindlingCliPath = new TextField();
     private final TextField kindlingVersion = new TextField();
+    private final ComboBox<AppTheme> theme =
+            new ComboBox<>(FXCollections.observableArrayList(AppTheme.values()));
 
     public PreferencesDialog(Preferences current) {
         setTitle("Preferences");
-        setHeaderText("Where files are kept, and which kindling-cli to use");
+        setHeaderText("Where files are kept, which kindling-cli to use, and how the window looks");
         getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         dumpsDir.setText(current.dumpsDir().toString());
@@ -52,6 +57,8 @@ public class PreferencesDialog extends Dialog<Preferences> {
         kindlingCliPath.setPromptText("Leave empty to use PATH, cache, or download");
         kindlingVersion.setText(current.kindlingVersion().orElse(""));
         kindlingVersion.setPromptText(KindlingRelease.load().version() + " (pinned default)");
+        theme.setValue(current.theme());
+        theme.setMaxWidth(Double.MAX_VALUE);
 
         getDialogPane().setContent(buildForm());
         setResultConverter(button -> button == ButtonType.OK ? toPreferences() : null);
@@ -68,7 +75,9 @@ public class PreferencesDialog extends Dialog<Preferences> {
                     withDirectoryChooser(dictionariesDir, "Choose dictionaries folder"));
         grid.addRow(2, new Label("kindling-cli binary"), withFileChooser(kindlingCliPath));
         grid.addRow(3, new Label("kindling version"), kindlingVersion);
-        grid.add(memoryLabel(), 1, 4);
+        grid.addRow(4, new Label("Theme"), theme);
+        grid.add(themeHint(), 1, 5);
+        grid.add(memoryLabel(), 1, 6);
 
         GridPane.setHgrow(dumpsDir, Priority.ALWAYS);
         return grid;
@@ -116,6 +125,14 @@ public class PreferencesDialog extends Dialog<Preferences> {
         return dir.isDirectory() ? Optional.of(dir) : Optional.empty();
     }
 
+    private static Label themeHint() {
+        Label label = new Label("Cupertino follows the system light and dark setting. "
+                                + "Either theme applies as soon as you press OK.");
+        label.setWrapText(true);
+        label.getStyleClass().add("path-label");
+        return label;
+    }
+
     private static Label memoryLabel() {
         long maxHeapMb = Runtime.getRuntime().maxMemory() / BYTES_PER_MB;
         Label label = new Label(memoryText(maxHeapMb));
@@ -138,7 +155,8 @@ public class PreferencesDialog extends Dialog<Preferences> {
         return new Preferences(Path.of(dumpsDir.getText().strip()),
                                Path.of(dictionariesDir.getText().strip()),
                                optionalPath(kindlingCliPath.getText()),
-                               optionalText(kindlingVersion.getText()));
+                               optionalText(kindlingVersion.getText()),
+                               theme.getValue());
     }
 
     private static Optional<String> optionalText(String text) {

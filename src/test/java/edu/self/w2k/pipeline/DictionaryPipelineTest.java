@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import edu.self.w2k.config.AppTheme;
 import edu.self.w2k.config.Preferences;
 import edu.self.w2k.download.DownloadResult;
 import edu.self.w2k.progress.ProgressListener;
@@ -20,7 +21,8 @@ class DictionaryPipelineTest {
     private static final Preferences PREFS = new Preferences(Path.of("/data/dumps"),
                                                              Path.of("/data/dictionaries"),
                                                              Optional.empty(),
-                                                             Optional.empty());
+                                                             Optional.empty(),
+                                                             AppTheme.JAVAFX);
 
     private static final Path DUMP = Path.of("/data/dumps/raw-wiktextract-data-el-2026-07-24.jsonl.gz");
     private static final Path MOBI = Path.of("/data/dictionaries/w2k-dictionary-en-el.mobi");

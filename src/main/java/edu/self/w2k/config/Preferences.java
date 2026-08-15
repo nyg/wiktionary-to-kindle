@@ -26,12 +26,14 @@ import lombok.extern.slf4j.Slf4j;
  * @param dictionariesDir where generated dictionaries are written
  * @param kindlingCliPath explicit kindling-cli binary, bypassing PATH/cache/download resolution
  * @param kindlingVersion kindling release tag to download; empty means the pinned default
+ * @param theme           look of the desktop window; read by the GUI only, ignored by the CLI
  */
 @Slf4j
 public record Preferences(Path dumpsDir,
                           Path dictionariesDir,
                           Optional<Path> kindlingCliPath,
-                          Optional<String> kindlingVersion) {
+                          Optional<String> kindlingVersion,
+                          AppTheme theme) {
 
     static final String FILE_NAME = "preferences.properties";
 
@@ -39,10 +41,12 @@ public record Preferences(Path dumpsDir,
     private static final String KEY_DICTIONARIES_DIR = "dictionariesDir";
     private static final String KEY_KINDLING_CLI_PATH = "kindlingCliPath";
     private static final String KEY_KINDLING_VERSION = "kindlingVersion";
+    private static final String KEY_THEME = "theme";
 
     private static final String FILE_COMMENT = """
             %s preferences. Blank or missing values fall back to the defaults.
-            kindlingVersion accepts a release tag such as v0.28.0; blank uses the pinned default."""
+            kindlingVersion accepts a release tag such as v0.28.0; blank uses the pinned default.
+            theme accepts javafx or cupertino, and only the desktop app reads it."""
             .formatted(AppInfo.SLUG);
 
     public static Preferences defaults() {
@@ -50,7 +54,8 @@ public record Preferences(Path dumpsDir,
         return new Preferences(dataDir.resolve("dumps"),
                                dataDir.resolve("dictionaries"),
                                Optional.empty(),
-                               Optional.empty());
+                               Optional.empty(),
+                               AppTheme.defaultForThisPlatform());
     }
 
     /** Loads from the standard location, falling back to {@link #defaults()} if unreadable. */
@@ -81,7 +86,8 @@ public record Preferences(Path dumpsDir,
                 path(props, KEY_DUMPS_DIR).orElse(defaults.dumpsDir()),
                 path(props, KEY_DICTIONARIES_DIR).orElse(defaults.dictionariesDir()),
                 path(props, KEY_KINDLING_CLI_PATH),
-                value(props, KEY_KINDLING_VERSION));
+                value(props, KEY_KINDLING_VERSION),
+                value(props, KEY_THEME).flatMap(AppTheme::fromKey).orElse(defaults.theme()));
     }
 
     /** Writes to the standard location, creating the config directory if needed. */
@@ -95,6 +101,7 @@ public record Preferences(Path dumpsDir,
         props.setProperty(KEY_DICTIONARIES_DIR, dictionariesDir.toString());
         props.setProperty(KEY_KINDLING_CLI_PATH, kindlingCliPath.map(Path::toString).orElse(""));
         props.setProperty(KEY_KINDLING_VERSION, kindlingVersion.orElse(""));
+        props.setProperty(KEY_THEME, theme.key());
 
         Path parent = file.getParent();
         if (parent != null) {

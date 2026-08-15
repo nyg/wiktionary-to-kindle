@@ -21,7 +21,8 @@ class PreferencesTest {
         Preferences original = new Preferences(Path.of("/data/dumps"),
                                                Path.of("/data/dictionaries"),
                                                Optional.of(Path.of("/usr/local/bin/kindling-cli")),
-                                               Optional.of("v0.28.0"));
+                                               Optional.of("v0.28.0"),
+                                               AppTheme.CUPERTINO);
         Path file = tmp.resolve("preferences.properties");
 
         // When
@@ -38,7 +39,8 @@ class PreferencesTest {
         Preferences original = new Preferences(Path.of("/data/dumps"),
                                                Path.of("/data/dictionaries"),
                                                Optional.empty(),
-                                               Optional.empty());
+                                               Optional.empty(),
+                                               AppTheme.JAVAFX);
         Path file = tmp.resolve("preferences.properties");
 
         // When
@@ -103,6 +105,32 @@ class PreferencesTest {
 
         // Then
         assertThat(loaded.kindlingVersion()).contains("v1.2.3");
+    }
+
+    @Test
+    void should_keep_the_platform_default_theme_when_the_file_names_an_unknown_one() throws Exception {
+        // Given
+        Path file = tmp.resolve("preferences.properties");
+        Files.writeString(file, "theme=solarized\n", StandardCharsets.UTF_8);
+
+        // When
+        Preferences loaded = Preferences.load(file);
+
+        // Then
+        assertThat(loaded.theme()).isEqualTo(AppTheme.defaultForThisPlatform());
+    }
+
+    @Test
+    void should_read_a_theme_named_in_any_case() throws Exception {
+        // Given
+        Path file = tmp.resolve("preferences.properties");
+        Files.writeString(file, "theme=Cupertino\n", StandardCharsets.UTF_8);
+
+        // When
+        Preferences loaded = Preferences.load(file);
+
+        // Then
+        assertThat(loaded.theme()).isEqualTo(AppTheme.CUPERTINO);
     }
 
     @Test
