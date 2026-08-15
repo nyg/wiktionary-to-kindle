@@ -2,6 +2,7 @@ package edu.self.w2k.gui;
 
 import java.awt.Desktop;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -322,6 +323,19 @@ public class MainController {
 
     private void refreshDumps() {
         viewModel.getDumps().setAll(catalog().list());
+        dumpsTable.setPlaceholder(new Label(dumpsPlaceholder(viewModel.preferencesProperty().get().dumpsDir())));
+    }
+
+    static String dumpsPlaceholder(Path dumpsDir) {
+        if (Files.notExists(dumpsDir)) {
+            return "No dumps yet. The folder is created on the first download:%n%s".formatted(dumpsDir);
+        }
+        if (!Files.isReadable(dumpsDir)) {
+            return ("%s cannot be read.%nOn macOS, Documents is protected: grant access under System "
+                    + "Settings > Privacy & Security > Files and Folders, or choose another folder in "
+                    + "Preferences.").formatted(dumpsDir);
+        }
+        return "No dumps downloaded yet.";
     }
 
     private DumpCatalog catalog() {

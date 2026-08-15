@@ -184,6 +184,15 @@ class MainFxmlLoadTest {
                 .hasToString("German (de)");
     }
 
+    @Test
+    void should_explain_an_empty_dumps_table_when_the_folder_is_absent_or_unreadable() {
+        // When / Then
+        assertThat(MainController.dumpsPlaceholder(Path.of("/nowhere/w2k/dumps")))
+                .contains("created on the first download");
+        assertThat(MainController.dumpsPlaceholder(Path.of(System.getProperty("java.io.tmpdir"))))
+                .isEqualTo("No dumps downloaded yet.");
+    }
+
     private static void onFxThread(Runnable action) throws Exception {
         CountDownLatch done = new CountDownLatch(1);
         Platform.runLater(() -> {

@@ -43,7 +43,7 @@ public class DumpCatalog {
             }
         }
         catch (IOException e) {
-            log.debug("Could not list dumps in {}: {}", dumpsDir, e.getLocalizedMessage());
+            log.warn("Could not list dumps in {}: {}", dumpsDir, e.getLocalizedMessage());
             return List.of();
         }
 
