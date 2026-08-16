@@ -1,6 +1,16 @@
 # Changelog
 
 
+## [2.2.0](https://github.com/nyg/wiktionary-to-kindle/compare/v2.1.0..v2.2.0) - 2026-08-16
+
+### ⛰️  Features
+
+- [`a35611e`](https://github.com/nyg/wiktionary-to-kindle/commit/a35611ec4df9f73f551b9e1efbadf15a9774114d) *(release)* Ship deb, rpm and a Windows exe installer ([#93](https://github.com/nyg/wiktionary-to-kindle/issues/93))
+
+### 🚜 Refactor
+
+- [`bcc0c81`](https://github.com/nyg/wiktionary-to-kindle/commit/bcc0c81032afb616dfc218b5ae9e710d9afd9377) Clear the low-effort sonar findings ([#94](https://github.com/nyg/wiktionary-to-kindle/issues/94))
+
 ## [2.1.0](https://github.com/nyg/wiktionary-to-kindle/compare/v2.0.3..v2.1.0) - 2026-08-15
 
 ### ⛰️  Features
