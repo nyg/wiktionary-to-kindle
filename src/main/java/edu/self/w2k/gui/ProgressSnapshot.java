@@ -60,7 +60,7 @@ public record ProgressSnapshot(double fraction, String message) {
     }
 
     /** True when the total was reported as {@link ProgressListener#TOTAL_UNKNOWN}. */
-    public boolean indeterminate() {
+    public boolean isIndeterminate() {
         return fraction == INDETERMINATE;
     }
 }

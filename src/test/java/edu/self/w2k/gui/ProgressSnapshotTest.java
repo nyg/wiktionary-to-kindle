@@ -30,7 +30,7 @@ class ProgressSnapshotTest {
                 ProgressSnapshot.of(Stage.DOWNLOAD, 7 * MB, ProgressListener.TOTAL_UNKNOWN);
 
         // Then
-        assertThat(snapshot.indeterminate()).isTrue();
+        assertThat(snapshot.isIndeterminate()).isTrue();
         assertThat(snapshot.fraction()).isEqualTo(ProgressSnapshot.INDETERMINATE);
         assertThat(snapshot.message()).isEqualTo("Downloading dump… 7 MB");
     }
@@ -60,7 +60,7 @@ class ProgressSnapshotTest {
         ProgressSnapshot snapshot = ProgressSnapshot.of(Stage.FOLD, 0, ProgressListener.TOTAL_UNKNOWN);
 
         // Then
-        assertThat(snapshot.indeterminate()).isTrue();
+        assertThat(snapshot.isIndeterminate()).isTrue();
         assertThat(snapshot.message()).isEqualTo("Folding inflected forms…");
     }
 
@@ -70,7 +70,7 @@ class ProgressSnapshotTest {
         ProgressSnapshot snapshot = ProgressSnapshot.of(Stage.KINDLING, 0, ProgressListener.TOTAL_UNKNOWN);
 
         // Then
-        assertThat(snapshot.indeterminate()).isTrue();
+        assertThat(snapshot.isIndeterminate()).isTrue();
         assertThat(snapshot.message()).contains("kindling-cli");
     }
 
@@ -100,7 +100,7 @@ class ProgressSnapshotTest {
 
         // Then
         assertThat(idle.fraction()).isZero();
-        assertThat(idle.indeterminate()).isFalse();
+        assertThat(idle.isIndeterminate()).isFalse();
         assertThat(idle.message()).isEqualTo("Ready");
     }
 }
