@@ -30,9 +30,21 @@ scoop install wiktionary-to-kindle
 
 Scoop installs per-user, needs no admin rights, and avoids the SmartScreen prompt.
 
+Without Scoop, download `wiktionary-to-kindle-<version>-windows-x64.exe` from the [latest release](https://github.com/nyg/wiktionary-to-kindle/releases/latest) and double-click it. It also installs per-user and needs no admin rights, and it adds a Start Menu shortcut and a normal entry under Installed apps. Being unsigned, it does trip SmartScreen on first run — *"Windows protected your PC"*, then **More info** and **Run anyway**.
+
 ### Linux
 
-There is no Linux desktop package — Homebrew casks are macOS-only. Run the portable JAR instead, which needs Java 25 installed. See [Command line](#command-line).
+```sh
+sudo apt install ./wiktionary-to-kindle-<version>-linux-x64.deb
+```
+
+```sh
+sudo dnf install ./wiktionary-to-kindle-<version>-linux-x64.rpm
+```
+
+Both install under `/opt/wiktionary-to-kindle` and register a desktop entry, so the app appears in your application menu. Remove it with `sudo apt remove wiktionary-to-kindle` or `sudo dnf remove wiktionary-to-kindle`.
+
+On a distribution neither package suits, run the portable JAR instead, which needs Java 25 installed. See [Command line](#command-line).
 
 ### Manual download
 
@@ -41,8 +53,11 @@ Grab the [latest release](https://github.com/nyg/wiktionary-to-kindle/releases/l
 | File | For |
 |------|-----|
 | `wiktionary-to-kindle-<version>-macos-arm64.dmg` | macOS (Apple Silicon) |
-| `wiktionary-to-kindle-<version>-windows-x64-scoop.zip` | Windows — extract and run `Wiktionary to Kindle.exe` |
-| `wiktionary-to-kindle-<version>.jar` | Linux, or scripted use anywhere. Needs Java 25 |
+| `wiktionary-to-kindle-<version>-windows-x64.exe` | Windows — per-user installer, no admin rights |
+| `wiktionary-to-kindle-<version>-windows-x64-scoop.zip` | Windows, no install — what Scoop consumes; extract it and run `Wiktionary to Kindle.exe` in place |
+| `wiktionary-to-kindle-<version>-linux-x64.deb` | Debian, Ubuntu and derivatives |
+| `wiktionary-to-kindle-<version>-linux-x64.rpm` | Fedora, RHEL, openSUSE and derivatives |
+| `wiktionary-to-kindle-<version>.jar` | Any other distribution, or scripted use anywhere. Needs Java 25 |
 
 The app is ad-hoc signed but **not notarized**, so macOS quarantines the DMG download and blocks the first launch — you may see *"is damaged"* or *"Apple could not verify…"*, which both mean the same thing and do not mean the app is corrupted. Homebrew handles this for you. If you installed the DMG by hand, clear the flag once:
 
@@ -152,11 +167,12 @@ mvn javafx:run     # runs the desktop app
 To build a native bundle for the host platform:
 
 ```sh
-scripts/package.sh          # defaults per platform; pass dmg, app-image, msi or deb explicitly
+scripts/package.sh          # defaults per platform
+scripts/package.sh deb rpm  # or name the types: dmg, app-image, exe, msi, deb, rpm
 ```
 
-It jlinks a trimmed runtime, verifies it — TLS, locale data, the JavaFX modules and `ImageIO` all have to resolve inside the fresh image, and packaging fails if any of them do not — then runs `jpackage`. Output lands in `target/dist`.
+It jlinks a trimmed runtime, verifies it — TLS, locale data, the JavaFX modules and `ImageIO` all have to resolve inside the fresh image, and packaging fails if any of them do not — then runs `jpackage` once per type named. Output lands in `target/dist`. Packages can only be built for the platform you are on, and the Windows `exe` additionally needs the WiX Toolset on the `PATH`.
 
-Only the macOS `dmg` and Windows `app-image` targets are built in CI and shipped; the Linux `deb` target is a convenience for local use and is not exercised.
+The release workflow ships the macOS `dmg`, the Windows `exe` and Scoop `app-image`, and the Linux `deb` and `rpm`. Per-PR CI only exercises the `dmg` and the `app-image`, so a regression in the other three surfaces when a release is cut rather than in review.
 
 The shaded JAR deliberately excludes JavaFX so it stays cross-platform: JavaFX resolves to native, platform-specific artifacts, and the desktop app gets them from its bundled runtime instead.

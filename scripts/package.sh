@@ -6,9 +6,11 @@
 # differences here are small enough that two scripts would drift.
 #
 # Usage:
-#   scripts/package.sh [dmg|app-image|msi|deb]
+#   scripts/package.sh [type...]
 #
-# Defaults to the natural installer type for the host OS. Run `mvn package` first.
+# Types are dmg and app-image on macOS, exe, msi and app-image on Windows, deb and rpm on Linux.
+# Several may be given in one run, which links and verifies the runtime image once and then calls
+# jpackage per type. Defaults to the natural installer type for the host OS. Run `mvn package` first.
 set -euo pipefail
 
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -75,7 +77,9 @@ detect_default_type() {
   esac
 }
 
-readonly PACKAGE_TYPE="${1:-$(detect_default_type)}"
+PACKAGE_TYPES=("$@")
+[[ ${#PACKAGE_TYPES[@]} -gt 0 ]] || PACKAGE_TYPES=("$(detect_default_type)")
+readonly PACKAGE_TYPES
 
 case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) readonly PATH_SEPARATOR=";" ;;
@@ -240,7 +244,11 @@ icon_argument() {
   esac
 }
 
+# --linux-package-name is pinned rather than derived: jpackage takes it from --name, which is
+# "Wiktionary to Kindle", and deb and rpm package names admit neither spaces nor capitals. The
+# kebab-case slug is also the name the uninstall instructions document.
 platform_arguments() {
+  local type="$1"
   case "$(uname -s)" in
     Darwin)
       # --mac-package-name is left unset so CFBundleName falls back to --name: Apple suggests
@@ -249,26 +257,28 @@ platform_arguments() {
       echo "--mac-package-identifier $BUNDLE_ID"
       ;;
     MINGW* | MSYS* | CYGWIN*)
-      if [[ "$PACKAGE_TYPE" == "msi" ]]; then
+      if [[ "$type" == "msi" || "$type" == "exe" ]]; then
         echo "--win-menu --win-dir-chooser --win-per-user-install --win-shortcut"
       fi
       ;;
     *)
-      echo "--linux-shortcut"
+      local linux_args="--linux-shortcut --linux-package-name wiktionary-to-kindle --linux-menu-group Utility"
+      if [[ "$type" == "rpm" ]]; then
+        linux_args="$linux_args --linux-rpm-license-type MIT"
+      fi
+      echo "$linux_args"
       ;;
   esac
 }
 
 build_package() {
-  local java_home="$1" jar="$2" version="$3"
-  rm -rf "$OUTPUT_DIR"
-  mkdir -p "$OUTPUT_DIR"
+  local java_home="$1" jar="$2" version="$3" type="$4"
 
-  log "jpackage: building $PACKAGE_TYPE $version"
+  log "jpackage: building $type $version"
 
   # shellcheck disable=SC2046,SC2086
   "$java_home/bin/jpackage" \
-    --type "$PACKAGE_TYPE" \
+    --type "$type" \
     --name "$APP_NAME" \
     --app-version "$version" \
     --vendor "$VENDOR" \
@@ -281,11 +291,11 @@ build_package() {
     --java-options "-XX:MaxRAMPercentage=75" \
     --java-options "-Dfile.encoding=UTF-8" \
     $(icon_argument) \
-    $(platform_arguments)
+    $(platform_arguments "$type")
 }
 
 main() {
-  local java_home jar raw_version version
+  local java_home jar raw_version version type
   java_home="$(resolve_java_home)"
   jar="$(find_app_jar)"
   raw_version="$(project_version "$jar")"
@@ -293,14 +303,20 @@ main() {
 
   [[ -n "$version" ]] || die "could not determine the project version"
 
-  log "packaging $APP_NAME $version ($PACKAGE_TYPE) from $(basename "$jar")"
+  log "packaging $APP_NAME $version (${PACKAGE_TYPES[*]}) from $(basename "$jar")"
   mkdir -p "$BUILD_DIR"
 
   collect_javafx_modules
   build_runtime "$java_home"
   verify_runtime
   stage_input "$jar"
-  build_package "$java_home" "$jar" "$version"
+
+  # Reset once, outside the loop: a per-type reset would leave only the last type's output behind.
+  rm -rf "$OUTPUT_DIR"
+  mkdir -p "$OUTPUT_DIR"
+  for type in "${PACKAGE_TYPES[@]}"; do
+    build_package "$java_home" "$jar" "$version" "$type"
+  done
 
   log "done:"
   ls -la "$OUTPUT_DIR"

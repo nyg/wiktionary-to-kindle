@@ -130,8 +130,8 @@ jobs:
             artifact: macos
           - os: windows-latest    # x64
             artifact: windows
-          - os: ubuntu-latest     # cross-platform CLI JAR only
-            artifact: jar
+          - os: ubuntu-latest     # deb, rpm, and the cross-platform CLI JAR
+            artifact: linux
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout release tag
@@ -165,16 +165,29 @@ jobs:
           mkdir -p artifacts
           mv "target/dist/"*.dmg "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg"
 
-      # Scoop consumes a flat ZIP whose root holds the launcher, so the app-image directory is
-      # zipped from the inside. The directory name contains spaces, hence the quoting.
-      - name: Package Windows ZIP for Scoop
+      # The runner image ships WiX 3.14 but does not put it on PATH, and jpackage needs candle.exe
+      # there to build the exe installer. Matched by glob so a WiX version bump in the image does
+      # not silently drop the installer.
+      - name: Put WiX on the PATH
+        if: matrix.artifact == 'windows'
+        shell: pwsh
+        run: |
+          $candle = Get-ChildItem 'C:\Program Files (x86)\WiX Toolset v*\bin\candle.exe' -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $candle) { throw 'No WiX Toolset found on this runner; --type exe cannot be built' }
+          $candle.Directory.FullName | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      # Two artifacts off one runtime image: the flat ZIP Scoop consumes, whose root holds the
+      # launcher, so the app-image directory is zipped from the inside; and the per-user installer
+      # for everyone not using Scoop. The directory name contains spaces, hence the quoting.
+      - name: Package Windows ZIP and installer
         if: matrix.artifact == 'windows'
         shell: bash
         env:
           VERSION: ${{ needs.prepare.outputs.release_version }}
         run: |
           set -euo pipefail
-          scripts/package.sh app-image
+          scripts/package.sh app-image exe
           mkdir -p artifacts
 
           app_dir=$(find target/dist -mindepth 1 -maxdepth 1 -type d -print | head -1)
@@ -191,8 +204,30 @@ jobs:
           ( cd "$app_dir" && 7z a -tzip -mx=7 \
               "$GITHUB_WORKSPACE/artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip" . )
 
+          mv "target/dist/"*.exe "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64.exe"
+
+      # fakeroot builds the deb and rpmbuild the rpm; both are in the ubuntu-24.04 image today, but
+      # a release should not depend on the image inventory staying put.
+      - name: Install Linux packaging tools
+        if: matrix.artifact == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y fakeroot rpm
+
+      # jpackage names these wiktionary-to-kindle_X.Y.Z_amd64.deb and
+      # wiktionary-to-kindle-X.Y.Z-1.x86_64.rpm, so they are matched by extension.
+      - name: Package Linux deb and rpm
+        if: matrix.artifact == 'linux'
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.release_version }}
+        run: |
+          set -euo pipefail
+          scripts/package.sh deb rpm
+          mkdir -p artifacts
+          mv "target/dist/"*.deb "artifacts/wiktionary-to-kindle-${VERSION}-linux-x64.deb"
+          mv "target/dist/"*.rpm "artifacts/wiktionary-to-kindle-${VERSION}-linux-x64.rpm"
+
       - name: Collect portable JAR
-        if: matrix.artifact == 'jar'
+        if: matrix.artifact == 'linux'
         shell: bash
         run: |
           set -euo pipefail
@@ -247,12 +282,26 @@ jobs:
           brew install --cask nyg/tap/wiktionary-to-kindle
           ```
 
-          **Windows** (no admin rights, no SmartScreen prompt):
+          **Windows** — with Scoop (no admin rights, no SmartScreen prompt):
 
           ```powershell
           scoop bucket add nyg https://github.com/nyg/scoop-bucket
           scoop install wiktionary-to-kindle
           ```
+
+          Or download `wiktionary-to-kindle-VERSION-windows-x64.exe` and double-click it. It installs per-user, so it needs no admin rights, and adds a Start Menu shortcut. The installer is unsigned, so SmartScreen shows *"Windows protected your PC"* on first run — choose **More info**, then **Run anyway**.
+
+          **Linux** — install the package for your distribution:
+
+          ```sh
+          sudo apt install ./wiktionary-to-kindle-VERSION-linux-x64.deb
+          ```
+
+          ```sh
+          sudo dnf install ./wiktionary-to-kindle-VERSION-linux-x64.rpm
+          ```
+
+          Both install under `/opt/wiktionary-to-kindle` and add a desktop entry, so the app launches from your application menu. Uninstall with `sudo apt remove wiktionary-to-kindle` or `sudo dnf remove wiktionary-to-kindle`.
 
           ### Manual install on macOS
 
@@ -262,23 +311,26 @@ jobs:
           xattr -dr com.apple.quarantine "/Applications/Wiktionary to Kindle.app"
           ```
 
-          ### Linux and scripted use
+          ### Other distributions, and scripted use
 
-          There is no Linux desktop package — Homebrew casks are macOS-only. Linux users and anyone scripting the pipeline can use the portable JAR, which needs Java 25:
+          On a distribution the deb and rpm do not cover, and for scripting the pipeline anywhere, use the portable JAR, which needs Java 25:
 
           ```sh
           java -jar wiktionary-to-kindle-VERSION.jar download el
           java -jar wiktionary-to-kindle-VERSION.jar generate el en
           ```
           EOF
-          sed -i "s/wiktionary-to-kindle-VERSION.jar/wiktionary-to-kindle-${VERSION}.jar/g" git-cliff/CHANGELOG.md
+          sed -i "s/wiktionary-to-kindle-VERSION/wiktionary-to-kindle-${VERSION}/g" git-cliff/CHANGELOG.md
 
       - name: Create GitHub release
         run: |
           set -uo pipefail
           assets=(
             "artifacts/wiktionary-to-kindle-${VERSION}-macos-arm64.dmg"
+            "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64.exe"
             "artifacts/wiktionary-to-kindle-${VERSION}-windows-x64-scoop.zip"
+            "artifacts/wiktionary-to-kindle-${VERSION}-linux-x64.deb"
+            "artifacts/wiktionary-to-kindle-${VERSION}-linux-x64.rpm"
             "artifacts/wiktionary-to-kindle-${VERSION}.jar"
           )
 
