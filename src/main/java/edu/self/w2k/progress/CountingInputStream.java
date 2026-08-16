@@ -29,10 +29,10 @@ public final class CountingInputStream extends FilterInputStream {
      * @param reporter    receives the cumulative byte count
      */
     public CountingInputStream(InputStream in, long reportEvery, LongConsumer reporter) {
-        super(in);
         if (reportEvery <= 0) {
             throw new IllegalArgumentException("reportEvery must be positive, got " + reportEvery);
         }
+        super(in);
         this.reportEvery = reportEvery;
         this.reporter = reporter;
     }

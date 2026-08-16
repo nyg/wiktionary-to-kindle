@@ -85,7 +85,7 @@ class MainFxmlLoadTest {
             }
             toolkitReady = false;
         }
-        catch (Error e) {
+        catch (Error _) {
             // No display, or the native libraries cannot initialise.
             toolkitReady = false;
         }

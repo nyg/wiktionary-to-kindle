@@ -9,12 +9,14 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  statuses: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:

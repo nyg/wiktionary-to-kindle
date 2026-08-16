@@ -205,7 +205,7 @@ class PreferencesTest {
         Preferences defaults = Preferences.defaults();
 
         // Then
-        assertThat(defaults.dumpsDir().getParent()).isEqualTo(defaults.dictionariesDir().getParent());
+        assertThat(defaults.dumpsDir()).hasParentRaw(defaults.dictionariesDir().getParent());
         assertThat(defaults.dumpsDir().getFileName()).hasToString("dumps");
         assertThat(defaults.dictionariesDir().getFileName()).hasToString("dictionaries");
     }

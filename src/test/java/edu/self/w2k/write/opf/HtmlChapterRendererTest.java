@@ -72,11 +72,11 @@ class HtmlChapterRendererTest {
                 .contains("<idx:orth value=\"σύντροφος\"><b>σύντροφος</b></idx:orth>")
                 .contains("<idx:infl><idx:iform value=\"σύντροφοι\"/>")
                 .contains("<idx:iform value=\"συντρόφου\"/>")
-                .contains("<idx:iform value=\"συντρόφους\"/></idx:infl>");
-        // <idx:infl> must be a sibling of <idx:orth>, never a child (mixed content
-        // inside <idx:orth> crashes the Kindle popup renderer on long-press)
-        assertThat(html).doesNotContain("<idx:orth value=\"σύντροφος\"><idx:infl");
-        assertThat(html).doesNotContain("</idx:infl></idx:orth>");
+                .contains("<idx:iform value=\"συντρόφους\"/></idx:infl>")
+                // <idx:infl> must be a sibling of <idx:orth>, never a child (mixed content
+                // inside <idx:orth> crashes the Kindle popup renderer on long-press)
+                .doesNotContain("<idx:orth value=\"σύντροφος\"><idx:infl")
+                .doesNotContain("</idx:infl></idx:orth>");
     }
 
     @Test

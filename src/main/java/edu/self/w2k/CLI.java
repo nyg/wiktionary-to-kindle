@@ -69,7 +69,7 @@ public class CLI implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        spec.commandLine().usage(System.out);
+        spec.commandLine().usage(spec.commandLine().getOut());
         return 0;
     }
 

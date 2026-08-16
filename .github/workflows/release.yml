@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Job 1: bump the pom version, update the changelog, commit, tag and push
@@ -248,6 +248,8 @@ jobs:
   release:
     needs: [prepare, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       VERSION: ${{ needs.prepare.outputs.release_version }}
     steps:

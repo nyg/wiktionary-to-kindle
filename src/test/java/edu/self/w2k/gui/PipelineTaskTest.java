@@ -1,6 +1,7 @@
 package edu.self.w2k.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -74,7 +75,7 @@ class PipelineTaskTest {
         PipelineTask task = new PipelineTask(pipeline, PREFS, "el", "en", ProgressListener.NOOP);
 
         // When / Then — cancelling during download must not blow up on a null process
-        task.terminateKindling();
+        assertThatCode(task::terminateKindling).doesNotThrowAnyException();
     }
 
     @Test
@@ -113,7 +114,7 @@ class PipelineTaskTest {
     }
 
     @Test
-    void should_use_the_view_models_selection_when_creating_a_task() {
+    void should_use_the_view_models_selection_when_creating_a_task() throws Exception {
         // Given
         MainViewModel viewModel = new MainViewModel();
         viewModel.preferencesProperty().set(PREFS);
@@ -137,5 +138,7 @@ class PipelineTaskTest {
 
         // Then
         assertThat(task).isInstanceOf(PipelineTask.class);
+        assertThat(((PipelineTask) task).call()).isEqualTo(MOBI);
+        assertThat(seen).containsExactly("el", "en");
     }
 }

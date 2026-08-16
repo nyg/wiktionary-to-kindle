@@ -104,7 +104,7 @@ class DictionaryPipelineTest {
     }
 
     @Test
-    void should_not_generate_when_the_download_fails() throws Exception {
+    void should_not_generate_when_the_download_fails() {
         // Given
         AtomicReference<Boolean> generated = new AtomicReference<>(false);
         DictionaryPipeline unit = new DictionaryPipeline(

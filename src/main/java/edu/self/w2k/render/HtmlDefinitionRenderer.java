@@ -20,6 +20,8 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
 
     private static final int VISIBLE_FORMS_THRESHOLD = 30;
 
+    private static final String LIST_ITEM_END = "</li>";
+
     @Override
     public Optional<RenderedEntry> render(WiktionaryEntry entry) {
         StringBuilder sb = new StringBuilder();
@@ -124,14 +126,14 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                     hasExample = true;
                     exSb.append("<li>");
                     exSb.append(StringEscapeUtils.escapeXml10(text.replaceAll("[\n\r]", "; ")));
-                    exSb.append("</li>");
+                    exSb.append(LIST_ITEM_END);
                 }
                 exSb.append("</ul>");
                 if (hasExample) {
                     sb.append(exSb);
                 }
 
-                sb.append("</li>");
+                sb.append(LIST_ITEM_END);
             }
         }
 
@@ -161,7 +163,7 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         if (filtered.isEmpty()) {
             return List.of();
         }
-        Set<String> seen = new LinkedHashSet<>(filtered.size());
+        Set<String> seen = LinkedHashSet.newLinkedHashSet(filtered.size());
         for (WiktionaryForm form : filtered) {
             String text = form.form().strip();
             if (isUsableLookupKey(text)) {
@@ -213,7 +215,7 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                 sb.append(' ');
             }
             sb.append(StringEscapeUtils.escapeXml10(form.form().strip()));
-            sb.append("</li>");
+            sb.append(LIST_ITEM_END);
         }
         sb.append("</ul>");
     }
