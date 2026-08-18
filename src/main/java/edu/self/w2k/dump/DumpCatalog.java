@@ -2,7 +2,9 @@ package edu.self.w2k.dump;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,8 +44,12 @@ public class DumpCatalog {
                                          () -> log.debug("Ignoring unrecognised dump filename: {}", path));
             }
         }
+        catch (NoSuchFileException _) {
+            log.debug("No dumps directory yet at {}", dumpsDir);
+            return List.of();
+        }
         catch (IOException e) {
-            log.warn("Could not list dumps in {}: {}", dumpsDir, e.getLocalizedMessage());
+            log.warn("Could not list dumps in {}: {}", dumpsDir, describe(e));
             return List.of();
         }
 
@@ -88,6 +94,15 @@ public class DumpCatalog {
             log.info("Deleted dump {}", dump.path());
         }
         return deleted;
+    }
+
+    private static String describe(IOException e) {
+        if (e instanceof FileSystemException fileSystemException) {
+            return fileSystemException.getReason() != null
+                    ? fileSystemException.getReason()
+                    : e.getClass().getSimpleName();
+        }
+        return e.getLocalizedMessage();
     }
 
     private static long sizeOf(Path path) {

@@ -4,13 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Optional;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.LoggerFactory;
 
 class DumpCatalogTest {
 
@@ -18,10 +24,19 @@ class DumpCatalogTest {
     Path tmp;
 
     private DumpCatalog unit;
+    private ListAppender<ILoggingEvent> logged;
 
     @BeforeEach
     void setUp() {
         unit = new DumpCatalog(tmp);
+        logged = new ListAppender<>();
+        logged.start();
+        logger().addAppender(logged);
+    }
+
+    @AfterEach
+    void tearDown() {
+        logger().detachAppender(logged);
     }
 
     @Test
@@ -79,6 +94,40 @@ class DumpCatalogTest {
         // When / Then
         assertThat(absent.list()).isEmpty();
         assertThat(absent.latestFor("el")).isEmpty();
+    }
+
+    @Test
+    void should_stay_quiet_when_dumps_dir_does_not_exist() {
+        // Given a first run: the dumps folder is created by the first download, not before it
+        DumpCatalog absent = new DumpCatalog(tmp.resolve("nope"));
+
+        // When
+        absent.list();
+
+        // Then
+        assertThat(logged.list).noneMatch(event -> event.getLevel().isGreaterOrEqual(Level.WARN));
+    }
+
+    @Test
+    void should_name_the_cause_rather_than_the_path_when_the_dumps_dir_is_not_a_directory()
+            throws Exception {
+        // Given
+        Path file = tmp.resolve("not-a-directory");
+        Files.createFile(file);
+        DumpCatalog unusable = new DumpCatalog(file);
+
+        // When
+        assertThat(unusable.list()).isEmpty();
+
+        // Then the path is named once, by the template, and the cause explains the failure
+        assertThat(logged.list).singleElement()
+                .satisfies(event -> {
+                    assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                    assertThat(event.getFormattedMessage())
+                            .contains(NotDirectoryException.class.getSimpleName())
+                            .satisfies(message -> assertThat(occurrencesOf(file.toString(), message))
+                                    .isEqualTo(1));
+                });
     }
 
     @Test
@@ -156,6 +205,18 @@ class DumpCatalogTest {
         Path path = tmp.resolve("raw-wiktextract-data-%s-%s.jsonl.gz".formatted(lang, date));
         Files.createFile(path);
         return path;
+    }
+
+    private static int occurrencesOf(String needle, String haystack) {
+        int count = 0;
+        for (int at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, at + 1)) {
+            count++;
+        }
+        return count;
+    }
+
+    private static ch.qos.logback.classic.Logger logger() {
+        return (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(DumpCatalog.class);
     }
 
     private static org.assertj.core.groups.Tuple tuple(String lang, String date) {
