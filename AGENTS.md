@@ -1,4 +1,4 @@
-# Copilot Instructions
+# Agent Instructions
 
 ## Project Overview
 
