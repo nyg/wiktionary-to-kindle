@@ -16,6 +16,8 @@ final class AppMenus {
 
     static final String ABOUT = "About " + AppInfo.DISPLAY_NAME;
 
+    private static final String SETTINGS_SHORTCUT = "Shortcut+Comma";
+
     record Actions(Runnable settings, Runnable about, Runnable quit) {
     }
 
@@ -24,9 +26,9 @@ final class AppMenus {
 
     static List<Menu> menuBar(DesktopPlatform platform, Actions actions) {
         return switch (platform) {
-            case MACOS -> List.of(menu("File", item("Settings…", "Shortcut+Comma", actions.settings())));
+            case MACOS -> List.of(menu("File", item("Settings…", SETTINGS_SHORTCUT, actions.settings())));
             case WINDOWS -> List.of(menu("_File",
-                                         item("_Settings…", "Shortcut+Comma", actions.settings()),
+                                         item("_Settings…", SETTINGS_SHORTCUT, actions.settings()),
                                          new SeparatorMenuItem(),
                                          item("E_xit", null, actions.quit())),
                                     menu("_Help", item("_" + ABOUT, null, actions.about())));
@@ -43,7 +45,7 @@ final class AppMenus {
         if (platform != DesktopPlatform.GNOME) {
             return List.of();
         }
-        return List.of(item("Preferences", "Shortcut+Comma", actions.settings()),
+        return List.of(item("Preferences", SETTINGS_SHORTCUT, actions.settings()),
                        new SeparatorMenuItem(),
                        item(ABOUT, null, actions.about()));
     }
