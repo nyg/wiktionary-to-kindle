@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
  * It reaches into JavaFX internals, so any failure leaves JavaFX's own spacing in place.
  */
 @Slf4j
+@SuppressWarnings("java:S3011")
 final class SystemFontAdvances {
 
     /** CoreText uses SF's 17pt design at every size up to 17pt, so advances taken at 13pt fit all of the app's text. */
