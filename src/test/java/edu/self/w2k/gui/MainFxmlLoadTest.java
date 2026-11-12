@@ -48,6 +48,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
@@ -874,6 +876,58 @@ class MainFxmlLoadTest {
             }
         });
         return String.valueOf(area.get());
+    }
+
+    @Test
+    void should_space_bold_system_text_wider_than_regular_when_the_host_is_macos() throws Exception {
+        if (!toolkitReady || !System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
+            abort("Needs the JavaFX toolkit on macOS");
+        }
+
+        // Given
+        AtomicReference<Double> regular = new AtomicReference<>();
+        AtomicReference<Double> bold = new AtomicReference<>();
+
+        // When
+        onFxThread(() -> {
+            SystemFontAdvances.install();
+            Text regularText = new Text("Word language:");
+            regularText.setFont(Font.font("System", 13));
+            Text boldText = new Text("Word language:");
+            boldText.setFont(Font.font("System", FontWeight.BOLD, 13));
+            regular.set(regularText.getLayoutBounds().getWidth());
+            bold.set(boldText.getLayoutBounds().getWidth());
+        });
+
+        // Then
+        assertThat(bold.get())
+                .as("the font file's own advances space bold exactly like regular; CoreText's do not")
+                .isGreaterThan(regular.get() * 1.03);
+    }
+
+    @Test
+    void should_leave_the_system_font_spacing_alone_when_the_host_is_not_macos() throws Exception {
+        if (!toolkitReady || System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
+            abort("Needs the JavaFX toolkit outside macOS");
+        }
+
+        // Given
+        AtomicReference<Double> before = new AtomicReference<>();
+        AtomicReference<Double> after = new AtomicReference<>();
+
+        // When
+        onFxThread(() -> {
+            Text beforeText = new Text("Word language:");
+            beforeText.setFont(Font.font("System", 13));
+            before.set(beforeText.getLayoutBounds().getWidth());
+            SystemFontAdvances.install();
+            Text afterText = new Text("Word language:");
+            afterText.setFont(Font.font("System", 13));
+            after.set(afterText.getLayoutBounds().getWidth());
+        });
+
+        // Then
+        assertThat(after.get()).isEqualTo(before.get());
     }
 
     private static void onFxThread(Runnable action) throws Exception {

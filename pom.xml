@@ -51,7 +51,8 @@
             src/main/java/edu/self/w2k/gui/App.java,
             src/main/java/edu/self/w2k/gui/Launcher.java,
             src/main/java/edu/self/w2k/gui/MainController.java,
-            src/main/java/edu/self/w2k/gui/PreferencesDialog.java
+            src/main/java/edu/self/w2k/gui/PreferencesDialog.java,
+            src/main/java/edu/self/w2k/gui/SystemFontAdvances.java
         </sonar.coverage.exclusions>
     </properties>
 
@@ -223,6 +224,10 @@
                 <version>${javafx-maven-plugin.version}</version>
                 <configuration>
                     <mainClass>edu.self.w2k.gui.Launcher</mainClass>
+                    <options>
+                        <option>--add-opens=javafx.graphics/com.sun.javafx.font=ALL-UNNAMED</option>
+                        <option>--add-opens=javafx.graphics/com.sun.javafx.font.coretext=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
 

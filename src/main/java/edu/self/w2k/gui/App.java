@@ -45,6 +45,7 @@ public class App extends Application {
     }
 
     static MainController showMainWindow(Stage stage, UiLogAppender appender) throws IOException {
+        SystemFontAdvances.install();
         FXMLLoader loader = new FXMLLoader(App.class.getResource(MAIN_FXML));
         loader.setControllerFactory(_ -> new MainController(appender));
         Scene scene = new Scene(loader.load());

@@ -255,6 +255,9 @@ platform_arguments() {
       # keeping the menu-bar name within 16 characters, which "Wiktionary to Kindle" exceeds, but a
       # sixth spelling of the app's own name costs more than a long menu-bar title does.
       echo "--mac-package-identifier $BUNDLE_ID"
+      # SystemFontAdvances reads JavaFX's font internals to space SF as AppKit does.
+      echo "--java-options --add-opens=javafx.graphics/com.sun.javafx.font=ALL-UNNAMED"
+      echo "--java-options --add-opens=javafx.graphics/com.sun.javafx.font.coretext=ALL-UNNAMED"
       ;;
     MINGW* | MSYS* | CYGWIN*)
       if [[ "$type" == "msi" || "$type" == "exe" ]]; then
