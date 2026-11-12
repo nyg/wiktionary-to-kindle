@@ -30,12 +30,14 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
@@ -46,10 +48,12 @@ import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -432,7 +436,7 @@ class MainFxmlLoadTest {
 
         assertThat(root.get().getStyleClass()).contains(styleClass);
         assertThat(root.get().lookupAll(".form-label")).first()
-                .extracting(label -> ((javafx.scene.control.Label) label).getText())
+                .extracting(label -> ((Label) label).getText())
                 .isEqualTo(firstLabel);
         assertThat(((HBox) startButton.getParent()).getChildren().stream()
                            .filter(Button.class::isInstance)
@@ -442,6 +446,96 @@ class MainFxmlLoadTest {
         assertThat(menuBar.isManaged()).as("menu bar laid out in the window").isEqualTo(menuBarInWindow);
         assertThat(primaryMenuButton.isVisible()).as("primary menu button shown").isEqualTo(primaryMenu);
         assertThat(primaryMenuButton.getItems().isEmpty()).isEqualTo(!primaryMenu);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "MACOS, Shortcut+Comma",
+            "GNOME, Shortcut+Q",
+    })
+    void should_answer_the_shortcut_on_the_scene_when_the_desktop_menus_cannot(DesktopPlatform platform,
+                                                                               String shortcut)
+            throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, platform);
+        AtomicReference<Scene> scene = new AtomicReference<>();
+
+        onFxThread(() -> {
+            scene.set(new Scene(root.get()));
+            controller.attachTo(new Stage());
+        });
+
+        assertThat(scene.get().getAccelerators()).containsKey(KeyCombination.keyCombination(shortcut));
+    }
+
+    @Test
+    void should_title_the_macos_header_with_the_app_name_alone_when_attached_to_a_stage() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, DesktopPlatform.MACOS);
+        Label windowTitle = readField(controller, "windowTitle", Label.class);
+
+        onFxThread(() -> {
+            new Scene(root.get());
+            controller.attachTo(new Stage());
+        });
+
+        assertThat(windowTitle.isVisible()).isTrue();
+        assertThat(windowTitle.getText()).isEqualTo("Wiktionary to Kindle");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"MACOS", "GNOME"})
+    void should_drag_the_window_from_anywhere_in_the_header_but_its_buttons_when_it_is_the_title_bar(
+            DesktopPlatform platform) throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, platform);
+        HeaderBar headerBar = readField(controller, "headerBar", HeaderBar.class);
+        Node switcher = readField(controller, "pageSwitcher", Node.class);
+        Node buildPageButton = readField(controller, "buildPageButton", Node.class);
+        Node dumpsPageButton = readField(controller, "dumpsPageButton", Node.class);
+        AtomicReference<Scene> scene = new AtomicReference<>();
+        AtomicReference<Stage> stage = new AtomicReference<>();
+        CountDownLatch laidOut = new CountDownLatch(1);
+
+        onFxThread(() -> {
+            scene.set(new Scene(root.get(), 680, 400));
+            scene.get().getStylesheets().add(App.class.getResource(App.STYLESHEET).toExternalForm());
+            scene.get().addPostLayoutPulseListener(laidOut::countDown);
+            stage.set(new Stage());
+            controller.attachTo(stage.get());
+            stage.get().setScene(scene.get());
+            stage.get().setX(-4000);
+            stage.get().show();
+            Platform.requestNextPulse();
+        });
+        assertThat(laidOut.await(30, TimeUnit.SECONDS)).as("layout pulse timed out").isTrue();
+
+        Bounds bar = headerBar.localToScene(headerBar.getLayoutBounds());
+        Bounds slot = switcher.localToScene(switcher.getLayoutBounds());
+        Bounds first = buildPageButton.localToScene(buildPageButton.getLayoutBounds());
+        Bounds last = dumpsPageButton.localToScene(dumpsPageButton.getLayoutBounds());
+        double middle = bar.getCenterY();
+        assertThat(headerArea(scene.get(), (bar.getMinX() + slot.getMinX()) / 2, middle)).as("left of the switcher")
+                .isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), (slot.getMinX() + first.getMinX()) / 2, middle))
+                .as("between the switcher's edge and its first button").isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), (last.getMaxX() + slot.getMaxX()) / 2, middle))
+                .as("between the switcher's last button and its edge").isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), first.getCenterX(), first.getCenterY())).as("a switcher button")
+                .isNotEqualTo("DRAGBAR");
+        onFxThread(() -> stage.get().hide());
     }
 
     @Test
@@ -810,6 +904,26 @@ class MainFxmlLoadTest {
                 .contains("created on the first download");
         assertThat(MainController.dumpsPlaceholder(Path.of(System.getProperty("java.io.tmpdir"))))
                 .isEqualTo("No dumps downloaded yet.");
+    }
+
+    /** JavaFX exposes no public hit test for the draggable header area, so this asks the one glass uses. */
+    private static String headerArea(Scene scene, double x, double y) throws Exception {
+        Class<?> listenerType = Class.forName("javafx.scene.Scene$ScenePeerListener");
+        var constructor = listenerType.getDeclaredConstructor(Scene.class);
+        constructor.setAccessible(true);
+        Object listener = constructor.newInstance(scene);
+        var pick = listenerType.getMethod("pickHeaderArea", double.class, double.class);
+        pick.setAccessible(true);
+        AtomicReference<Object> area = new AtomicReference<>();
+        onFxThread(() -> {
+            try {
+                area.set(pick.invoke(listener, x, y));
+            }
+            catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        return String.valueOf(area.get());
     }
 
     private static void onFxThread(Runnable action) throws Exception {

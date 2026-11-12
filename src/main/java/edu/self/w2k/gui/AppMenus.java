@@ -16,7 +16,9 @@ final class AppMenus {
 
     static final String ABOUT = "About " + AppInfo.DISPLAY_NAME;
 
-    private static final String SETTINGS_SHORTCUT = "Shortcut+Comma";
+    static final KeyCombination SETTINGS_SHORTCUT = KeyCombination.keyCombination("Shortcut+Comma");
+
+    static final KeyCombination QUIT_SHORTCUT = KeyCombination.keyCombination("Shortcut+Q");
 
     record Actions(Runnable settings, Runnable about, Runnable quit) {
     }
@@ -26,15 +28,17 @@ final class AppMenus {
 
     static List<Menu> menuBar(DesktopPlatform platform, Actions actions) {
         return switch (platform) {
-            case MACOS -> List.of(menu("File", item("Settings…", SETTINGS_SHORTCUT, actions.settings())));
+            case MACOS -> List.of(menu("File", item("Settings…", SETTINGS_SHORTCUT, actions.settings())),
+                                  menu("Help", item(ABOUT, null, actions.about())));
             case WINDOWS -> List.of(menu("_File",
                                          item("_Settings…", SETTINGS_SHORTCUT, actions.settings()),
                                          new SeparatorMenuItem(),
                                          item("E_xit", null, actions.quit())),
                                     menu("_Help", item("_" + ABOUT, null, actions.about())));
-            case KDE -> List.of(menu("_File", item("_Quit", "Shortcut+Q", actions.quit())),
+            case KDE -> List.of(menu("_File", item("_Quit", QUIT_SHORTCUT, actions.quit())),
                                 menu("_Settings",
-                                     item("_Configure " + AppInfo.DISPLAY_NAME + "…", "Shortcut+Shift+Comma",
+                                     item("_Configure " + AppInfo.DISPLAY_NAME + "…",
+                                          KeyCombination.keyCombination("Shortcut+Shift+Comma"),
                                           actions.settings())),
                                 menu("_Help", item("_" + ABOUT, null, actions.about())));
             case GNOME -> List.of();
@@ -54,11 +58,9 @@ final class AppMenus {
         return new Menu(text, null, items);
     }
 
-    private static MenuItem item(String text, String accelerator, Runnable action) {
+    private static MenuItem item(String text, KeyCombination accelerator, Runnable action) {
         MenuItem item = new MenuItem(text);
-        if (accelerator != null) {
-            item.setAccelerator(KeyCombination.keyCombination(accelerator));
-        }
+        item.setAccelerator(accelerator);
         item.setOnAction(_ -> action.run());
         return item;
     }

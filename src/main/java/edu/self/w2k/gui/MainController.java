@@ -32,6 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -47,10 +48,10 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.skin.VirtualFlow;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -98,9 +99,7 @@ public class MainController {
     @FXML private HeaderBar headerBar;
     @FXML private HBox pageSwitcher;
     @FXML private MenuButton primaryMenuButton;
-    @FXML private VBox windowTitle;
-    @FXML private Label windowTitleName;
-    @FXML private Label windowSubtitle;
+    @FXML private Label windowTitle;
     @FXML private ToggleGroup pageGroup;
     @FXML private ToggleButton buildPageButton;
     @FXML private ToggleButton dumpsPageButton;
@@ -236,6 +235,7 @@ public class MainController {
      */
     private Region balancingSpacer(Stage stage) {
         Region spacer = new Region();
+        HeaderBar.setDragType(spacer, HeaderDragType.DRAGGABLE);
         spacer.minWidthProperty().bind(Bindings.createDoubleBinding(
                 () -> Math.max(0, primaryMenuButton.getWidth()
                                   + HeaderBar.getRightSystemInset(stage).getWidth()
@@ -260,8 +260,7 @@ public class MainController {
             stage.initStyle(StageStyle.EXTENDED);
         }
         if (platform == DesktopPlatform.MACOS) {
-            windowTitleName.setText(AppInfo.DISPLAY_NAME);
-            windowSubtitle.setText("Version " + AppVersion.get());
+            windowTitle.setText(AppInfo.DISPLAY_NAME);
             windowTitle.setVisible(true);
             headerBar.setMinHeight(UNIFIED_TITLE_BAR_HEIGHT);
             HeaderBar.setSystemButtonHeight(stage, UNIFIED_TITLE_BAR_HEIGHT);
@@ -270,8 +269,18 @@ public class MainController {
             headerBar.setMinHeight(GNOME_HEADER_BAR_HEIGHT);
             headerBar.setLeft(balancingSpacer(stage));
         }
-        if (platform.hasQuitShortcut() && root.getScene() != null) {
-            root.getScene().getAccelerators().put(KeyCombination.keyCombination("Shortcut+Q"), Platform::exit);
+        if (root.getScene() != null) {
+            addSceneShortcuts(root.getScene());
+        }
+    }
+
+    private void addSceneShortcuts(Scene scene) {
+        if (platform.hasQuitShortcut()) {
+            scene.getAccelerators().put(AppMenus.QUIT_SHORTCUT, Platform::exit);
+        }
+        // macOS drops the system menu's key equivalent whenever a text field has focus, so the scene answers it too.
+        if (platform.menuStyle() == DesktopPlatform.MenuStyle.SYSTEM_MENU_BAR) {
+            scene.getAccelerators().put(AppMenus.SETTINGS_SHORTCUT, this::onPreferences);
         }
     }
 
