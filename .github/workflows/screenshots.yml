@@ -1,6 +1,7 @@
 name: Screenshots
 
-# Captures the real main window on each desktop for the README. Run it by hand after a UI change,
+# Captures the real main window on macOS, Windows and GNOME for the README; GNOME draws its own title
+# bar, where a KDE window would need KWin running to get one. Run it by hand after a UI change,
 # then commit the PNGs from its artifacts to assets/screenshots/.
 on:
   workflow_dispatch:
@@ -25,10 +26,6 @@ jobs:
             name: windows
           - os: ubuntu-latest
             name: linux-gnome
-            desktop: GNOME
-          - os: ubuntu-latest
-            name: linux-kde
-            desktop: KDE
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,15 +67,15 @@ jobs:
         shell: pwsh
         run: |
           $classpath = "target/test-classes;target/classes;" + (Get-Content cp.txt -Raw).Trim()
-          Start-Process java -ArgumentList "-cp", "`"$classpath`"", "edu.self.w2k.gui.ScreenshotLauncher" `
-            -RedirectStandardOutput launcher.log -RedirectStandardError launcher.err -NoNewWindow
+          $launcher = Start-Process java -ArgumentList "-cp", "`"$classpath`"", "edu.self.w2k.gui.ScreenshotLauncher" `
+            -RedirectStandardOutput launcher.log -RedirectStandardError launcher.err -NoNewWindow -PassThru
           foreach ($i in 1..120) {
             if ((Test-Path launcher.log) -and (Select-String -Path launcher.log -Pattern "SCREENSHOT READY" -Quiet)) { break }
             Start-Sleep -Seconds 1
           }
           Get-Content launcher.log, launcher.err -ErrorAction SilentlyContinue
           Start-Sleep -Seconds 2
-          Add-Type -AssemblyName System.Drawing
+          Add-Type -AssemblyName System.Drawing, System.Windows.Forms
           Add-Type @"
           using System;
           using System.Runtime.InteropServices;
@@ -91,8 +88,22 @@ jobs:
           }
           "@
           [Win32]::SetProcessDPIAware() | Out-Null
-          $window = [Win32]::FindWindow($null, "Wiktionary to Kindle")
-          if ($window -eq [IntPtr]::Zero) { throw "Window not found" }
+          $window = [IntPtr]::Zero
+          foreach ($i in 1..30) {
+            $launcher.Refresh()
+            $window = $launcher.MainWindowHandle
+            if ($window -eq [IntPtr]::Zero) { $window = [Win32]::FindWindow($null, "Wiktionary to Kindle") }
+            if ($window -ne [IntPtr]::Zero) { break }
+            Start-Sleep -Seconds 1
+          }
+          if ($window -eq [IntPtr]::Zero) {
+            Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Format-Table Id, ProcessName, MainWindowTitle -AutoSize
+            $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $desktop = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+            [System.Drawing.Graphics]::FromImage($desktop).CopyFromScreen(0, 0, 0, 0, $desktop.Size)
+            $desktop.Save("screenshots/windows-desktop.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            throw "Window not found"
+          }
           [Win32]::SetForegroundWindow($window) | Out-Null
           Start-Sleep -Seconds 1
           # Extended frame bounds leave out the invisible resize border GetWindowRect would include.
@@ -105,28 +116,22 @@ jobs:
       - name: Capture on Linux
         if: runner.os == 'Linux'
         env:
-          XDG_CURRENT_DESKTOP: ${{ matrix.desktop }}
+          XDG_CURRENT_DESKTOP: GNOME
           DISPLAY: ':99'
         run: |
           sudo apt-get update && sudo apt-get install -y xvfb x11-utils imagemagick fonts-cantarell
           Xvfb :99 -screen 0 1280x900x24 &
           sleep 2
-          # GNOME draws its own title bar, but a KDE window takes KWin's; best effort, since a bare
-          # Xvfb still yields the window's content.
-          if [ "$XDG_CURRENT_DESKTOP" = KDE ]; then
-            sudo apt-get install -y kwin-x11 breeze dbus-x11 || true
-            (dbus-launch --exit-with-session kwin_x11 > kwin.log 2>&1 &) || true
-            sleep 5
-          fi
           java -cp "target/test-classes:target/classes:$(cat cp.txt)" edu.self.w2k.gui.ScreenshotLauncher > launcher.log 2>&1 &
           for _ in $(seq 1 120); do grep -q "SCREENSHOT READY" launcher.log && break; sleep 1; done
           cat launcher.log
           sleep 2
           window=$(xwininfo -root -tree | awk '/"Wiktionary to Kindle"/ { print $1; exit }')
           [ -n "$window" ] || { echo "Window not found"; exit 1; }
-          import -frame -window "$window" screenshots/${{ matrix.name }}.png
+          import -window "$window" screenshots/${{ matrix.name }}.png
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
         with:
           name: screenshot-${{ matrix.name }}
           path: screenshots/
