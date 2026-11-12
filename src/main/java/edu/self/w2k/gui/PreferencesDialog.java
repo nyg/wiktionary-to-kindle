@@ -20,6 +20,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 
@@ -75,12 +76,12 @@ public class PreferencesDialog extends Dialog<Preferences> {
         grid.setVgap(10);
         grid.setPadding(new Insets(12));
 
-        grid.addRow(0, new Label("Dumps folder"), withDirectoryChooser(dumpsDir, "Choose dumps folder"));
-        grid.addRow(1, new Label("Dictionaries folder"),
+        grid.addRow(0, label("Dumps folder"), withDirectoryChooser(dumpsDir, "Choose dumps folder"));
+        grid.addRow(1, label("Dictionaries folder"),
                     withDirectoryChooser(dictionariesDir, "Choose dictionaries folder"));
-        grid.addRow(2, new Label("kindling-cli binary"), withFileChooser(kindlingCliPath));
-        grid.addRow(3, new Label("kindling version"), kindlingVersion);
-        grid.addRow(4, new Label("Theme"), theme);
+        grid.addRow(2, label("kindling-cli binary"), withFileChooser(kindlingCliPath));
+        grid.addRow(3, label("kindling version"), kindlingVersion);
+        grid.addRow(4, label("Theme"), theme);
         grid.add(themeHint(), 1, 5);
         grid.add(deleteIntermediateFiles, 1, 6);
         grid.add(intermediateFilesHint(), 1, 7);
@@ -117,8 +118,16 @@ public class PreferencesDialog extends Dialog<Preferences> {
         return row(field, browse);
     }
 
+    /** The fields give way when the dialog is narrower than the form, never the labels. */
+    private static Label label(String text) {
+        Label label = new Label(text);
+        label.setMinWidth(Region.USE_PREF_SIZE);
+        return label;
+    }
+
     private static HBox row(TextField field, Button browse) {
         field.setPrefColumnCount(28);
+        browse.setMinWidth(Region.USE_PREF_SIZE);
         HBox box = new HBox(6, field, browse);
         HBox.setHgrow(field, Priority.ALWAYS);
         return box;

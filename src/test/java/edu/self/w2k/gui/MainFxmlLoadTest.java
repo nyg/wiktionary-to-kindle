@@ -1,6 +1,7 @@
 package edu.self.w2k.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.junit.jupiter.api.Assumptions.abort;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import edu.self.w2k.config.Preferences;
 import edu.self.w2k.dump.DumpFile;
 import edu.self.w2k.kaikki.KaikkiCatalog;
 import javafx.application.Application;
+import javafx.application.ColorScheme;
 import javafx.collections.FXCollections;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -58,6 +60,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
@@ -735,7 +738,12 @@ class MainFxmlLoadTest {
             onFxThread(() -> choice.set(AppTheme.CUPERTINO));
 
             assertThat(Application.getUserAgentStylesheet()).contains("cupertino");
-            assertThat(scene.getStylesheets()).hasSize(1);
+            assertThat(scene.getStylesheets()).doesNotHaveDuplicates()
+                                              .anyMatch(sheet -> sheet.endsWith("app-cupertino.css"));
+
+            onFxThread(() -> choice.set(AppTheme.PRIMER));
+
+            assertThat(scene.getStylesheets()).containsExactly(SystemTheme.url(SystemTheme.STYLESHEET));
         }
         finally {
             Application.setUserAgentStylesheet(previous);
@@ -783,7 +791,8 @@ class MainFxmlLoadTest {
                 Scene scene = new Scene(new VBox(combo.get(), logView.get()), 480, 320);
                 scene.getStylesheets().add(App.class.getResource(App.STYLESHEET).toExternalForm());
                 Application.setUserAgentStylesheet(new CupertinoLight().getUserAgentStylesheet());
-                scene.getStylesheets().add(App.class.getResource(SystemTheme.STYLESHEET).toExternalForm());
+                SystemTheme.stylesheetsFor(AppTheme.CUPERTINO, ColorScheme.LIGHT)
+                           .forEach(sheet -> scene.getStylesheets().add(SystemTheme.url(sheet)));
 
                 stage.set(new Stage());
                 stage.get().setScene(scene);
@@ -817,6 +826,47 @@ class MainFxmlLoadTest {
                 }
                 Application.setUserAgentStylesheet(previous);
             });
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"LIGHT", "DARK"})
+    void should_give_buttons_fields_and_pickers_appkit_s_one_control_height_under_the_cupertino_theme(
+            ColorScheme scheme) throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        String previous = Application.getUserAgentStylesheet();
+        AtomicReference<double[]> heights = new AtomicReference<>();
+
+        try {
+            onFxThread(() -> {
+                Button button = new Button("Cancel");
+                TextField field = new TextField();
+                ComboBox<String> picker = new ComboBox<>(FXCollections.observableArrayList("English (en)"));
+                ComboBox<String> editablePicker = new ComboBox<>(FXCollections.observableArrayList("English (en)"));
+                editablePicker.setEditable(true);
+
+                Scene scene = new Scene(new VBox(button, field, picker, editablePicker), 480, 320);
+                scene.getStylesheets().add(App.class.getResource(App.STYLESHEET).toExternalForm());
+                Application.setUserAgentStylesheet(SystemTheme.themeFor(AppTheme.CUPERTINO, scheme)
+                                                              .getUserAgentStylesheet());
+                SystemTheme.stylesheetsFor(AppTheme.CUPERTINO, scheme)
+                           .forEach(sheet -> scene.getStylesheets().add(SystemTheme.url(sheet)));
+                scene.getRoot().applyCss();
+                scene.getRoot().layout();
+                heights.set(new double[] {button.getHeight(), field.getHeight(), picker.getHeight(),
+                                          editablePicker.getHeight()});
+            });
+
+            assertThat(heights.get()).as("push button, text field, pop-up and combo box share one height")
+                                     .containsOnly(heights.get()[0]);
+            assertThat(heights.get()[0]).as("AppKit's regular control height at a 13px system font")
+                                        .isCloseTo(24, within(2.0));
+        }
+        finally {
+            onFxThread(() -> Application.setUserAgentStylesheet(previous));
         }
     }
 

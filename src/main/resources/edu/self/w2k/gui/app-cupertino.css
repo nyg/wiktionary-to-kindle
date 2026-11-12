@@ -1,0 +1,192 @@
+/*
+ * Cupertino follows iOS; these are AppKit's values on macOS 27, sampled from controls it drew off-screen.
+ * As author rules they outrank every Cupertino rule they touch, variants included, so a token set on
+ * .button also replaces .button:default's, which is restated below for that reason.
+ */
+.root {
+    -macos-label: rgba(0, 0, 0, 0.85);
+    -macos-control: #efefef;
+    -macos-control-pressed: #dcdcdc;
+    -macos-segment-selected: #d6d6d6;
+    -macos-field-border: #e0e0e0;
+    -macos-field-button: #ededed;
+    -macos-check-box: #ebebeb;
+    -macos-separator: rgba(0, 0, 0, 0.1);
+    -macos-focus-ring: rgba(0, 103, 244, 0.5);
+    -color-fg-default: -macos-label;
+}
+
+.button {
+    -color-button-bg: -macos-control;
+    -color-button-border: transparent;
+    -color-button-bg-hover: -macos-control;
+    -color-button-border-hover: transparent;
+    -color-button-bg-focused: -macos-control;
+    -color-button-border-focused: transparent;
+    -color-button-bg-pressed: -macos-control-pressed;
+    -color-button-border-pressed: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-effect: null;
+    -fx-padding: 3.5px 12px 3.5px 12px;
+}
+
+.button:hover {
+    -fx-opacity: 1;
+}
+
+.button:default {
+    -color-button-bg: -color-accent-emphasis;
+    -color-button-fg: -color-fg-emphasis;
+    -color-button-bg-hover: -color-accent-emphasis;
+    -color-button-fg-hover: -color-fg-emphasis;
+    -color-button-bg-focused: -color-accent-emphasis;
+    -color-button-fg-focused: -color-fg-emphasis;
+    -color-button-bg-pressed: -color-accent-6;
+    -color-button-fg-pressed: -color-fg-emphasis;
+}
+
+.button:default:disabled {
+    -color-button-bg: -macos-control;
+    -color-button-fg: -color-fg-default;
+    -color-button-border: transparent;
+}
+
+/* macOS rings a push button only when the keyboard put focus there, never after a click. */
+.button:focus-visible {
+    -fx-background-color: -macos-focus-ring, -color-button-bg;
+    -fx-background-insets: -3px, 0;
+    -fx-background-radius: 9px, 6px;
+}
+
+/* A non-editable combo box is an NSPopUpButton: a filled button with up and down chevrons. */
+.combo-box-base,
+.combo-box-base:focused {
+    -fx-background-color: -macos-control;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+}
+
+.combo-box-base:focus-visible {
+    -fx-background-color: -macos-focus-ring, -macos-control;
+    -fx-background-insets: -3px, 0;
+    -fx-background-radius: 9px, 6px;
+}
+
+.combo-box-base > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 9px 0 6px;
+}
+
+.combo-box-base > .arrow-button > .arrow {
+    -fx-shape: "M3.5 0 L7 3.5 L6.2 4.3 L3.5 1.6 L0.8 4.3 L0 3.5 Z M0 7.5 L0.8 6.7 L3.5 9.4 L6.2 6.7 L7 7.5 L3.5 11 Z";
+    -fx-scale-shape: true;
+    -fx-padding: 5px 3.5px 5px 3.5px;
+    -fx-background-color: -macos-label;
+}
+
+.combo-box > .list-cell {
+    -fx-padding: 3.5px 8px 3.5px 10px;
+}
+
+/* An editable one is an NSComboBox: a text field with a chevron in a small filled box on its right. */
+.combo-box-base:editable {
+    -fx-background-color: -macos-field-border, -color-bg-default;
+    -fx-background-insets: 0, 1px;
+    -fx-background-radius: 6.5px, 5.5px;
+}
+
+.combo-box-base:editable:focused {
+    -fx-background-color: -macos-focus-ring, -macos-field-border, -color-bg-default;
+    -fx-background-insets: -3px, 0, 1px;
+    -fx-background-radius: 9.5px, 6.5px, 5.5px;
+}
+
+.combo-box-base:editable > .arrow-button {
+    -fx-background-color: -macos-field-button;
+    -fx-background-insets: 3.5px 4px 3.5px 0;
+    -fx-background-radius: 4px;
+    -fx-padding: 0 12px 0 8px;
+}
+
+.combo-box-base:editable > .arrow-button > .arrow {
+    -fx-shape: "M0 0.9 L0.9 0 L4 3.1 L7.1 0 L8 0.9 L4 4.9 Z";
+    -fx-padding: 2.45px 4px 2.45px 4px;
+}
+
+.combo-box-base > .text-field,
+.combo-box-base > .text-field:focused {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 3.5px 6px 3.5px 7px;
+}
+
+.text-field {
+    -color-input-border: -macos-field-border;
+    -color-input-border-focused: -macos-field-border;
+    -fx-background-radius: 6.5px, 5.5px;
+    -fx-padding: 3.5px 7px 3.5px 7px;
+}
+
+.text-field:focused {
+    -fx-background-color: -macos-focus-ring, -color-input-border, -color-input-bg-focused;
+    -fx-background-insets: -3px, 0, 1px;
+    -fx-background-radius: 9.5px, 6.5px, 5.5px;
+}
+
+.check-box > .box {
+    -fx-background-color: -macos-check-box;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4.5px;
+    -fx-padding: 3.5px 3px 3.5px 3px;
+}
+
+.check-box > .box > .mark {
+    -fx-background-color: transparent;
+}
+
+.check-box:selected > .box {
+    -fx-background-color: -color-accent-emphasis;
+}
+
+.check-box:selected > .box > .mark {
+    -fx-background-color: -color-fg-emphasis;
+}
+
+/* A unified toolbar: the window's own background under a hairline, the title at 15px. */
+.macos .header-bar {
+    -fx-background-color: -color-bg-default;
+    -fx-border-color: transparent transparent -macos-separator transparent;
+    -fx-border-width: 0 0 0.5px 0;
+}
+
+.macos .window-title {
+    -fx-font-size: 15px;
+}
+
+.macos.dialog-pane > .header-panel {
+    -fx-background-color: -color-bg-default;
+    -fx-border-color: transparent transparent -macos-separator transparent;
+    -fx-border-width: 0 0 0.5px 0;
+}
+
+/* An NSSegmentedControl: one filled track, the selected segment a shade darker, sized to its label. */
+.macos .segmented .toggle-button,
+.macos .segmented .toggle-button:hover {
+    -fx-background-color: -macos-control;
+    -fx-min-width: 0;
+    -fx-padding: 3.5px 12px 3.5px 12px;
+}
+
+.macos .segmented .toggle-button:selected,
+.macos .segmented .toggle-button:selected:focused {
+    -fx-background-color: -macos-segment-selected;
+}
+
+.macos .segmented .left-pill {
+    -fx-background-radius: 6px 0 0 6px;
+}
+
+.macos .segmented .right-pill {
+    -fx-background-radius: 0 6px 6px 0;
+}

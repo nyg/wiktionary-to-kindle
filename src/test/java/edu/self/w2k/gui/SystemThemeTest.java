@@ -2,6 +2,8 @@ package edu.self.w2k.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import atlantafx.base.theme.CupertinoDark;
 import atlantafx.base.theme.CupertinoLight;
 import atlantafx.base.theme.PrimerDark;
@@ -11,6 +13,7 @@ import edu.self.w2k.config.AppTheme;
 import javafx.application.ColorScheme;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -55,6 +58,36 @@ class SystemThemeTest {
 
         // Then
         assertThat(theme).isInstanceOf(PrimerLight.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "JAVAFX, LIGHT, ''",
+            "JAVAFX, DARK, ''",
+            "PRIMER, LIGHT, /edu/self/w2k/gui/app-atlantafx.css",
+            "PRIMER, DARK, /edu/self/w2k/gui/app-atlantafx.css",
+            "CUPERTINO, LIGHT, /edu/self/w2k/gui/app-atlantafx.css|/edu/self/w2k/gui/app-cupertino.css",
+            "CUPERTINO, DARK, /edu/self/w2k/gui/app-atlantafx.css|/edu/self/w2k/gui/app-cupertino.css"
+                              + "|/edu/self/w2k/gui/app-cupertino-dark.css",
+    })
+    void should_layer_the_app_stylesheets_that_go_with_the_theme_when_one_is_chosen(AppTheme choice,
+                                                                                    ColorScheme scheme,
+                                                                                    String expected) {
+        // When
+        List<String> stylesheets = SystemTheme.stylesheetsFor(choice, scheme);
+
+        // Then
+        assertThat(stylesheets).containsExactly(expected.isEmpty() ? new String[0] : expected.split("\\|"));
+    }
+
+    @Test
+    void should_ship_every_stylesheet_a_theme_can_layer() {
+        // When
+        List<String> stylesheets = SystemTheme.stylesheetsFor(AppTheme.CUPERTINO, ColorScheme.DARK);
+
+        // Then
+        assertThat(stylesheets).isNotEmpty()
+                               .allSatisfy(sheet -> assertThat(SystemTheme.class.getResource(sheet)).isNotNull());
     }
 
     @Test

@@ -198,6 +198,15 @@
     -fx-rotate: 90;
 }
 
+/* AppKit's disclosure button is a chevron before the label, turning to point down. */
+.macos .disclosure-arrow {
+    -fx-shape: "M0 0.9 L0.9 0 L4.5 3.6 L0.9 7.2 L0 6.3 L2.7 3.6 Z";
+    -fx-min-width: 4.5px;
+    -fx-max-width: 4.5px;
+    -fx-min-height: 7.2px;
+    -fx-max-height: 7.2px;
+}
+
 /* WinUI's expander and GNOME's expander row put a chevron after the label, pointing down. */
 .windows .disclosure,
 .gnome .disclosure {
