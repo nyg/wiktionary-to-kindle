@@ -501,6 +501,7 @@ class MainFxmlLoadTest {
         HeaderBar headerBar = readField(controller, "headerBar", HeaderBar.class);
         Node switcher = readField(controller, "pageSwitcher", Node.class);
         Node buildPageButton = readField(controller, "buildPageButton", Node.class);
+        Node dumpsPageButton = readField(controller, "dumpsPageButton", Node.class);
         AtomicReference<Scene> scene = new AtomicReference<>();
         AtomicReference<Stage> stage = new AtomicReference<>();
         CountDownLatch laidOut = new CountDownLatch(1);
@@ -519,13 +520,17 @@ class MainFxmlLoadTest {
         assertThat(laidOut.await(30, TimeUnit.SECONDS)).as("layout pulse timed out").isTrue();
 
         Bounds bar = headerBar.localToScene(headerBar.getLayoutBounds());
-        Bounds button = buildPageButton.localToScene(buildPageButton.getLayoutBounds());
-        Bounds switcherBounds = switcher.localToScene(switcher.getLayoutBounds());
+        Bounds slot = switcher.localToScene(switcher.getLayoutBounds());
+        Bounds first = buildPageButton.localToScene(buildPageButton.getLayoutBounds());
+        Bounds last = dumpsPageButton.localToScene(dumpsPageButton.getLayoutBounds());
         double middle = bar.getCenterY();
-        assertThat(headerArea(scene.get(), bar.getMinX() + 120, middle)).as("left of the switcher").isEqualTo("DRAGBAR");
-        assertThat(headerArea(scene.get(), switcherBounds.getMaxX() - 120, middle)).as("right of the switcher")
+        assertThat(headerArea(scene.get(), (bar.getMinX() + slot.getMinX()) / 2, middle)).as("left of the switcher")
                 .isEqualTo("DRAGBAR");
-        assertThat(headerArea(scene.get(), button.getCenterX(), button.getCenterY())).as("a switcher button")
+        assertThat(headerArea(scene.get(), (slot.getMinX() + first.getMinX()) / 2, middle))
+                .as("between the switcher's edge and its first button").isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), (last.getMaxX() + slot.getMaxX()) / 2, middle))
+                .as("between the switcher's last button and its edge").isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), first.getCenterX(), first.getCenterY())).as("a switcher button")
                 .isNotEqualTo("DRAGBAR");
         onFxThread(() -> stage.get().hide());
     }
