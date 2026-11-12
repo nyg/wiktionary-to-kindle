@@ -4,11 +4,25 @@ Turns Wiktionary into a MOBI dictionary your Kindle can use for tap-to-define â€
 
 Available as a desktop app that bundles its own Java runtime, or as a command-line tool.
 
-| macOS | Windows | Linux |
-|:-----:|:-------:|:-----:|
-| ![The app on macOS: the title bar holds the name, version and a Build/Dumps switcher; the form is centred with right-aligned labels](assets/screenshots/macos.png) | ![The app on Windows: native title bar, a File and Help menu bar, underlined tabs and a left-aligned form](assets/screenshots/windows.png) | ![The app on GNOME: a header bar with the view switcher and a menu button, and the form as a rounded list](assets/screenshots/linux-gnome.png) |
+![The app on macOS, Windows and GNOME: a unified title bar with the version and a Build/Dumps switcher on macOS; the native title bar, a File and Help menu bar and underlined tabs on Windows; a header bar with a view switcher, a menu button and the form as a rounded list on GNOME](assets/screenshots/desktops.png)
 
 The app follows each desktop's own conventions: the title bar, menus, button order and wording all change with it, and KDE gets its own variant too. On macOS the app opens with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino theme and elsewhere with its Primer theme, both following the system's light or dark appearance; Settings can switch to either, or to the plain JavaFX look.
+
+## Contents
+
+- [Install](#install)
+  - [macOS](#macos)
+  - [Windows](#windows)
+  - [Linux](#linux)
+  - [Manual download](#manual-download)
+- [Using the app](#using-the-app)
+  - [On your Kindle](#on-your-kindle)
+  - [Where files go](#where-files-go)
+- [Command line](#command-line)
+- [How it works](#how-it-works)
+- [Inflected forms](#inflected-forms)
+- [Examples of generated dictionaries](#examples-of-generated-dictionaries)
+- [Building from source](#building-from-source)
 
 ## Install
 
