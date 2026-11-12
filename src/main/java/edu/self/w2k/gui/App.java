@@ -31,9 +31,22 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         uiAppender = installLogAppenders();
+        showMainWindow(stage, uiAppender);
 
+        // Logged after the appenders are installed, so both the console pane and the log file always
+        // open with the environment details a bug report needs.
+        log.info("{} {} started — Java {}, {} {}, max heap {} MB",
+                 AppInfo.SLUG,
+                 AppVersion.get(),
+                 Runtime.version(),
+                 System.getProperty("os.name"),
+                 System.getProperty("os.arch"),
+                 Runtime.getRuntime().maxMemory() / (1024 * 1024));
+    }
+
+    static MainController showMainWindow(Stage stage, UiLogAppender appender) throws IOException {
         FXMLLoader loader = new FXMLLoader(App.class.getResource(MAIN_FXML));
-        loader.setControllerFactory(_ -> new MainController(uiAppender));
+        loader.setControllerFactory(_ -> new MainController(appender));
         Scene scene = new Scene(loader.load());
         scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
         MainController controller = loader.getController();
@@ -46,16 +59,7 @@ public class App extends Application {
         loadIcon().ifPresent(stage.getIcons()::add);
         stage.show();
         stage.setMinHeight(stage.getHeight());
-
-        // Logged after the appenders are installed, so both the console pane and the log file always
-        // open with the environment details a bug report needs.
-        log.info("{} {} started — Java {}, {} {}, max heap {} MB",
-                 AppInfo.SLUG,
-                 AppVersion.get(),
-                 Runtime.version(),
-                 System.getProperty("os.name"),
-                 System.getProperty("os.arch"),
-                 Runtime.getRuntime().maxMemory() / (1024 * 1024));
+        return controller;
     }
 
     @Override
@@ -94,7 +98,7 @@ public class App extends Application {
         }
     }
 
-    private java.util.Optional<Image> loadIcon() {
+    private static java.util.Optional<Image> loadIcon() {
         var stream = App.class.getResourceAsStream(ICON);
         return stream == null ? java.util.Optional.empty() : java.util.Optional.of(new Image(stream));
     }
