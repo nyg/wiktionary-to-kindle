@@ -28,6 +28,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -45,6 +46,7 @@ import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.input.Clipboard;
@@ -486,6 +488,48 @@ class MainFxmlLoadTest {
         assertThat(windowTitle.getText()).isEqualTo("Wiktionary to Kindle");
     }
 
+    @ParameterizedTest
+    @CsvSource({"MACOS", "GNOME"})
+    void should_drag_the_window_from_anywhere_in_the_header_but_its_buttons_when_it_is_the_title_bar(
+            DesktopPlatform platform) throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, platform);
+        HeaderBar headerBar = readField(controller, "headerBar", HeaderBar.class);
+        Node switcher = readField(controller, "pageSwitcher", Node.class);
+        Node buildPageButton = readField(controller, "buildPageButton", Node.class);
+        AtomicReference<Scene> scene = new AtomicReference<>();
+        AtomicReference<Stage> stage = new AtomicReference<>();
+        CountDownLatch laidOut = new CountDownLatch(1);
+
+        onFxThread(() -> {
+            scene.set(new Scene(root.get(), 680, 400));
+            scene.get().getStylesheets().add(App.class.getResource(App.STYLESHEET).toExternalForm());
+            scene.get().addPostLayoutPulseListener(laidOut::countDown);
+            stage.set(new Stage());
+            controller.attachTo(stage.get());
+            stage.get().setScene(scene.get());
+            stage.get().setX(-4000);
+            stage.get().show();
+            Platform.requestNextPulse();
+        });
+        assertThat(laidOut.await(30, TimeUnit.SECONDS)).as("layout pulse timed out").isTrue();
+
+        Bounds bar = headerBar.localToScene(headerBar.getLayoutBounds());
+        Bounds button = buildPageButton.localToScene(buildPageButton.getLayoutBounds());
+        Bounds switcherBounds = switcher.localToScene(switcher.getLayoutBounds());
+        double middle = bar.getCenterY();
+        assertThat(headerArea(scene.get(), bar.getMinX() + 120, middle)).as("left of the switcher").isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), switcherBounds.getMaxX() - 120, middle)).as("right of the switcher")
+                .isEqualTo("DRAGBAR");
+        assertThat(headerArea(scene.get(), button.getCenterX(), button.getCenterY())).as("a switcher button")
+                .isNotEqualTo("DRAGBAR");
+        onFxThread(() -> stage.get().hide());
+    }
+
     @Test
     void should_show_one_page_at_a_time_and_never_none_when_a_segment_is_clicked() throws Exception {
         if (!toolkitReady) {
@@ -805,6 +849,26 @@ class MainFxmlLoadTest {
                 .contains("created on the first download");
         assertThat(MainController.dumpsPlaceholder(Path.of(System.getProperty("java.io.tmpdir"))))
                 .isEqualTo("No dumps downloaded yet.");
+    }
+
+    /** JavaFX exposes no public hit test for the draggable header area, so this asks the one glass uses. */
+    private static String headerArea(Scene scene, double x, double y) throws Exception {
+        Class<?> listenerType = Class.forName("javafx.scene.Scene$ScenePeerListener");
+        var constructor = listenerType.getDeclaredConstructor(Scene.class);
+        constructor.setAccessible(true);
+        Object listener = constructor.newInstance(scene);
+        var pick = listenerType.getMethod("pickHeaderArea", double.class, double.class);
+        pick.setAccessible(true);
+        AtomicReference<Object> area = new AtomicReference<>();
+        onFxThread(() -> {
+            try {
+                area.set(pick.invoke(listener, x, y));
+            }
+            catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        return String.valueOf(area.get());
     }
 
     private static void onFxThread(Runnable action) throws Exception {

@@ -37,10 +37,10 @@
 
             <HeaderBar fx:id="headerBar" styleClass="header-bar">
                 <left>
-                    <Label fx:id="windowTitle" styleClass="window-title"/>
+                    <Label fx:id="windowTitle" styleClass="window-title" HeaderBar.dragType="DRAGGABLE_SUBTREE"/>
                 </left>
                 <center>
-                    <HBox fx:id="pageSwitcher" styleClass="segmented">
+                    <HBox fx:id="pageSwitcher" styleClass="segmented" HeaderBar.dragType="DRAGGABLE">
                         <ToggleButton fx:id="buildPageButton" text="Build" toggleGroup="$pageGroup"
                                       selected="true" styleClass="left-pill"/>
                         <ToggleButton fx:id="dumpsPageButton" text="Dumps" toggleGroup="$pageGroup"

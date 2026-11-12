@@ -51,6 +51,7 @@ import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -234,6 +235,7 @@ public class MainController {
      */
     private Region balancingSpacer(Stage stage) {
         Region spacer = new Region();
+        HeaderBar.setDragType(spacer, HeaderDragType.DRAGGABLE);
         spacer.minWidthProperty().bind(Bindings.createDoubleBinding(
                 () -> Math.max(0, primaryMenuButton.getWidth()
                                   + HeaderBar.getRightSystemInset(stage).getWidth()
