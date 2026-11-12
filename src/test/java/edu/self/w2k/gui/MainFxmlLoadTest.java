@@ -51,6 +51,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.ToggleButton;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -395,6 +396,54 @@ class MainFxmlLoadTest {
             index.set(first == null ? -1 : first.getIndex());
         });
         return index.get();
+    }
+
+    @Test
+    void should_show_one_page_at_a_time_and_never_none_when_a_segment_is_clicked() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ToggleButton dumpsPageButton = readField(controller, "dumpsPageButton", ToggleButton.class);
+        Node buildPage = readField(controller, "buildPage", Node.class);
+        Node dumpsPage = readField(controller, "dumpsPage", Node.class);
+
+        assertThat(buildPage.isVisible()).as("the window opens on the Build page").isTrue();
+        assertThat(dumpsPage.isVisible()).isFalse();
+
+        onFxThread(dumpsPageButton::fire);
+
+        assertThat(buildPage.isVisible()).isFalse();
+        assertThat(dumpsPage.isVisible()).isTrue();
+
+        onFxThread(dumpsPageButton::fire);
+
+        assertThat(dumpsPageButton.isSelected())
+                .as("clicking the selected segment again must not leave the window blank")
+                .isTrue();
+        assertThat(dumpsPage.isVisible()).isTrue();
+    }
+
+    @Test
+    void should_keep_the_log_and_the_status_out_of_the_way_when_the_window_opens() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        MainController controller = loadOnFxThread(new AtomicReference<>());
+        ToggleButton logToggle = readField(controller, "logToggle", ToggleButton.class);
+        ListView<String> logView = readLogView(controller);
+        Node progressBox = readField(controller, "progressBox", Node.class);
+
+        assertThat(progressBox.isVisible()).as("an idle window shows no progress and no \"Ready\"").isFalse();
+        assertThat(logView.isVisible()).isFalse();
+        assertThat(logView.isManaged()).as("a closed log must take no space").isFalse();
+
+        onFxThread(logToggle::fire);
+
+        assertThat(logView.isVisible()).isTrue();
+        assertThat(logView.isManaged()).isTrue();
     }
 
     @Test

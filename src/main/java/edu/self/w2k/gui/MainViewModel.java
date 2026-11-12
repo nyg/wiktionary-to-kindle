@@ -50,11 +50,13 @@ public class MainViewModel {
 
     private final BooleanProperty startable = new SimpleBooleanProperty(false);
     private final BooleanProperty wordLanguageSelectable = new SimpleBooleanProperty(false);
+    private final BooleanProperty statusShown = new SimpleBooleanProperty(false);
 
     public MainViewModel() {
         title.bind(Bindings.createStringBinding(this::computeTitle, edition, wordLanguage));
         startable.bind(edition.isNotNull().and(wordLanguage.isNotNull()).and(running.not()));
         wordLanguageSelectable.bind(edition.isNotNull());
+        statusShown.bind(running.or(progress.isNotEqualTo(ProgressSnapshot.idle())));
     }
 
     private String computeTitle() {
@@ -114,6 +116,10 @@ public class MainViewModel {
 
     public ReadOnlyBooleanProperty wordLanguageSelectableProperty() {
         return wordLanguageSelectable;
+    }
+
+    public ReadOnlyBooleanProperty statusShownProperty() {
+        return statusShown;
     }
 
     public ObjectProperty<Path> lastOutputProperty() {

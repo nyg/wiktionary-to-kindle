@@ -14,3 +14,48 @@
     -fx-background-color: -color-accent-subtle;
     -fx-text-fill: -color-fg-default;
 }
+
+.header-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: transparent transparent -color-border-default transparent;
+}
+
+/* A macOS toolbar switcher, as in Finder: borderless segments, the selected one filled in grey. */
+.segmented .toggle-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-effect: null;
+    -fx-text-fill: -color-fg-default;
+}
+
+.segmented .toggle-button:hover {
+    -fx-background-color: -color-neutral-subtle;
+}
+
+.segmented .toggle-button:selected,
+.segmented .toggle-button:selected:focused {
+    -fx-background-color: -color-neutral-muted;
+    -fx-text-fill: -color-fg-default;
+}
+
+.disclosure {
+    -fx-text-fill: -color-fg-default;
+}
+
+.disclosure-arrow {
+    -fx-background-color: -color-fg-muted;
+}
+
+/* Cupertino sizes table headers for touch; macOS draws them at about 28px, in regular weight. */
+.table-view > .column-header-background .column-header {
+    -fx-size: 28px;
+    -fx-font-weight: normal;
+}
+
+/* A disabled default button keeps its accent fill under Cupertino; macOS greys it like any other. */
+.button:default:disabled {
+    -color-button-bg: -color-bg-default;
+    -color-button-fg: -color-fg-default;
+    -color-button-border: -color-border-default;
+}

@@ -23,20 +23,29 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringExpression;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.skin.VirtualFlow;
+import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 
@@ -63,13 +72,35 @@ public class MainController {
 
     private static final String EDITION_FIRST_PROMPT = "Pick a Wiktionary edition first";
 
+    private static final String NO_TITLE_YET = "—";
+
+    private static final PseudoClass PLACEHOLDER = PseudoClass.getPseudoClass("placeholder");
+
+    private static final double DEFAULT_LOG_HEIGHT = 240;
+
+    /** The height of a macOS window toolbar unified with its title bar. */
+    private static final double UNIFIED_TITLE_BAR_HEIGHT = 52;
+
+    @FXML private MenuBar menuBar;
+    @FXML private HeaderBar headerBar;
+    @FXML private VBox windowTitle;
+    @FXML private Label windowTitleName;
+    @FXML private Label windowSubtitle;
+    @FXML private ToggleGroup pageGroup;
+    @FXML private ToggleButton buildPageButton;
+    @FXML private ToggleButton dumpsPageButton;
+    @FXML private Node buildPage;
+    @FXML private Node dumpsPage;
+
     @FXML private ComboBox<Language> editionCombo;
     @FXML private ComboBox<Language> wordLanguageCombo;
     @FXML private Label titlePreview;
     @FXML private Button startButton;
     @FXML private Button cancelButton;
+    @FXML private VBox progressBox;
     @FXML private ProgressBar progressBar;
     @FXML private Label statusLabel;
+    @FXML private ToggleButton logToggle;
     @FXML private ListView<String> logView;
     @FXML private Button revealButton;
 
@@ -91,6 +122,7 @@ public class MainController {
     private VirtualFlow<?> logFlow;
     private String loadedWordLanguageEdition;
     private int idleTicks;
+    private double logHeight = DEFAULT_LOG_HEIGHT;
 
     public MainController(UiLogAppender logAppender) {
         this(logAppender, new KaikkiCatalog());
@@ -105,9 +137,11 @@ public class MainController {
     void initialize() {
         viewModel.preferencesProperty().set(Preferences.load());
 
+        setUpHeader();
         setUpLanguagePickers();
         setUpProgressBindings();
         setUpLogConsole();
+        setUpLogDisclosure();
         setUpDumpsTable();
 
         pipeline = new PipelineService(viewModel, this::onProgress);
@@ -122,8 +156,37 @@ public class MainController {
         startButton.disableProperty().bind(viewModel.startableProperty().not());
         cancelButton.disableProperty().bind(viewModel.runningProperty().not());
         revealButton.disableProperty().bind(viewModel.lastOutputProperty().isNull());
+        revealButton.setText(DesktopPlatform.current().revealLabel());
 
         refreshDumps();
+    }
+
+    /**
+     * Only an extended stage has room for a title of its own; a decorated one already shows it in the
+     * system title bar, so the header keeps just the page switcher.
+     */
+    private void setUpHeader() {
+        // Left visible so its skin still installs the system menus, but laid out at zero size.
+        menuBar.setManaged(!DesktopPlatform.current().hasSystemMenuBar());
+        windowTitle.setVisible(false);
+        windowTitle.managedProperty().bind(windowTitle.visibleProperty());
+
+        buildPage.visibleProperty().bind(buildPageButton.selectedProperty());
+        dumpsPage.visibleProperty().bind(dumpsPageButton.selectedProperty());
+        // Clicking the selected segment would otherwise deselect it and leave no page showing.
+        pageGroup.selectedToggleProperty().addListener((_, previous, current) -> {
+            if (current == null && previous != null) {
+                previous.setSelected(true);
+            }
+        });
+    }
+
+    void extendIntoTitleBar(Stage stage, String title, String subtitle) {
+        windowTitleName.setText(title);
+        windowSubtitle.setText(subtitle);
+        windowTitle.setVisible(true);
+        headerBar.setMinHeight(UNIFIED_TITLE_BAR_HEIGHT);
+        HeaderBar.setSystemButtonHeight(stage, UNIFIED_TITLE_BAR_HEIGHT);
     }
 
     private void setUpLanguagePickers() {
@@ -145,7 +208,10 @@ public class MainController {
 
         viewModel.editionProperty().bind(editionCombo.valueProperty());
         viewModel.wordLanguageProperty().bind(wordLanguageCombo.valueProperty());
-        titlePreview.textProperty().bind(viewModel.titleProperty());
+        StringExpression title = viewModel.titleProperty();
+        titlePreview.textProperty().bind(Bindings.when(title.isEmpty()).then(NO_TITLE_YET).otherwise(title));
+        titlePreview.pseudoClassStateChanged(PLACEHOLDER, true);
+        title.addListener((_, _, text) -> titlePreview.pseudoClassStateChanged(PLACEHOLDER, text.isEmpty()));
         wordLanguageCombo.disableProperty().bind(viewModel.wordLanguageSelectableProperty().not());
 
         editionCombo.valueProperty().addListener((_, _, edition) -> onEditionChanged(edition));
@@ -203,6 +269,10 @@ public class MainController {
                 () -> viewModel.progressProperty().get().fraction(), viewModel.progressProperty()));
         statusLabel.textProperty().bind(Bindings.createStringBinding(
                 () -> viewModel.progressProperty().get().message(), viewModel.progressProperty()));
+        // Hidden rather than unmanaged: it is also the footer's spacer, holding the buttons apart.
+        progressBox.visibleProperty().bind(viewModel.statusShownProperty());
+        progressBar.visibleProperty().bind(viewModel.runningProperty());
+        progressBar.managedProperty().bind(progressBar.visibleProperty());
     }
 
     private void setUpLogConsole() {
@@ -213,6 +283,29 @@ public class MainController {
         logDrain.setCycleCount(Animation.INDEFINITE);
         logDrain.play();
         logAppender.setWakeListener(this::wakeLogDrain);
+    }
+
+    private void setUpLogDisclosure() {
+        logView.visibleProperty().bind(logToggle.selectedProperty());
+        logView.managedProperty().bind(logView.visibleProperty());
+        logToggle.selectedProperty().addListener((_, _, shown) -> resizeWindowForLog(shown));
+    }
+
+    /**
+     * Grows or shrinks the window by the log's height, as a disclosure does, so opening the log never
+     * squeezes the form and closing it leaves no empty space behind.
+     */
+    private void resizeWindowForLog(boolean shown) {
+        if (logView.getScene() == null || !(logView.getScene().getWindow() instanceof Stage stage)
+                || stage.isMaximized() || stage.isFullScreen()) {
+            return;
+        }
+        double spacing = logView.getParent() instanceof VBox box ? box.getSpacing() : 0;
+        if (!shown) {
+            logHeight = logView.getHeight();
+        }
+        double change = logHeight + spacing;
+        stage.setHeight(stage.getHeight() + (shown ? change : -change));
     }
 
     private void wakeLogDrain() {
@@ -404,6 +497,7 @@ public class MainController {
 
     private void onFailed(Throwable error) {
         log.error("Pipeline failed", error);
+        logToggle.setSelected(true);
         viewModel.report(new ProgressSnapshot(0, "Failed — " + error.getLocalizedMessage()));
         refreshDumps();
     }
