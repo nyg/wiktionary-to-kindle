@@ -4,7 +4,11 @@ Turns Wiktionary into a MOBI dictionary your Kindle can use for tap-to-define �
 
 Available as a desktop app that bundles its own Java runtime, or as a command-line tool.
 
-![The Build tab: pick a Wiktionary edition and a word language, press Build dictionary, and watch the download, parse and MOBI conversion stream into the log](assets/screenshots/app-build-tab.png)
+| macOS | Windows | Linux |
+|:-----:|:-------:|:-----:|
+| ![The app on macOS: the title bar holds the name, version and a Build/Dumps switcher; the form is centred with right-aligned labels](assets/screenshots/macos.png) | ![The app on Windows: native title bar, a File and Help menu bar, underlined tabs and a left-aligned form](assets/screenshots/windows.png) | ![The app on GNOME: a header bar with the view switcher and a menu button, and the form as a rounded list](assets/screenshots/linux-gnome.png) |
+
+The app follows each desktop's own conventions: the title bar, menus, button order and wording all change with it, and KDE gets its own variant too. On macOS the app opens with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino theme and elsewhere with its Primer theme, both following the system's light or dark appearance; Settings can switch to either, or to the plain JavaFX look.
 
 ## Install
 
@@ -15,8 +19,6 @@ The desktop app is the recommended way to run this — it bundles its own Java r
 ```sh
 brew install --cask nyg/tap/wiktionary-to-kindle
 ```
-
-On macOS the app opens themed with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino themes, following the system appearance and switching between light and dark as you do. Preferences has a Theme setting — *JavaFX* or *AtlantaFX — Cupertino* — that applies the moment you press OK, so either look is available on any platform; only the default differs.
 
 ### Windows
 
@@ -69,15 +71,15 @@ xattr -dr com.apple.quarantine "/Applications/Wiktionary to Kindle.app"
 
 1. Pick a **Wiktionary edition** — which Wiktionary the definitions are written in. The Greek Wiktionary defines words in Greek.
 2. Pick a **word language** — which language's words to include. Any language may appear in any edition.
-3. Press **Build dictionary**.
+3. Press **Build Dictionary**.
 
 So *edition: Greek, word language: English* gives you an English–Greek dictionary: look up an English word, read the definition in Greek. The title updates as you choose, so you can see what you are about to build.
 
 The first build for an edition downloads its dump, which is 100 MB to several GB. Progress and a live log are shown throughout, and **Cancel** stops the run cleanly at any stage. Subsequent builds reuse the downloaded dump.
 
-When it finishes, **Show in folder** reveals the `.mobi` — `w2k-dictionary-en-el.mobi` for the example above. Copy it to your Kindle over USB, or send it to your device's Kindle email address.
+When it finishes, **Show in Finder** reveals the `.mobi` (*Open file location* on Windows, *Show in Files* on GNOME, *Open Containing Folder* on KDE) — `w2k-dictionary-en-el.mobi` for the example above. Copy it to your Kindle over USB, or send it to your device's Kindle email address.
 
-The **Dumps** tab lists what has been downloaded, with the Wiktionary edition, generation date and size, and lets you delete dumps you no longer need — worth checking, since they are the largest thing this app puts on your disk.
+The **Dumps** page lists what has been downloaded, with the Wiktionary edition, generation date and size, and lets you delete dumps you no longer need — worth checking, since they are the largest thing this app puts on your disk.
 
 ### On your Kindle
 
@@ -90,7 +92,7 @@ Once the `.mobi` is on the device, set it as the default dictionary for its lang
 
 | What | Location |
 |------|----------|
-| Dumps and dictionaries | `~/Documents/wiktionary-to-kindle/` (change in Preferences; the CLI uses the same folders) |
+| Dumps and dictionaries | `~/Documents/wiktionary-to-kindle/` (change in Settings; the CLI uses the same folders) |
 | Build leftovers | `dictionaries/intermediate/` — the HTML, OPF, NCX and cover files each build feeds to `kindling-cli`, one sub-folder per dictionary |
 | Settings | `~/.config/wiktionary-to-kindle/` — `%LOCALAPPDATA%\wiktionary-to-kindle\Config` on Windows |
 | Log file | `~/.local/state/wiktionary-to-kindle/logs/app.log`, rolled daily to `app-YYYY-MM-DD.log.gz` and kept 14 days — `%LOCALAPPDATA%\wiktionary-to-kindle\State` on Windows |
@@ -98,7 +100,7 @@ Once the `.mobi` is on the device, set it as the default dictionary for its lang
 
 macOS included, these follow the [XDG Base Directory specification](https://specifications.freedesktop.org/basedir-spec/latest/) and honour `XDG_CONFIG_HOME`, `XDG_CACHE_HOME` and `XDG_STATE_HOME`. Dumps and dictionaries deliberately sit in your documents folder instead — they are multi-gigabyte and the `.mobi` has to be found and copied to a Kindle, so both belong somewhere a file manager shows by default. That folder is still resolved the XDG way, via `XDG_DOCUMENTS_DIR`.
 
-Preferences also lets you delete the build leftovers as soon as a dictionary is built, point at a pre-installed `kindling-cli`, or pin a specific version. Maximum heap is shown there but cannot be changed: it is fixed when the app starts, and the bundle sizes it at 75% of your machine's RAM.
+Settings also lets you delete the build leftovers as soon as a dictionary is built, point at a pre-installed `kindling-cli`, or pin a specific version. Maximum heap is shown there but cannot be changed: it is fixed when the app starts, and the bundle sizes it at 75% of your machine's RAM.
 
 ## Command line
 
