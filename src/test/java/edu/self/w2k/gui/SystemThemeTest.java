@@ -86,7 +86,8 @@ class SystemThemeTest {
         List<String> stylesheets = SystemTheme.stylesheetsFor(AppTheme.CUPERTINO, ColorScheme.DARK);
 
         // Then
-        assertThat(stylesheets).allSatisfy(sheet -> assertThat(SystemTheme.class.getResource(sheet)).isNotNull());
+        assertThat(stylesheets).isNotEmpty()
+                               .allSatisfy(sheet -> assertThat(SystemTheme.class.getResource(sheet)).isNotNull());
     }
 
     @Test
