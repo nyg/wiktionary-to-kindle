@@ -25,17 +25,8 @@
 }
 
 .window-title {
-    -fx-alignment: center-left;
     -fx-padding: 0 0 0 8px;
-}
-
-.window-title-name {
     -fx-font-weight: bold;
-}
-
-.window-subtitle {
-    -fx-font-size: 11px;
-    -fx-opacity: 0.6;
 }
 
 .segmented {

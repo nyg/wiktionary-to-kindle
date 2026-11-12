@@ -37,10 +37,7 @@
 
             <HeaderBar fx:id="headerBar" styleClass="header-bar">
                 <left>
-                    <VBox fx:id="windowTitle" styleClass="window-title">
-                        <Label fx:id="windowTitleName" styleClass="window-title-name"/>
-                        <Label fx:id="windowSubtitle" styleClass="window-subtitle"/>
-                    </VBox>
+                    <Label fx:id="windowTitle" styleClass="window-title"/>
                 </left>
                 <center>
                     <HBox fx:id="pageSwitcher" styleClass="segmented">

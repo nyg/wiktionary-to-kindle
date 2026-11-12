@@ -53,7 +53,7 @@ class AppMenusTest {
     }
 
     @Test
-    void should_offer_only_settings_when_on_macos() {
+    void should_put_settings_under_file_and_about_under_help_when_on_macos() {
         // Given
         AppMenus.Actions actions = new AppMenus.Actions(settings, about, quit);
 
@@ -61,10 +61,12 @@ class AppMenusTest {
         List<Menu> menus = AppMenus.menuBar(DesktopPlatform.MACOS, actions);
 
         // Then
-        assertThat(menus).extracting(Menu::getText).containsExactly("File");
+        assertThat(menus).extracting(Menu::getText).containsExactly("File", "Help");
         assertThat(menus.getFirst().getItems()).extracting(MenuItem::getText).containsExactly("Settings…");
         assertThat(menus.getFirst().getItems().getFirst().getAccelerator())
                 .isEqualTo(KeyCombination.keyCombination("Shortcut+Comma"));
+        assertThat(menus.getLast().getItems()).extracting(MenuItem::getText)
+                .containsExactly("About Wiktionary to Kindle");
     }
 
     @Test

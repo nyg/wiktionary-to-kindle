@@ -34,6 +34,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
@@ -48,6 +49,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -429,7 +431,7 @@ class MainFxmlLoadTest {
 
         assertThat(root.get().getStyleClass()).contains(styleClass);
         assertThat(root.get().lookupAll(".form-label")).first()
-                .extracting(label -> ((javafx.scene.control.Label) label).getText())
+                .extracting(label -> ((Label) label).getText())
                 .isEqualTo(firstLabel);
         assertThat(((HBox) startButton.getParent()).getChildren().stream()
                            .filter(Button.class::isInstance)
@@ -439,6 +441,49 @@ class MainFxmlLoadTest {
         assertThat(menuBar.isManaged()).as("menu bar laid out in the window").isEqualTo(menuBarInWindow);
         assertThat(primaryMenuButton.isVisible()).as("primary menu button shown").isEqualTo(primaryMenu);
         assertThat(primaryMenuButton.getItems().isEmpty()).isEqualTo(!primaryMenu);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "MACOS, Shortcut+Comma",
+            "GNOME, Shortcut+Q",
+    })
+    void should_answer_the_shortcut_on_the_scene_when_the_desktop_menus_cannot(DesktopPlatform platform,
+                                                                               String shortcut)
+            throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, platform);
+        AtomicReference<Scene> scene = new AtomicReference<>();
+
+        onFxThread(() -> {
+            scene.set(new Scene(root.get()));
+            controller.attachTo(new Stage());
+        });
+
+        assertThat(scene.get().getAccelerators()).containsKey(KeyCombination.keyCombination(shortcut));
+    }
+
+    @Test
+    void should_title_the_macos_header_with_the_app_name_alone_when_attached_to_a_stage() throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, DesktopPlatform.MACOS);
+        Label windowTitle = readField(controller, "windowTitle", Label.class);
+
+        onFxThread(() -> {
+            new Scene(root.get());
+            controller.attachTo(new Stage());
+        });
+
+        assertThat(windowTitle.isVisible()).isTrue();
+        assertThat(windowTitle.getText()).isEqualTo("Wiktionary to Kindle");
     }
 
     @Test
