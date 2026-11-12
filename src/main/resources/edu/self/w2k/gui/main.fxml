@@ -5,17 +5,14 @@
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
-<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.HeaderBar?>
 <?import javafx.scene.layout.Region?>
@@ -27,7 +24,7 @@
     appender. The declaration is required even with a factory — FXMLLoader only consults the factory
     once it knows which controller class to ask for.
 -->
-<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+<BorderPane fx:id="root" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="edu.self.w2k.gui.MainController">
 
     <fx:define>
@@ -36,15 +33,7 @@
 
     <top>
         <VBox>
-            <MenuBar fx:id="menuBar" useSystemMenuBar="true">
-                <menus>
-                    <Menu text="File">
-                        <items>
-                            <MenuItem text="Settings…" accelerator="Shortcut+COMMA" onAction="#onPreferences"/>
-                        </items>
-                    </Menu>
-                </menus>
-            </MenuBar>
+            <MenuBar fx:id="menuBar"/>
 
             <HeaderBar fx:id="headerBar" styleClass="header-bar">
                 <left>
@@ -54,13 +43,20 @@
                     </VBox>
                 </left>
                 <center>
-                    <HBox styleClass="segmented">
+                    <HBox fx:id="pageSwitcher" styleClass="segmented">
                         <ToggleButton fx:id="buildPageButton" text="Build" toggleGroup="$pageGroup"
                                       selected="true" styleClass="left-pill"/>
                         <ToggleButton fx:id="dumpsPageButton" text="Dumps" toggleGroup="$pageGroup"
                                       styleClass="right-pill"/>
                     </HBox>
                 </center>
+                <right>
+                    <MenuButton fx:id="primaryMenuButton" styleClass="primary-menu">
+                        <graphic>
+                            <Region styleClass="primary-menu-icon"/>
+                        </graphic>
+                    </MenuButton>
+                </right>
             </HeaderBar>
         </VBox>
     </top>
@@ -68,27 +64,23 @@
     <center>
         <StackPane>
 
-            <BorderPane fx:id="buildPage">
+            <BorderPane fx:id="buildPage" styleClass="page">
                 <center>
                     <VBox styleClass="page-content">
-                        <GridPane styleClass="form">
-                            <columnConstraints>
-                                <ColumnConstraints halignment="RIGHT"/>
-                                <ColumnConstraints/>
-                            </columnConstraints>
-
-                            <Label text="Wiktionary edition:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                            <ComboBox fx:id="editionCombo" styleClass="form-field"
-                                      GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                            <Label text="Word language:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                            <ComboBox fx:id="wordLanguageCombo" styleClass="form-field"
-                                      GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                            <Label text="Dictionary title:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                            <Label fx:id="titlePreview" styleClass="title-preview"
-                                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-                        </GridPane>
+                        <VBox fx:id="form" styleClass="form">
+                            <HBox styleClass="form-row">
+                                <Label text="Wiktionary edition" styleClass="form-label" HBox.hgrow="ALWAYS"/>
+                                <ComboBox fx:id="editionCombo" styleClass="form-field"/>
+                            </HBox>
+                            <HBox styleClass="form-row">
+                                <Label text="Word language" styleClass="form-label" HBox.hgrow="ALWAYS"/>
+                                <ComboBox fx:id="wordLanguageCombo" styleClass="form-field"/>
+                            </HBox>
+                            <HBox styleClass="form-row, last">
+                                <Label text="Dictionary title" styleClass="form-label" HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="titlePreview" styleClass="form-field, title-preview"/>
+                            </HBox>
+                        </VBox>
 
                         <ToggleButton fx:id="logToggle" text="Log" styleClass="disclosure">
                             <graphic>
@@ -106,13 +98,12 @@
                             <ProgressBar fx:id="progressBar" progress="0" maxWidth="Infinity"/>
                         </VBox>
                         <Button fx:id="cancelButton" text="Cancel" onAction="#onCancel"/>
-                        <Button fx:id="startButton" text="Build Dictionary"
-                                defaultButton="true" onAction="#onStart"/>
+                        <Button fx:id="startButton" defaultButton="true" onAction="#onStart"/>
                     </HBox>
                 </bottom>
             </BorderPane>
 
-            <BorderPane fx:id="dumpsPage">
+            <BorderPane fx:id="dumpsPage" styleClass="page">
                 <center>
                     <VBox styleClass="page-content">
                         <TableView fx:id="dumpsTable" prefHeight="120" VBox.vgrow="ALWAYS">

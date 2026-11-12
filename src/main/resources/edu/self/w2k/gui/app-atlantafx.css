@@ -47,6 +47,63 @@
     -fx-background-color: -color-fg-muted;
 }
 
+.windows .segmented .toggle-button,
+.kde .segmented .toggle-button,
+.windows .segmented .toggle-button:hover,
+.kde .segmented .toggle-button:hover {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-fg-muted;
+}
+
+.windows .segmented .toggle-button:selected,
+.kde .segmented .toggle-button:selected,
+.windows .segmented .toggle-button:selected:focused,
+.kde .segmented .toggle-button:selected:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -color-accent-emphasis transparent;
+    -fx-text-fill: -color-fg-default;
+}
+
+.windows .header-bar,
+.windows .menu-bar {
+    -fx-background-color: -color-bg-default;
+    -fx-border-color: transparent;
+}
+
+.gnome .page {
+    -fx-background-color: -color-bg-subtle;
+}
+
+.gnome .form {
+    -fx-background-color: -color-border-default, -color-bg-default;
+}
+
+.gnome .form-row {
+    -fx-border-color: transparent transparent -color-border-muted transparent;
+}
+
+/* libadwaita buttons are borderless and tinted with the text colour; only the suggested one is filled. */
+.gnome .button {
+    -color-button-bg: -color-neutral-muted;
+    -color-button-border: transparent;
+    -fx-effect: null;
+}
+
+.gnome .button:default:disabled {
+    -color-button-bg: -color-neutral-muted;
+    -color-button-border: transparent;
+}
+
+.primary-menu:hover,
+.primary-menu:showing {
+    -fx-background-color: -color-neutral-muted;
+    -fx-background-radius: 6px;
+}
+
+.primary-menu-icon {
+    -fx-background-color: -color-fg-default;
+}
+
 /* Cupertino sizes table headers for touch; macOS draws them at about 28px, in regular weight. */
 .table-view > .column-header-background .column-header {
     -fx-size: 28px;

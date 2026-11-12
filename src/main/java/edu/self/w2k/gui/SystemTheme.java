@@ -4,6 +4,8 @@ import java.util.Optional;
 
 import atlantafx.base.theme.CupertinoDark;
 import atlantafx.base.theme.CupertinoLight;
+import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
 import atlantafx.base.theme.Theme;
 import edu.self.w2k.config.AppTheme;
 import javafx.application.Application;
@@ -23,7 +25,7 @@ public final class SystemTheme {
 
     /**
      * Applies {@code choice} and keeps following it, so picking a theme in Preferences restyles the
-     * open window. Under Cupertino the window also follows the system light/dark setting live.
+     * open window. Under an AtlantaFX theme the window also follows the system light/dark setting live.
      */
     public static void install(Scene scene, ObservableValue<AppTheme> choice) {
         apply(scene, choice.getValue());
@@ -35,13 +37,13 @@ public final class SystemTheme {
     public static void apply(Scene scene, AppTheme choice) {
         String tweaks = SystemTheme.class.getResource(STYLESHEET).toExternalForm();
 
-        if (choice != AppTheme.CUPERTINO) {
+        if (choice == AppTheme.JAVAFX) {
             Application.setUserAgentStylesheet(Application.STYLESHEET_MODENA);
             scene.getStylesheets().remove(tweaks);
             return;
         }
 
-        Theme theme = themeFor(systemColorScheme());
+        Theme theme = themeFor(choice, systemColorScheme());
         Application.setUserAgentStylesheet(theme.getUserAgentStylesheet());
         if (!scene.getStylesheets().contains(tweaks)) {
             scene.getStylesheets().add(tweaks);
@@ -49,8 +51,12 @@ public final class SystemTheme {
         log.debug("Applied the {} theme", theme.getName());
     }
 
-    static Theme themeFor(ColorScheme scheme) {
-        return scheme == ColorScheme.DARK ? new CupertinoDark() : new CupertinoLight();
+    static Theme themeFor(AppTheme choice, ColorScheme scheme) {
+        boolean dark = scheme == ColorScheme.DARK;
+        if (choice == AppTheme.PRIMER) {
+            return dark ? new PrimerDark() : new PrimerLight();
+        }
+        return dark ? new CupertinoDark() : new CupertinoLight();
     }
 
     private static ColorScheme systemColorScheme() {

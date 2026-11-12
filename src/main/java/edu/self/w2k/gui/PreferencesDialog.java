@@ -133,8 +133,8 @@ public class PreferencesDialog extends Dialog<Preferences> {
     }
 
     private static Label themeHint() {
-        Label label = new Label("Cupertino follows the system light and dark setting. "
-                                + "Either theme applies as soon as you press OK.");
+        Label label = new Label("The AtlantaFX themes follow the system light and dark setting. "
+                                + "A theme applies as soon as you press OK.");
         label.setWrapText(true);
         label.getStyleClass().add("path-label");
         return label;

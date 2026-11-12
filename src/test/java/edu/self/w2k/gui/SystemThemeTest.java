@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import atlantafx.base.theme.CupertinoDark;
 import atlantafx.base.theme.CupertinoLight;
+import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
 import atlantafx.base.theme.Theme;
+import edu.self.w2k.config.AppTheme;
 import javafx.application.ColorScheme;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +19,7 @@ class SystemThemeTest {
     @Test
     void should_pick_cupertino_dark_when_the_system_scheme_is_dark() {
         // When / Then
-        assertThat(SystemTheme.themeFor(ColorScheme.DARK))
+        assertThat(SystemTheme.themeFor(AppTheme.CUPERTINO, ColorScheme.DARK))
                 .isInstanceOf(CupertinoDark.class)
                 .matches(Theme::isDarkMode);
     }
@@ -29,11 +32,29 @@ class SystemThemeTest {
         ColorScheme colorScheme = scheme == null ? null : ColorScheme.valueOf(scheme);
 
         // When / Then
-        assertThat(SystemTheme.themeFor(colorScheme))
+        assertThat(SystemTheme.themeFor(AppTheme.CUPERTINO, colorScheme))
                 .isInstanceOf(CupertinoLight.class)
                 .extracting(Theme::getUserAgentStylesheet)
                 .asString()
                 .endsWith("cupertino-light.css");
+    }
+
+    @Test
+    void should_pick_primer_dark_when_primer_is_chosen_and_the_system_scheme_is_dark() {
+        // When
+        Theme theme = SystemTheme.themeFor(AppTheme.PRIMER, ColorScheme.DARK);
+
+        // Then
+        assertThat(theme).isInstanceOf(PrimerDark.class).matches(Theme::isDarkMode);
+    }
+
+    @Test
+    void should_pick_primer_light_when_primer_is_chosen_and_the_system_scheme_is_light() {
+        // When
+        Theme theme = SystemTheme.themeFor(AppTheme.PRIMER, ColorScheme.LIGHT);
+
+        // Then
+        assertThat(theme).isInstanceOf(PrimerLight.class);
     }
 
     @Test

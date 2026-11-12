@@ -12,7 +12,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 
@@ -40,14 +39,7 @@ public class App extends Application {
         MainController controller = loader.getController();
         SystemTheme.install(scene, controller.themeChoice());
 
-        if (DesktopPlatform.current().extendsIntoTitleBar()) {
-            stage.initStyle(StageStyle.EXTENDED);
-            stage.setTitle(AppInfo.DISPLAY_NAME);
-            controller.extendIntoTitleBar(stage, AppInfo.DISPLAY_NAME, "Version " + AppVersion.get());
-        }
-        else {
-            stage.setTitle(AppInfo.DISPLAY_NAME + " " + AppVersion.get());
-        }
+        controller.attachTo(stage);
         stage.setScene(scene);
         stage.setWidth(DEFAULT_WIDTH);
         stage.setMinWidth(MIN_WIDTH);

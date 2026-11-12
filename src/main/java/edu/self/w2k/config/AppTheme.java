@@ -11,7 +11,8 @@ import java.util.Optional;
 public enum AppTheme {
 
     JAVAFX("javafx", "JavaFX"),
-    CUPERTINO("cupertino", "AtlantaFX — Cupertino");
+    CUPERTINO("cupertino", "AtlantaFX — Cupertino"),
+    PRIMER("primer", "AtlantaFX — Primer");
 
     private final String key;
     private final String label;
@@ -29,9 +30,12 @@ public enum AppTheme {
         return label;
     }
 
-    /** Cupertino is a macOS look, so it is only the default there. */
+    /**
+     * Cupertino is a macOS look, so it is only the default there. Elsewhere Primer: flat and lightly
+     * rounded, it is much nearer Windows 11 and GNOME than Modena's gradients.
+     */
     public static AppTheme defaultFor(String osName) {
-        return osName != null && osName.toLowerCase(Locale.ROOT).startsWith("mac") ? CUPERTINO : JAVAFX;
+        return osName != null && osName.toLowerCase(Locale.ROOT).startsWith("mac") ? CUPERTINO : PRIMER;
     }
 
     public static AppTheme defaultForThisPlatform() {

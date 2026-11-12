@@ -5,6 +5,19 @@
     -fx-font-size: 13px;
 }
 
+/* Each desktop's body text: WinUI's 14px, GNOME's 11pt and KDE's 10pt; macOS keeps 13px. */
+.windows {
+    -fx-font-size: 14px;
+}
+
+.gnome {
+    -fx-font-size: 11pt;
+}
+
+.kde {
+    -fx-font-size: 10pt;
+}
+
 /* The header is the window's title bar on macOS and a toolbar row elsewhere. */
 .header-bar {
     -fx-padding: 6px 12px 6px 12px;
@@ -39,14 +52,117 @@
     -fx-spacing: 14px;
 }
 
+/* macOS and KDE: a centred form, its labels right-aligned against their controls. */
 .form {
     -fx-alignment: top-center;
-    -fx-hgap: 8px;
-    -fx-vgap: 10px;
+    -fx-fill-width: false;
+    -fx-spacing: 10px;
+}
+
+.form-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 8px;
+}
+
+.form-label {
+    -fx-alignment: center-right;
+    -fx-min-width: 150px;
+    -fx-pref-width: 150px;
+    -fx-max-width: 150px;
 }
 
 .form-field {
     -fx-pref-width: 340px;
+}
+
+/* Windows: the form and its label column both align left. */
+.windows .form {
+    -fx-alignment: top-left;
+}
+
+.windows .form-label {
+    -fx-alignment: center-left;
+}
+
+/* GNOME: a boxed list, each row a label on the left and its control or value on the right. */
+.gnome .form {
+    -fx-fill-width: true;
+    -fx-spacing: 0;
+    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1px;
+    -fx-background-radius: 12px, 11px;
+}
+
+.gnome .form-row {
+    -fx-min-height: 50px;
+    -fx-padding: 6px 12px 6px 12px;
+    -fx-border-color: transparent transparent -fx-box-border transparent;
+}
+
+.gnome .form-row.last {
+    -fx-border-color: transparent;
+}
+
+.gnome .form-label {
+    -fx-alignment: center-left;
+    -fx-max-width: 100000px;
+}
+
+.gnome .form-field {
+    -fx-pref-width: 300px;
+}
+
+.gnome .title-preview {
+    -fx-alignment: center-right;
+    -fx-opacity: 0.7;
+}
+
+/* Windows and KDE lead the toolbar with a row of tabs, underlined in the accent colour. */
+.windows .segmented .toggle-button,
+.kde .segmented .toggle-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-effect: null;
+    -fx-padding: 6px 12px 6px 12px;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 3px 0;
+    -fx-border-insets: 0 12px 0 12px;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.windows .segmented .toggle-button:selected,
+.kde .segmented .toggle-button:selected {
+    -fx-border-color: transparent transparent -fx-accent transparent;
+}
+
+.windows .header-bar {
+    -fx-border-color: transparent;
+}
+
+/* GNOME's primary menu: a flat icon button with no drop-down arrow. */
+.primary-menu {
+    -fx-background-color: transparent;
+    -fx-effect: null;
+    -fx-padding: 6px 8px 6px 8px;
+}
+
+.primary-menu > .arrow-button {
+    -fx-padding: 0;
+}
+
+.primary-menu > .arrow-button > .arrow {
+    -fx-shape: null;
+    -fx-padding: 0;
+}
+
+.primary-menu-icon {
+    -fx-shape: "M0 0 H16 V2 H0 Z M0 5 H16 V7 H0 Z M0 10 H16 V12 H0 Z";
+    -fx-background-color: -fx-text-base-color;
+    -fx-min-width: 16px;
+    -fx-max-width: 16px;
+    -fx-min-height: 12px;
+    -fx-max-height: 12px;
 }
 
 .title-preview:placeholder {
@@ -91,6 +207,26 @@
     -fx-rotate: 90;
 }
 
+/* WinUI's expander and GNOME's expander row put a chevron after the label, pointing down. */
+.windows .disclosure,
+.gnome .disclosure {
+    -fx-content-display: right;
+}
+
+.windows .disclosure-arrow,
+.gnome .disclosure-arrow {
+    -fx-shape: "M0 1.4 L1.4 0 L4 2.6 L6.6 0 L8 1.4 L4 5.4 Z";
+    -fx-min-width: 8px;
+    -fx-max-width: 8px;
+    -fx-min-height: 5px;
+    -fx-max-height: 5px;
+}
+
+.windows .disclosure:selected .disclosure-arrow,
+.gnome .disclosure:selected .disclosure-arrow {
+    -fx-rotate: 180;
+}
+
 .path-label {
     -fx-opacity: 0.6;
     -fx-font-size: 11px;
@@ -120,4 +256,19 @@
 
 .combo-box-popup .list-view {
     -fx-fixed-cell-size: 24px;
+}
+
+.about {
+    -fx-alignment: center;
+    -fx-spacing: 6px;
+    -fx-padding: 12px 24px 12px 24px;
+}
+
+.about-name {
+    -fx-font-size: 1.4em;
+    -fx-font-weight: bold;
+}
+
+.about-secondary {
+    -fx-opacity: 0.7;
 }

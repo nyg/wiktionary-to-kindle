@@ -63,7 +63,7 @@ public record Preferences(Path dumpsDir,
     private static final String FILE_COMMENT = """
             %s preferences. Blank or missing values fall back to the defaults.
             kindlingVersion accepts a release tag such as v0.28.0; blank uses the pinned default.
-            theme accepts javafx or cupertino, and only the desktop app reads it.
+            theme accepts javafx, cupertino or primer, and only the desktop app reads it.
             deleteIntermediateFiles accepts true or false, and both front-ends read it."""
             .formatted(AppInfo.SLUG);
 
