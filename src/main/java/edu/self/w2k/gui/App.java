@@ -12,6 +12,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,10 @@ public class App extends Application {
     static final String MAIN_FXML = "/edu/self/w2k/gui/main.fxml";
     static final String STYLESHEET = "/edu/self/w2k/gui/app.css";
     static final String ICON = "/edu/self/w2k/gui/icon.png";
+
+    private static final double DEFAULT_WIDTH = 680;
+
+    private static final double MIN_WIDTH = 560;
 
     private UiLogAppender uiAppender;
 
@@ -32,14 +37,23 @@ public class App extends Application {
         loader.setControllerFactory(_ -> new MainController(uiAppender));
         Scene scene = new Scene(loader.load());
         scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
-        SystemTheme.install(scene, ((MainController) loader.getController()).themeChoice());
+        MainController controller = loader.getController();
+        SystemTheme.install(scene, controller.themeChoice());
 
-        stage.setTitle(AppInfo.DISPLAY_NAME + " " + AppVersion.get());
+        if (DesktopPlatform.current().extendsIntoTitleBar()) {
+            stage.initStyle(StageStyle.EXTENDED);
+            stage.setTitle(AppInfo.DISPLAY_NAME);
+            controller.extendIntoTitleBar(stage, AppInfo.DISPLAY_NAME, "Version " + AppVersion.get());
+        }
+        else {
+            stage.setTitle(AppInfo.DISPLAY_NAME + " " + AppVersion.get());
+        }
         stage.setScene(scene);
-        stage.setMinWidth(720);
-        stage.setMinHeight(560);
+        stage.setWidth(DEFAULT_WIDTH);
+        stage.setMinWidth(MIN_WIDTH);
         loadIcon().ifPresent(stage.getIcons()::add);
         stage.show();
+        stage.setMinHeight(stage.getHeight());
 
         // Logged after the appenders are installed, so both the console pane and the log file always
         // open with the environment details a bug report needs.

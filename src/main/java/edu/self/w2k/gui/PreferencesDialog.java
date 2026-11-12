@@ -51,7 +51,7 @@ public class PreferencesDialog extends Dialog<Preferences> {
             new CheckBox("Delete intermediate files after the dictionary is built");
 
     public PreferencesDialog(Preferences current) {
-        setTitle("Preferences");
+        setTitle("Settings");
         setHeaderText("Where files are kept, which kindling-cli to use, and how the window looks");
         getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 

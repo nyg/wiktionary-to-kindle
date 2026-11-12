@@ -5,17 +5,90 @@
     -fx-font-size: 13px;
 }
 
-.section-label {
-    -fx-font-weight: bold;
-    -fx-opacity: 0.75;
+/* The header is the window's title bar on macOS and a toolbar row elsewhere. */
+.header-bar {
+    -fx-padding: 6px 12px 6px 12px;
+    -fx-border-color: transparent transparent -fx-box-border transparent;
 }
 
-.title-preview {
+.window-title {
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 0 8px;
+}
+
+.window-title-name {
     -fx-font-weight: bold;
+}
+
+.window-subtitle {
+    -fx-font-size: 11px;
+    -fx-opacity: 0.6;
+}
+
+.segmented {
+    -fx-alignment: center;
+}
+
+.segmented .toggle-button {
+    -fx-min-width: 80px;
+    -fx-padding: 4px 14px 4px 14px;
+}
+
+.page-content {
+    -fx-padding: 20px 20px 0 20px;
+    -fx-spacing: 14px;
+}
+
+.form {
+    -fx-alignment: top-center;
+    -fx-hgap: 8px;
+    -fx-vgap: 10px;
+}
+
+.form-field {
+    -fx-pref-width: 340px;
+}
+
+.title-preview:placeholder {
+    -fx-opacity: 0.5;
+}
+
+.progress-box {
+    -fx-alignment: center-left;
+    -fx-padding: 0 8px 0 8px;
+    -fx-spacing: 4px;
 }
 
 .status-label {
+    -fx-font-size: 12px;
     -fx-opacity: 0.8;
+}
+
+.footer {
+    -fx-alignment: center-left;
+    -fx-padding: 14px 20px 20px 20px;
+    -fx-spacing: 8px;
+}
+
+.disclosure {
+    -fx-background-color: transparent;
+    -fx-effect: null;
+    -fx-padding: 2px 4px 2px 0;
+    -fx-graphic-text-gap: 6px;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.disclosure-arrow {
+    -fx-shape: "M0 0 L5 4 L0 8 Z";
+    -fx-background-color: -fx-text-base-color;
+    -fx-min-width: 5px;
+    -fx-max-width: 5px;
+    -fx-min-height: 8px;
+    -fx-max-height: 8px;
+}
+
+.disclosure:selected .disclosure-arrow {
+    -fx-rotate: 90;
 }
 
 .path-label {
@@ -42,7 +115,7 @@
 }
 
 .progress-bar {
-    -fx-pref-height: 14px;
+    -fx-pref-height: 10px;
 }
 
 .combo-box-popup .list-view {

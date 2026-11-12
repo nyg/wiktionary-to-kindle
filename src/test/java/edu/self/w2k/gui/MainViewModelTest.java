@@ -79,6 +79,34 @@ class MainViewModelTest {
     }
 
     @Test
+    void should_hide_the_status_when_nothing_has_run_yet() {
+        // Then
+        assertThat(unit.statusShownProperty().get()).isFalse();
+    }
+
+    @Test
+    void should_show_the_status_when_a_run_starts() {
+        // When
+        unit.runningProperty().set(true);
+
+        // Then
+        assertThat(unit.statusShownProperty().get()).isTrue();
+    }
+
+    @Test
+    void should_keep_showing_the_status_when_a_run_has_finished() {
+        // Given
+        unit.runningProperty().set(true);
+
+        // When
+        unit.report(new ProgressSnapshot(1, "Done — w2k-dictionary-el-en.mobi"));
+        unit.runningProperty().set(false);
+
+        // Then
+        assertThat(unit.statusShownProperty().get()).isTrue();
+    }
+
+    @Test
     void should_derive_title_from_word_language_and_edition() {
         // When
         unit.editionProperty().set(Language.of("el"));
