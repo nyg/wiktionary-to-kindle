@@ -1,0 +1,12 @@
+/* AppKit's dark-appearance values for the tokens app-cupertino.css defines, loaded after it. */
+.root {
+    -macos-label: rgba(255, 255, 255, 0.85);
+    -macos-control: #3f3f3f;
+    -macos-control-pressed: #565656;
+    -macos-segment-selected: #5c5c5c;
+    -macos-field-border: #424242;
+    -macos-field-button: #393939;
+    -macos-check-box: #444444;
+    -macos-separator: rgba(255, 255, 255, 0.12);
+    -macos-focus-ring: rgba(26, 169, 255, 0.5);
+}

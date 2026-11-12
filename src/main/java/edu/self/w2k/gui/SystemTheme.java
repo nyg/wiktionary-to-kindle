@@ -1,5 +1,6 @@
 package edu.self.w2k.gui;
 
+import java.util.List;
 import java.util.Optional;
 
 import atlantafx.base.theme.CupertinoDark;
@@ -20,6 +21,13 @@ public final class SystemTheme {
 
     static final String STYLESHEET = "/edu/self/w2k/gui/app-atlantafx.css";
 
+    static final String CUPERTINO_STYLESHEET = "/edu/self/w2k/gui/app-cupertino.css";
+
+    static final String CUPERTINO_DARK_STYLESHEET = "/edu/self/w2k/gui/app-cupertino-dark.css";
+
+    private static final List<String> THEME_STYLESHEETS =
+            List.of(STYLESHEET, CUPERTINO_STYLESHEET, CUPERTINO_DARK_STYLESHEET);
+
     private SystemTheme() {
     }
 
@@ -35,20 +43,38 @@ public final class SystemTheme {
     }
 
     public static void apply(Scene scene, AppTheme choice) {
-        String tweaks = SystemTheme.class.getResource(STYLESHEET).toExternalForm();
-
+        ColorScheme scheme = systemColorScheme();
         if (choice == AppTheme.JAVAFX) {
             Application.setUserAgentStylesheet(Application.STYLESHEET_MODENA);
-            scene.getStylesheets().remove(tweaks);
-            return;
         }
+        else {
+            Theme theme = themeFor(choice, scheme);
+            Application.setUserAgentStylesheet(theme.getUserAgentStylesheet());
+            log.debug("Applied the {} theme", theme.getName());
+        }
+        useStylesheets(scene, stylesheetsFor(choice, scheme));
+    }
 
-        Theme theme = themeFor(choice, systemColorScheme());
-        Application.setUserAgentStylesheet(theme.getUserAgentStylesheet());
-        if (!scene.getStylesheets().contains(tweaks)) {
-            scene.getStylesheets().add(tweaks);
-        }
-        log.debug("Applied the {} theme", theme.getName());
+    /** The app's own sheets that go with a theme, in the order they must follow app.css. */
+    static List<String> stylesheetsFor(AppTheme choice, ColorScheme scheme) {
+        return switch (choice) {
+            case JAVAFX -> List.of();
+            case PRIMER -> List.of(STYLESHEET);
+            case CUPERTINO -> scheme == ColorScheme.DARK
+                    ? List.of(STYLESHEET, CUPERTINO_STYLESHEET, CUPERTINO_DARK_STYLESHEET)
+                    : List.of(STYLESHEET, CUPERTINO_STYLESHEET);
+        };
+    }
+
+    private static void useStylesheets(Scene scene, List<String> wanted) {
+        List<String> urls = wanted.stream().map(SystemTheme::url).toList();
+        List<String> known = THEME_STYLESHEETS.stream().map(SystemTheme::url).toList();
+        scene.getStylesheets().removeIf(sheet -> known.contains(sheet) && !urls.contains(sheet));
+        urls.stream().filter(url -> !scene.getStylesheets().contains(url)).forEach(scene.getStylesheets()::add);
+    }
+
+    static String url(String stylesheet) {
+        return SystemTheme.class.getResource(stylesheet).toExternalForm();
     }
 
     static Theme themeFor(AppTheme choice, ColorScheme scheme) {
