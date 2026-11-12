@@ -1,14 +1,17 @@
 name: Screenshots
 
-# Captures the real main window on macOS, Windows and GNOME for the README; GNOME draws its own title
-# bar, where a KDE window would need KWin running to get one. Run it by hand after a UI change,
-# then commit the PNGs from its artifacts to assets/screenshots/.
+# Captures the real main window on macOS, Windows and GNOME, then gives them matching shadows and lays
+# them side by side for the README. GNOME draws its own title bar; a KDE window would need KWin running
+# to get one, so KDE is left out. Run it by hand after a UI change and commit the PNGs from its
+# `screenshots` artifact to assets/screenshots/.
+
 on:
   workflow_dispatch:
   pull_request:
     branches: [master]
     paths:
       - .github/workflows/screenshots.yml
+      - scripts/compose-screenshots.sh
       - src/test/java/edu/self/w2k/gui/ScreenshotLauncher.java
 
 permissions:
@@ -134,4 +137,26 @@ jobs:
         if: always()
         with:
           name: screenshot-${{ matrix.name }}
+          path: screenshots/
+
+  compose:
+    needs: capture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: screenshot-*
+          merge-multiple: true
+          path: captures
+
+      - name: Add shadows and lay out side by side
+        run: |
+          sudo apt-get update && sudo apt-get install -y imagemagick fonts-dejavu-core
+          scripts/compose-screenshots.sh captures screenshots
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots
           path: screenshots/
