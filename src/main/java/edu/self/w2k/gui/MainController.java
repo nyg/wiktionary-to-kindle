@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import edu.self.w2k.config.AppInfo;
 import edu.self.w2k.config.AppTheme;
+import edu.self.w2k.config.AppVersion;
 import edu.self.w2k.config.LanguageCatalog;
 import edu.self.w2k.config.LanguageCatalog.Language;
 import edu.self.w2k.config.Preferences;
@@ -33,19 +35,26 @@ import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.skin.VirtualFlow;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.HeaderBar;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 
@@ -81,8 +90,14 @@ public class MainController {
     /** The height of a macOS window toolbar unified with its title bar. */
     private static final double UNIFIED_TITLE_BAR_HEIGHT = 52;
 
+    /** The height of a libadwaita header bar. */
+    private static final double GNOME_HEADER_BAR_HEIGHT = 47;
+
+    @FXML private BorderPane root;
     @FXML private MenuBar menuBar;
     @FXML private HeaderBar headerBar;
+    @FXML private HBox pageSwitcher;
+    @FXML private MenuButton primaryMenuButton;
     @FXML private VBox windowTitle;
     @FXML private Label windowTitleName;
     @FXML private Label windowSubtitle;
@@ -92,6 +107,7 @@ public class MainController {
     @FXML private Node buildPage;
     @FXML private Node dumpsPage;
 
+    @FXML private VBox form;
     @FXML private ComboBox<Language> editionCombo;
     @FXML private ComboBox<Language> wordLanguageCombo;
     @FXML private Label titlePreview;
@@ -113,6 +129,7 @@ public class MainController {
 
     private final UiLogAppender logAppender;
     private final KaikkiCatalog catalog;
+    private final DesktopPlatform platform;
     private final MainViewModel viewModel = new MainViewModel();
     private final AtomicLong wordLanguageRequests = new AtomicLong();
     private final AtomicBoolean wakePending = new AtomicBoolean();
@@ -129,15 +146,23 @@ public class MainController {
     }
 
     public MainController(UiLogAppender logAppender, KaikkiCatalog catalog) {
+        this(logAppender, catalog, DesktopPlatform.current());
+    }
+
+    public MainController(UiLogAppender logAppender, KaikkiCatalog catalog, DesktopPlatform platform) {
         this.logAppender = logAppender;
         this.catalog = catalog;
+        this.platform = platform;
     }
 
     @FXML
     void initialize() {
         viewModel.preferencesProperty().set(Preferences.load());
 
+        root.getStyleClass().add(platform.styleClass());
         setUpHeader();
+        setUpMenus();
+        setUpFormLabels();
         setUpLanguagePickers();
         setUpProgressBindings();
         setUpLogConsole();
@@ -156,20 +181,29 @@ public class MainController {
         startButton.disableProperty().bind(viewModel.startableProperty().not());
         cancelButton.disableProperty().bind(viewModel.runningProperty().not());
         revealButton.disableProperty().bind(viewModel.lastOutputProperty().isNull());
-        revealButton.setText(DesktopPlatform.current().revealLabel());
+        revealButton.setText(platform.revealLabel());
+        startButton.setText(platform.startLabel());
+        if (platform.putsPrimaryButtonFirst()) {
+            List<Node> footer = ((HBox) startButton.getParent()).getChildren();
+            footer.remove(startButton);
+            footer.add(footer.indexOf(cancelButton), startButton);
+        }
 
         refreshDumps();
     }
 
     /**
-     * Only an extended stage has room for a title of its own; a decorated one already shows it in the
-     * system title bar, so the header keeps just the page switcher.
+     * Only the macOS title bar shows a title of its own: a decorated stage already has one, and a GNOME
+     * header bar holding a view switcher shows the switcher in its place.
      */
     private void setUpHeader() {
-        // Left visible so its skin still installs the system menus, but laid out at zero size.
-        menuBar.setManaged(!DesktopPlatform.current().hasSystemMenuBar());
         windowTitle.setVisible(false);
         windowTitle.managedProperty().bind(windowTitle.visibleProperty());
+        // The centre slot keeps its child centred between the other two, so a leading switcher moves slot.
+        if (!platform.centresPageSwitcher()) {
+            headerBar.setCenter(null);
+            headerBar.setLeft(pageSwitcher);
+        }
 
         buildPage.visibleProperty().bind(buildPageButton.selectedProperty());
         dumpsPage.visibleProperty().bind(dumpsPageButton.selectedProperty());
@@ -181,12 +215,64 @@ public class MainController {
         });
     }
 
-    void extendIntoTitleBar(Stage stage, String title, String subtitle) {
-        windowTitleName.setText(title);
-        windowSubtitle.setText(subtitle);
-        windowTitle.setVisible(true);
-        headerBar.setMinHeight(UNIFIED_TITLE_BAR_HEIGHT);
-        HeaderBar.setSystemButtonHeight(stage, UNIFIED_TITLE_BAR_HEIGHT);
+    private void setUpMenus() {
+        AppMenus.Actions actions = new AppMenus.Actions(this::onPreferences, this::onAbout, Platform::exit);
+        menuBar.setUseSystemMenuBar(platform.menuStyle() == DesktopPlatform.MenuStyle.SYSTEM_MENU_BAR);
+        menuBar.getMenus().setAll(AppMenus.menuBar(platform, actions));
+        primaryMenuButton.getItems().setAll(AppMenus.primaryMenu(platform, actions));
+
+        boolean primaryMenu = platform.menuStyle() == DesktopPlatform.MenuStyle.PRIMARY_MENU;
+        primaryMenuButton.setVisible(primaryMenu);
+        primaryMenuButton.setManaged(primaryMenu);
+        menuBar.setVisible(!primaryMenu);
+        // A system menu bar stays visible, since its skin is what installs the system menus, but takes no space.
+        menuBar.setManaged(platform.menuStyle() == DesktopPlatform.MenuStyle.MENU_BAR);
+    }
+
+    /**
+     * HeaderBar centres its centre slot between the left and right ones, but libadwaita centres the
+     * view switcher on the whole bar. A left spacer as wide as the menu button and the window buttons
+     * makes the two agree.
+     */
+    private Region balancingSpacer(Stage stage) {
+        Region spacer = new Region();
+        spacer.minWidthProperty().bind(Bindings.createDoubleBinding(
+                () -> Math.max(0, primaryMenuButton.getWidth()
+                                  + HeaderBar.getRightSystemInset(stage).getWidth()
+                                  - HeaderBar.getLeftSystemInset(stage).getWidth()),
+                primaryMenuButton.widthProperty(),
+                HeaderBar.rightSystemInsetProperty(stage),
+                HeaderBar.leftSystemInsetProperty(stage)));
+        return spacer;
+    }
+
+    private void setUpFormLabels() {
+        form.lookupAll(".form-label").forEach(node -> {
+            Label label = (Label) node;
+            label.setText(label.getText() + platform.labelSuffix());
+        });
+    }
+
+    /** Applies the platform's window conventions; must run before the stage is shown. */
+    void attachTo(Stage stage) {
+        stage.setTitle(AppInfo.DISPLAY_NAME);
+        if (platform.extendsIntoTitleBar()) {
+            stage.initStyle(StageStyle.EXTENDED);
+        }
+        if (platform == DesktopPlatform.MACOS) {
+            windowTitleName.setText(AppInfo.DISPLAY_NAME);
+            windowSubtitle.setText("Version " + AppVersion.get());
+            windowTitle.setVisible(true);
+            headerBar.setMinHeight(UNIFIED_TITLE_BAR_HEIGHT);
+            HeaderBar.setSystemButtonHeight(stage, UNIFIED_TITLE_BAR_HEIGHT);
+        }
+        if (platform == DesktopPlatform.GNOME) {
+            headerBar.setMinHeight(GNOME_HEADER_BAR_HEIGHT);
+            headerBar.setLeft(balancingSpacer(stage));
+        }
+        if (platform.hasQuitShortcut() && root.getScene() != null) {
+            root.getScene().getAccelerators().put(KeyCombination.keyCombination("Shortcut+Q"), Platform::exit);
+        }
     }
 
     private void setUpLanguagePickers() {
@@ -463,13 +549,10 @@ public class MainController {
         return viewModel.preferencesProperty().map(Preferences::theme);
     }
 
-    @FXML
     void onPreferences() {
         PreferencesDialog dialog = new PreferencesDialog(viewModel.preferencesProperty().get());
-        dialog.initOwner(startButton.getScene().getWindow());
-        // The dialog gets its own scene, which would otherwise carry the theme's user agent
-        // stylesheet but none of the app's own classes.
-        dialog.getDialogPane().getStylesheets().addAll(startButton.getScene().getStylesheets());
+        dialog.setTitle(platform.settingsTitle());
+        dressDialog(dialog);
 
         dialog.showAndWait()
                 .ifPresent(updated -> {
@@ -483,6 +566,22 @@ public class MainController {
                         log.error("Could not save preferences: {}", e.getLocalizedMessage());
                     }
                 });
+    }
+
+    void onAbout() {
+        AboutDialog dialog = new AboutDialog(AppVersion.get(), platform);
+        dressDialog(dialog);
+        dialog.showAndWait();
+    }
+
+    /**
+     * A dialog gets its own scene, which would otherwise carry the theme's user agent stylesheet but
+     * none of the app's own classes, nor the platform class the fonts and spacing hang off.
+     */
+    private void dressDialog(Dialog<?> dialog) {
+        dialog.initOwner(root.getScene().getWindow());
+        dialog.getDialogPane().getStylesheets().addAll(root.getScene().getStylesheets());
+        dialog.getDialogPane().getStyleClass().add(platform.styleClass());
     }
 
     private void onFinished(Path mobi) {

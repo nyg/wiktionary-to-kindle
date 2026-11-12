@@ -15,8 +15,8 @@ class AppThemeTest {
     @CsvSource({
             "Mac OS X, CUPERTINO",
             "macOS, CUPERTINO",
-            "Windows 11, JAVAFX",
-            "Linux, JAVAFX",
+            "Windows 11, PRIMER",
+            "Linux, PRIMER",
     })
     void should_default_to_cupertino_on_macos_only(String osName, AppTheme expected) {
         // When / Then
@@ -26,9 +26,9 @@ class AppThemeTest {
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = "")
-    void should_default_to_javafx_when_the_os_is_unknown(String osName) {
+    void should_default_to_primer_when_the_os_is_unknown(String osName) {
         // When / Then
-        assertThat(AppTheme.defaultFor(osName)).isEqualTo(AppTheme.JAVAFX);
+        assertThat(AppTheme.defaultFor(osName)).isEqualTo(AppTheme.PRIMER);
     }
 
     @ParameterizedTest

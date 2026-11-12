@@ -1,44 +1,106 @@
 package edu.self.w2k.gui;
 
+import java.util.Arrays;
 import java.util.Locale;
 
+/**
+ * The window conventions of each desktop, after its own guidelines: Apple's HIG, Windows' Fluent
+ * design and Win32 UX guide, the GNOME HIG and the KDE HIG. Linux is split by desktop rather than
+ * treated as one, since GNOME and KDE disagree on nearly every point here.
+ */
 public enum DesktopPlatform {
 
-    MACOS("Show in Finder"),
-    WINDOWS("Show in File Explorer"),
-    OTHER("Open Folder");
+    MACOS,
+    WINDOWS,
+    GNOME,
+    KDE;
 
-    private final String revealLabel;
-
-    DesktopPlatform(String revealLabel) {
-        this.revealLabel = revealLabel;
+    public enum MenuStyle {
+        SYSTEM_MENU_BAR,
+        MENU_BAR,
+        PRIMARY_MENU
     }
 
-    public static DesktopPlatform detect(String osName) {
-        String name = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
-        if (name.startsWith("mac")) {
+    public static DesktopPlatform detect(String osName, String currentDesktop) {
+        String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
+        if (os.startsWith("mac")) {
             return MACOS;
         }
-        return name.startsWith("windows") ? WINDOWS : OTHER;
+        if (os.startsWith("windows")) {
+            return WINDOWS;
+        }
+        return isKde(currentDesktop) ? KDE : GNOME;
     }
 
     public static DesktopPlatform current() {
-        return detect(System.getProperty("os.name"));
+        return detect(System.getProperty("os.name"), System.getenv("XDG_CURRENT_DESKTOP"));
     }
 
-    public String revealLabel() {
-        return revealLabel;
+    /** {@code XDG_CURRENT_DESKTOP} is a colon-separated list, such as {@code ubuntu:GNOME}. */
+    private static boolean isKde(String currentDesktop) {
+        return currentDesktop != null
+                && Arrays.stream(currentDesktop.split(":")).anyMatch(desktop -> desktop.equalsIgnoreCase("KDE"));
     }
 
-    public boolean hasSystemMenuBar() {
-        return this == MACOS;
+    public String styleClass() {
+        return name().toLowerCase(Locale.ROOT);
     }
 
     /**
-     * Only macOS keeps its native window buttons in an extended stage; elsewhere JavaFX paints its own,
-     * which match neither Windows nor any Linux desktop.
+     * macOS and GNOME draw the app's header as the title bar. Windows and KDE keep the system title
+     * bar: on Windows it is what provides Snap Layouts, and KDE's window manager decorates its own.
      */
     public boolean extendsIntoTitleBar() {
-        return this == MACOS;
+        return this == MACOS || this == GNOME;
+    }
+
+    public MenuStyle menuStyle() {
+        return switch (this) {
+            case MACOS -> MenuStyle.SYSTEM_MENU_BAR;
+            case WINDOWS, KDE -> MenuStyle.MENU_BAR;
+            case GNOME -> MenuStyle.PRIMARY_MENU;
+        };
+    }
+
+    /** The page switcher is centred in a title bar, and leads a toolbar like a row of tabs. */
+    public boolean centresPageSwitcher() {
+        return extendsIntoTitleBar();
+    }
+
+    /** Windows and KDE put the affirmative button first; macOS and GNOME put it last. */
+    public boolean putsPrimaryButtonFirst() {
+        return this == WINDOWS || this == KDE;
+    }
+
+    /** Only Apple's and KDE's form layouts end a label with a colon. */
+    public String labelSuffix() {
+        return this == MACOS || this == KDE ? ":" : "";
+    }
+
+    /** Windows uses sentence case for buttons; the other three use title case. */
+    public String startLabel() {
+        return this == WINDOWS ? "Build dictionary" : "Build Dictionary";
+    }
+
+    public String revealLabel() {
+        return switch (this) {
+            case MACOS -> "Show in Finder";
+            case WINDOWS -> "Open file location";
+            case GNOME -> "Show in Files";
+            case KDE -> "Open Containing Folder";
+        };
+    }
+
+    public String settingsTitle() {
+        return switch (this) {
+            case MACOS, WINDOWS -> "Settings";
+            case GNOME -> "Preferences";
+            case KDE -> "Configure — Wiktionary to Kindle";
+        };
+    }
+
+    /** GNOME's primary menu carries no Quit, so Ctrl+Q has to work on its own. */
+    public boolean hasQuitShortcut() {
+        return this == GNOME;
     }
 }

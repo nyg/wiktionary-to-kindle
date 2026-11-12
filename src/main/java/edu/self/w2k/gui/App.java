@@ -12,7 +12,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 
@@ -32,28 +31,7 @@ public class App extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         uiAppender = installLogAppenders();
-
-        FXMLLoader loader = new FXMLLoader(App.class.getResource(MAIN_FXML));
-        loader.setControllerFactory(_ -> new MainController(uiAppender));
-        Scene scene = new Scene(loader.load());
-        scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
-        MainController controller = loader.getController();
-        SystemTheme.install(scene, controller.themeChoice());
-
-        if (DesktopPlatform.current().extendsIntoTitleBar()) {
-            stage.initStyle(StageStyle.EXTENDED);
-            stage.setTitle(AppInfo.DISPLAY_NAME);
-            controller.extendIntoTitleBar(stage, AppInfo.DISPLAY_NAME, "Version " + AppVersion.get());
-        }
-        else {
-            stage.setTitle(AppInfo.DISPLAY_NAME + " " + AppVersion.get());
-        }
-        stage.setScene(scene);
-        stage.setWidth(DEFAULT_WIDTH);
-        stage.setMinWidth(MIN_WIDTH);
-        loadIcon().ifPresent(stage.getIcons()::add);
-        stage.show();
-        stage.setMinHeight(stage.getHeight());
+        showMainWindow(stage, uiAppender);
 
         // Logged after the appenders are installed, so both the console pane and the log file always
         // open with the environment details a bug report needs.
@@ -64,6 +42,24 @@ public class App extends Application {
                  System.getProperty("os.name"),
                  System.getProperty("os.arch"),
                  Runtime.getRuntime().maxMemory() / (1024 * 1024));
+    }
+
+    static MainController showMainWindow(Stage stage, UiLogAppender appender) throws IOException {
+        FXMLLoader loader = new FXMLLoader(App.class.getResource(MAIN_FXML));
+        loader.setControllerFactory(_ -> new MainController(appender));
+        Scene scene = new Scene(loader.load());
+        scene.getStylesheets().add(App.class.getResource(STYLESHEET).toExternalForm());
+        MainController controller = loader.getController();
+        SystemTheme.install(scene, controller.themeChoice());
+
+        controller.attachTo(stage);
+        stage.setScene(scene);
+        stage.setWidth(DEFAULT_WIDTH);
+        stage.setMinWidth(MIN_WIDTH);
+        loadIcon().ifPresent(stage.getIcons()::add);
+        stage.show();
+        stage.setMinHeight(stage.getHeight());
+        return controller;
     }
 
     @Override
@@ -102,7 +98,7 @@ public class App extends Application {
         }
     }
 
-    private java.util.Optional<Image> loadIcon() {
+    private static java.util.Optional<Image> loadIcon() {
         var stream = App.class.getResourceAsStream(ICON);
         return stream == null ? java.util.Optional.empty() : java.util.Optional.of(new Image(stream));
     }

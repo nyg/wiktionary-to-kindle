@@ -24,5 +24,7 @@ public final class AppInfo {
      */
     public static final String DICTIONARY_PREFIX = "W2K";
 
+    public static final String WEBSITE = "https://github.com/nyg/wiktionary-to-kindle";
+
     private AppInfo() {}
 }

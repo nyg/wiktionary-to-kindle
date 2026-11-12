@@ -1,0 +1,162 @@
+name: Screenshots
+
+# Captures the real main window on macOS, Windows and GNOME, then gives them matching shadows and lays
+# them side by side for the README. GNOME draws its own title bar; a KDE window would need KWin running
+# to get one, so KDE is left out. Run it by hand after a UI change and commit the PNGs from its
+# `screenshots` artifact to assets/screenshots/.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - .github/workflows/screenshots.yml
+      - scripts/compose-screenshots.sh
+      - src/test/java/edu/self/w2k/gui/ScreenshotLauncher.java
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            name: macos
+          - os: windows-latest
+            name: windows
+          - os: ubuntu-latest
+            name: linux-gnome
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: 25.0.4+7.0.LTS
+          distribution: temurin
+          cache: maven
+
+      - name: Build and resolve the classpath
+        shell: bash
+        run: |
+          mvn --no-transfer-progress -q -DskipTests test-compile
+          mvn --no-transfer-progress -q dependency:build-classpath -Dmdep.includeScope=test -Dmdep.outputFile=cp.txt
+          mkdir -p screenshots
+
+      - name: Capture on macOS
+        if: runner.os == 'macOS'
+        run: |
+          java -cp "target/test-classes:target/classes:$(cat cp.txt)" edu.self.w2k.gui.ScreenshotLauncher > launcher.log 2>&1 &
+          for _ in $(seq 1 120); do grep -q "SCREENSHOT READY" launcher.log && break; sleep 1; done
+          cat launcher.log
+          sleep 2
+          cat > window-id.swift <<'EOF'
+          import CoreGraphics
+          let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as! [[String: Any]]
+          for window in windows where (window[kCGWindowLayer as String] as? Int) == 0 {
+              if (window[kCGWindowOwnerName as String] as? String ?? "").lowercased().contains("java") {
+                  print(window[kCGWindowNumber as String] as! Int)
+                  break
+              }
+          }
+          EOF
+          screencapture -x -l "$(swift window-id.swift)" screenshots/${{ matrix.name }}.png
+
+      - name: Capture on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $classpath = "target/test-classes;target/classes;" + (Get-Content cp.txt -Raw).Trim()
+          $launcher = Start-Process java -ArgumentList "-cp", "`"$classpath`"", "edu.self.w2k.gui.ScreenshotLauncher" `
+            -RedirectStandardOutput launcher.log -RedirectStandardError launcher.err -NoNewWindow -PassThru
+          foreach ($i in 1..120) {
+            if ((Test-Path launcher.log) -and (Select-String -Path launcher.log -Pattern "SCREENSHOT READY" -Quiet)) { break }
+            Start-Sleep -Seconds 1
+          }
+          Get-Content launcher.log, launcher.err -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+          Add-Type -AssemblyName System.Drawing, System.Windows.Forms
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public static class Win32 {
+              [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
+              [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+              [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
+              [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
+              [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out Rect rect, int size);
+          }
+          "@
+          [Win32]::SetProcessDPIAware() | Out-Null
+          $window = [IntPtr]::Zero
+          foreach ($i in 1..30) {
+            $launcher.Refresh()
+            $window = $launcher.MainWindowHandle
+            if ($window -eq [IntPtr]::Zero) { $window = [Win32]::FindWindow($null, "Wiktionary to Kindle") }
+            if ($window -ne [IntPtr]::Zero) { break }
+            Start-Sleep -Seconds 1
+          }
+          if ($window -eq [IntPtr]::Zero) {
+            Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | Format-Table Id, ProcessName, MainWindowTitle -AutoSize
+            $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $desktop = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+            [System.Drawing.Graphics]::FromImage($desktop).CopyFromScreen(0, 0, 0, 0, $desktop.Size)
+            $desktop.Save("screenshots/windows-desktop.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            throw "Window not found"
+          }
+          [Win32]::SetForegroundWindow($window) | Out-Null
+          Start-Sleep -Seconds 1
+          # Extended frame bounds leave out the invisible resize border GetWindowRect would include.
+          $rect = New-Object Win32+Rect
+          [Win32]::DwmGetWindowAttribute($window, 9, [ref]$rect, 16) | Out-Null
+          $bitmap = New-Object System.Drawing.Bitmap ($rect.Right - $rect.Left), ($rect.Bottom - $rect.Top)
+          [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+          $bitmap.Save("screenshots/${{ matrix.name }}.png", [System.Drawing.Imaging.ImageFormat]::Png)
+
+      - name: Capture on Linux
+        if: runner.os == 'Linux'
+        env:
+          XDG_CURRENT_DESKTOP: GNOME
+          DISPLAY: ':99'
+        run: |
+          sudo apt-get update && sudo apt-get install -y xvfb x11-utils imagemagick fonts-cantarell
+          Xvfb :99 -screen 0 1280x900x24 &
+          sleep 2
+          java -cp "target/test-classes:target/classes:$(cat cp.txt)" edu.self.w2k.gui.ScreenshotLauncher > launcher.log 2>&1 &
+          for _ in $(seq 1 120); do grep -q "SCREENSHOT READY" launcher.log && break; sleep 1; done
+          cat launcher.log
+          sleep 2
+          window=$(xwininfo -root -tree | awk '/"Wiktionary to Kindle"/ { print $1; exit }')
+          [ -n "$window" ] || { echo "Window not found"; exit 1; }
+          import -window "$window" screenshots/${{ matrix.name }}.png
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: screenshot-${{ matrix.name }}
+          path: screenshots/
+
+  compose:
+    needs: capture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: screenshot-*
+          merge-multiple: true
+          path: captures
+
+      - name: Add shadows and lay out side by side
+        run: |
+          sudo apt-get update && sudo apt-get install -y imagemagick fonts-dejavu-core
+          scripts/compose-screenshots.sh captures screenshots
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots
+          path: screenshots/

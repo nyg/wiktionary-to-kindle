@@ -36,11 +36,14 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.input.Clipboard;
@@ -55,6 +58,8 @@ import javafx.scene.control.ToggleButton;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * Loads {@code main.fxml} for real, because nothing else catches a mistake in it: a misspelled
@@ -396,6 +401,44 @@ class MainFxmlLoadTest {
             index.set(first == null ? -1 : first.getIndex());
         });
         return index.get();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "MACOS, macos, 'Wiktionary edition:', 'Show in Finder|Cancel|Build Dictionary', false, false",
+            "WINDOWS, windows, 'Wiktionary edition', 'Open file location|Build dictionary|Cancel', true, false",
+            "GNOME, gnome, 'Wiktionary edition', 'Show in Files|Cancel|Build Dictionary', false, true",
+            "KDE, kde, 'Wiktionary edition:', 'Open Containing Folder|Build Dictionary|Cancel', true, false",
+    })
+    void should_follow_the_desktop_conventions_when_the_window_is_built_for_it(DesktopPlatform platform,
+                                                                               String styleClass,
+                                                                               String firstLabel,
+                                                                               String footerButtons,
+                                                                               boolean menuBarInWindow,
+                                                                               boolean primaryMenu)
+            throws Exception {
+        if (!toolkitReady) {
+            abort("No JavaFX toolkit available");
+        }
+
+        AtomicReference<Parent> root = new AtomicReference<>();
+        MainController controller = loadOnFxThread(root, platform);
+        Button startButton = readField(controller, "startButton", Button.class);
+        MenuBar menuBar = readField(controller, "menuBar", MenuBar.class);
+        MenuButton primaryMenuButton = readField(controller, "primaryMenuButton", MenuButton.class);
+
+        assertThat(root.get().getStyleClass()).contains(styleClass);
+        assertThat(root.get().lookupAll(".form-label")).first()
+                .extracting(label -> ((javafx.scene.control.Label) label).getText())
+                .isEqualTo(firstLabel);
+        assertThat(((HBox) startButton.getParent()).getChildren().stream()
+                           .filter(Button.class::isInstance)
+                           .map(button -> ((Button) button).getText()))
+                .as("the footer's buttons, in order")
+                .containsExactly(footerButtons.split("\\|"));
+        assertThat(menuBar.isManaged()).as("menu bar laid out in the window").isEqualTo(menuBarInWindow);
+        assertThat(primaryMenuButton.isVisible()).as("primary menu button shown").isEqualTo(primaryMenu);
+        assertThat(primaryMenuButton.getItems().isEmpty()).isEqualTo(!primaryMenu);
     }
 
     @Test
@@ -746,6 +789,11 @@ class MainFxmlLoadTest {
     }
 
     private static MainController loadOnFxThread(AtomicReference<Parent> root) throws Exception {
+        return loadOnFxThread(root, DesktopPlatform.current());
+    }
+
+    private static MainController loadOnFxThread(AtomicReference<Parent> root, DesktopPlatform platform)
+            throws Exception {
         AtomicReference<MainController> controller = new AtomicReference<>();
         AtomicReference<Throwable> failure = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
@@ -753,7 +801,7 @@ class MainFxmlLoadTest {
         Platform.runLater(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(App.class.getResource(App.MAIN_FXML));
-                loader.setControllerFactory(_ -> new MainController(new UiLogAppender(), offlineCatalog()));
+                loader.setControllerFactory(_ -> new MainController(new UiLogAppender(), offlineCatalog(), platform));
                 root.set(loader.load());
                 controller.set(loader.getController());
             }
