@@ -56,8 +56,13 @@ class EtymologyTest {
     void should_drop_the_ancestry_tree_when_the_english_edition_prints_one() {
         // Given
         WiktionaryEntry entry = new WiktionaryEntry("dictionary", "en", "noun", List.of(), List.of())
-                .withEtymologyText("Etymology tree\nProto-Italic *deikō\nLatin dīcō\n▲\nEnglish dictionary\n"
-                        + "From Middle English dixionare, a learned borrowing from Medieval Latin dictiōnārium.");
+                .withEtymologyText("""
+                        Etymology tree
+                        Proto-Italic *deikō
+                        Latin dīcō
+                        ▲
+                        English dictionary
+                        From Middle English dixionare, a learned borrowing from Medieval Latin dictiōnārium.""");
 
         // When
         String result = Etymology.textOf(entry);

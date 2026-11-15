@@ -7,6 +7,8 @@ final class PartOfSpeech {
 
     private static final Pattern HOMOGRAPH_NUMBER = Pattern.compile("\\s+\\d+$");
 
+    private static final String ABBREVIATION = "abbrev";
+
     private static final Map<String, String> ENGLISH = Map.ofEntries(
             Map.entry("adj", "adjective"),
             Map.entry("adv", "adverb"),
@@ -19,7 +21,7 @@ final class PartOfSpeech {
             Map.entry("interj", "interjection"),
             Map.entry("num", "numeral"),
             Map.entry("det", "determiner"),
-            Map.entry("abbrev", "abbreviation"));
+            Map.entry(ABBREVIATION, "abbreviation"));
 
     private static final Map<String, String> GREEK = Map.ofEntries(
             Map.entry("noun", "ουσιαστικό"),
@@ -34,7 +36,7 @@ final class PartOfSpeech {
             Map.entry("num", "αριθμητικό"),
             Map.entry("article", "άρθρο"),
             Map.entry("particle", "μόριο"),
-            Map.entry("abbrev", "συντομογραφία"));
+            Map.entry(ABBREVIATION, "συντομογραφία"));
 
     private static final Map<String, String> RUSSIAN = Map.ofEntries(
             Map.entry("noun", "существительное"),
@@ -49,7 +51,7 @@ final class PartOfSpeech {
             Map.entry("interj", "междометие"),
             Map.entry("num", "числительное"),
             Map.entry("particle", "частица"),
-            Map.entry("abbrev", "сокращение"));
+            Map.entry(ABBREVIATION, "сокращение"));
 
     // The editions whose dumps carry no pos_title, and so no part of speech in their own language.
     private static final Map<String, Map<String, String>> BY_EDITION = Map.of("el", GREEK, "ru", RUSSIAN);

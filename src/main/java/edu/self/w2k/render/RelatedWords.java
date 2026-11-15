@@ -1,6 +1,7 @@
 package edu.self.w2k.render;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -28,7 +29,7 @@ final class RelatedWords {
     private static List<String> wordsOf(WiktionaryEntry entry, List<WiktionaryLinkage> ofEntry,
                                         Function<WiktionarySense, List<WiktionaryLinkage>> ofSense) {
         Stream<WiktionaryLinkage> ofSenses = entry.senses().stream()
-                .filter(sense -> sense != null)
+                .filter(Objects::nonNull)
                 .flatMap(sense -> ofSense.apply(sense).stream());
         return Stream.concat(ofEntry.stream(), ofSenses)
                 .filter(linkage -> linkage != null && !HtmlText.isBlank(linkage.word()))
