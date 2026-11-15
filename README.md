@@ -176,6 +176,8 @@ Wiktionary entries on kaikki include a `forms` array listing every inflected for
 
 Gender-equivalent cross-references (e.g. `συντρόφισσα` listed as a feminine equivalent of `σύντροφος`, or `ingénieure` listed under `ingénieur`) are filtered out of the **lookup index** by a language-agnostic post-pass: any form whose normalised text already exists as a standalone headword in the same dump is dropped from the iform list, so long-press on `συντρόφισσα` resolves to its own entry instead of being shadowed by the lemma. The **visible "Forms:" table** in each entry's HTML body is untouched — readers still see the full paradigm (e.g. `ingénieure`, `ingénieurs`) under the lemma.
 
+Where a verb's page names a separate passive lemma, as English Wiktionary does for Greek, the passive forms in its table look up that lemma: `σηκώθηκε` opens `σηκώνομαι` ("to get up"), not `σηκώνω` ("to lift"). Romanizations are listed in the table but are not lookup targets.
+
 See [`docs/form-of-folding.md`](docs/form-of-folding.md) for the full design.
 
 ## Building from source

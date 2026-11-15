@@ -2,6 +2,7 @@ package edu.self.w2k.command;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -173,6 +174,52 @@ class GenerateCommandTest {
         TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
         assertThat(captured).containsOnlyKeys("suus");
         assertThat(captured.get("suus").getFirst().inflectionForms()).containsExactly("sua", "suum", "suis");
+    }
+
+    @Test
+    void should_move_passive_forms_to_their_lemma_when_that_lemma_is_a_headword() throws Exception {
+        // Given
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "en", "Test Title");
+        WiktionaryEntry active = new WiktionaryEntry("σηκώνω", "el", "verb", List.of(), List.of());
+        WiktionaryEntry passive = new WiktionaryEntry("σηκώνομαι", "el", "verb", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(active, passive));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>to lift</def>",
+                        List.of("σηκώνομαι", "σήκωσε", "σηκώθηκε", "σηκώνεται"), List.of(),
+                        Map.of("σηκώνομαι", List.of("σηκώθηκε", "σηκώνεται")))))
+                .thenReturn(Optional.of(new RenderedEntry("<def>to get up</def>", List.of("σηκώθηκα"), List.of())));
+
+        // When
+        unit.run();
+
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("el"), eq("en"), eq("Test Title"), eq(tmp));
+        TreeMap<String, List<LexiconEntry>> captured = captor.getValue();
+        assertThat(captured.get("σηκώνω").getFirst().inflectionForms()).containsExactly("σήκωσε");
+        assertThat(captured.get("σηκώνομαι").getFirst().inflectionForms())
+                .containsExactly("σηκώθηκα", "σηκώθηκε", "σηκώνεται");
+    }
+
+    @Test
+    void should_keep_passive_forms_when_their_lemma_is_not_a_headword() throws Exception {
+        // Given
+        GenerateCommand unit = new GenerateCommand(parser, renderer, writer, tmp.resolve("dump.jsonl.gz"), tmp, "el", "en", "Test Title");
+        WiktionaryEntry active = new WiktionaryEntry("σηκώνω", "el", "verb", List.of(), List.of());
+        when(parser.parse(any(Path.class), eq("el"))).thenReturn(Stream.of(active));
+        when(renderer.render(any()))
+                .thenReturn(Optional.of(new RenderedEntry("<def>to lift</def>",
+                        List.of("σηκώνομαι", "σήκωσε", "σηκώθηκε"), List.of(),
+                        Map.of("σηκώνομαι", List.of("σηκώθηκε")))));
+
+        // When
+        unit.run();
+
+        // Then
+        ArgumentCaptor<TreeMap<String, List<LexiconEntry>>> captor = ArgumentCaptor.captor();
+        verify(writer).write(captor.capture(), eq("el"), eq("en"), eq("Test Title"), eq(tmp));
+        assertThat(captor.getValue().get("σηκώνω").getFirst().inflectionForms())
+                .containsExactly("σηκώνομαι", "σήκωσε", "σηκώθηκε");
     }
 
     @Test

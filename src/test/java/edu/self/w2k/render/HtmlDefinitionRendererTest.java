@@ -2,6 +2,7 @@ package edu.self.w2k.render;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import edu.self.w2k.model.WiktionaryEntry;
@@ -290,6 +291,45 @@ class HtmlDefinitionRendererTest {
         assertThat(result.get().html())
                 .contains("<li>nom. pl.: λέξεις</li>")
                 .doesNotContain("κλίση", "no-table-tags", "class");
+    }
+
+    @Test
+    void should_show_a_romanization_in_the_table_but_keep_it_out_of_the_lookup_index() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("beauty"), List.of(), List.of());
+        List<WiktionaryForm> forms = List.of(
+                new WiktionaryForm("omorfiá", List.of("romanization"), null, null),
+                new WiktionaryForm("ομορφιές", List.of("plural"), null, null));
+        WiktionaryEntry entry = new WiktionaryEntry("ομορφιά", "el", "noun", List.of(sense), forms);
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().inflectionForms()).containsExactly("ομορφιές");
+        assertThat(result.get().html()).contains("<li>romanization: omorfiá</li>");
+    }
+
+    @Test
+    void should_report_passive_forms_under_their_lemma_when_the_headline_names_one() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("to raise, lift"), List.of(), List.of());
+        List<WiktionaryForm> forms = List.of(
+                new WiktionaryForm("σηκώνομαι", List.of("passive"), null, null),
+                new WiktionaryForm("σήκωσε", List.of("active", "past"), null, "conjugation"),
+                new WiktionaryForm("σηκώθηκε", List.of("passive", "past"), null, "conjugation"));
+        WiktionaryEntry entry = new WiktionaryEntry("σηκώνω", "el", "verb", List.of(sense), forms);
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().inflectionForms()).containsExactly("σηκώνομαι", "σήκωσε", "σηκώθηκε");
+        assertThat(result.get().counterpartForms()).containsExactly(Map.entry("σηκώνομαι", List.of("σηκώθηκε")));
     }
 
     @Test

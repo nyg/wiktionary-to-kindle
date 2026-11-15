@@ -117,16 +117,19 @@ Each helper in `render` exists because kaikki's data needs it:
 
 The English and Greek editions list rows tagged `inflection-template`, `table-tags` or `class` among an entry's `forms`. They name the inflection table's template, so they are kept out of the forms table and the lookup index.
 
+A form tagged `romanization` is shown in the forms table but kept out of the lookup index: no book prints the word in it.
+
 The model records normalise a missing list to an empty one in their compact constructors, so the renderer never null-checks a list. Each keeps a constructor with its pre-enrichment arity, and Lombok `@With` adds the newer fields one at a time in tests.
 
 Entries whose renderable senses all carry a `form_of` reference (Latin *suis* → "Datif pluriel de suus.") are flagged form-of-only through `RenderedEntry.formOfLemmas()`.
 
 ### Grouping and writing
 
-`GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then runs two post-passes before handing the map to the `DictionaryWriter`:
+`GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then runs three post-passes before handing the map to the `DictionaryWriter`:
 
 1. `foldFormOfEntries()` folds form-of-only lookup keys into their lemma's inflection index. On Kindle an exact headword match shadows the `<idx:iform>` index, so this makes an inflected-form lookup resolve straight to the lemma entry (issue #56). Folding is all-or-nothing per key: the key is dropped only when every entry under it is form-of with a lemma present in the map; a homograph with its own meaning, a missing lemma or a chain keeps all its entries.
-2. `filterFormsCollidingWithHeadwords()` drops any inflection form whose normalised text still exists as a headword key.
+2. `moveFormsToCounterpartLemmas()` moves the passive forms a verb conjugates to its passive lemma, when that lemma is a headword with a meaning of its own. English Wiktionary names the lemma on a Greek verb's headline, as a form tagged `passive` alone, and lists both voices in the active verb's table: without the move σηκώθηκε opens σηκώνω ("to lift") instead of σηκώνομαι ("to get up"). `PassiveForms` picks the forms out; one that another voice spells the same stays put.
+3. `filterFormsCollidingWithHeadwords()` drops any inflection form whose normalised text still exists as a headword key.
 
 `HtmlChapterRenderer` builds one MobiPocket HTML document per chunk of at most 10 000 entries, preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and the `xmlns:mbp`/`xmlns:idx` declarations. Entries sharing a key are stacked under the first one's headword, with a line of em dashes between them. The line is drawn with characters because kindling ends an entry's lookup span at the first `<hr/>` after its start: an `<hr/>` anywhere inside an entry hides everything below it from the popup. A key groups spellings that differ only in case, so an entry spelled differently from the one above it gets its own bold line.
 

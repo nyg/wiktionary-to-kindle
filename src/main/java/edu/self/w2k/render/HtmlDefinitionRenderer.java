@@ -24,6 +24,9 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
 
     private static final String LIST_ITEM_END = "</li>";
 
+    // A transliteration is worth reading in the forms table, but no book prints the word in it.
+    private static final String ROMANIZATION = "romanization";
+
     // A Kindle popup ignores CSS margins, and a div stacks flush against the next: a blank line takes a line.
     private static final String SECTION_BREAK = "<div>&#160;</div>";
 
@@ -63,7 +66,8 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                 .filter(section -> !section.isEmpty())
                 .collect(Collectors.joining(SECTION_BREAK));
 
-        return Optional.of(new RenderedEntry(html, inflectionForms, collectFormOfLemmas(entry.senses())));
+        return Optional.of(new RenderedEntry(html, inflectionForms, collectFormOfLemmas(entry.senses()),
+                PassiveForms.byLemma(filtered)));
     }
 
     private static String section(Consumer<StringBuilder> content) {
@@ -144,6 +148,10 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         return form.tags() != null && form.tags().stream().anyMatch(TEMPLATE_ROW_TAGS::contains);
     }
 
+    private static boolean isRomanization(WiktionaryForm form) {
+        return form.tags() != null && form.tags().contains(ROMANIZATION);
+    }
+
     private static List<String> collectInflectionForms(List<WiktionaryForm> filtered) {
         if (filtered.isEmpty()) {
             return List.of();
@@ -151,7 +159,7 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         Set<String> seen = LinkedHashSet.newLinkedHashSet(filtered.size());
         for (WiktionaryForm form : filtered) {
             String text = form.form().strip();
-            if (isUsableLookupKey(text)) {
+            if (isUsableLookupKey(text) && !isRomanization(form)) {
                 seen.add(text);
             }
         }
