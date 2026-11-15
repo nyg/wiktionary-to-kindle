@@ -20,6 +20,7 @@ The app follows each desktop's own conventions: the title bar, menus, button ord
   - [Where files go](#where-files-go)
 - [Command line](#command-line)
 - [How it works](#how-it-works)
+- [What an entry shows](#what-an-entry-shows)
 - [Inflected forms](#inflected-forms)
 - [Building from source](#building-from-source)
 
@@ -99,7 +100,10 @@ The **Dumps** page lists what has been downloaded, with the Wiktionary edition, 
 Once the `.mobi` is on the device, set it as the default dictionary for its language, and tap-to-define uses it everywhere you read. Titles are prefixed `W2K`, so the dictionaries this app builds group together in that list and stay apart from Amazon's own.
 
 ![Choosing your new default dictionary](https://i.imgur.com/aXAbTbx.jpg)
-![Proof that it works](https://i.imgur.com/q3Tdxjo.jpg)
+<p align="center">
+  <img src="assets/screenshots/kindle-lookup-inflected.jpg" width="45%" alt="Kindle popup for ήλθε, an inflected form: the entry for έρχομαι, with its part of speech, pronunciation and two translated examples">
+  <img src="assets/screenshots/kindle-lookup-entry.jpg" width="45%" alt="Kindle popup for λαιμός: part of speech and gender, pronunciation, a labelled sense, then the etymology">
+</p>
 
 ### Where files go
 
@@ -146,12 +150,25 @@ Up to and including 2.0.3 the CLI resolved `dumps/` and `dictionaries/` relative
 ## How it works
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the chosen edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
-2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition, its inflected forms are collected as Kindle lookup targets, and the result is grouped in memory by normalised key.
+2. The compressed JSONL is streamed and filtered by language. Each entry is rendered into an HTML definition (see [What an entry shows](#what-an-entry-shows)), its inflected forms are collected as Kindle lookup targets, and the result is grouped in memory by normalised key.
 3. Chunked MobiPocket HTML files, an NCX navigation map and an OPF manifest are written.
 4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded and cached, verified against a pinned SHA-256.
 5. `kindling-cli build` converts the OPF into a `.mobi` Kindle dictionary.
 
 [`docs/program-flow.md`](docs/program-flow.md) has sequence diagrams for each stage.
+
+## What an entry shows
+
+Whatever the dump carries for a word, in this order:
+
+* **Part of speech, gender and pronunciation** — `Nom commun, m. \a.kœj\`. The part of speech is in the edition's own words where kaikki provides them. The Greek and Russian dumps do not, so the app names it for them.
+* **Senses**, numbered when there are several, with sub-senses nested under their parent. Register, region and domain labels lead each one in italics: *(figuratively)*, *(Québec)*.
+* **Examples** — the three shortest of each sense, with the headword in bold, and the translation after a dash when Wiktionary gives one.
+* **Etymology**, in square brackets.
+* **Synonyms and antonyms**, after `≈` and `≠`, six of each at most.
+* **Inflected forms**, described below.
+
+The labels wiktextract recognises are stored in English whatever the edition, so a French definition can carry *(dated)*. The Greek edition keeps its labels in Greek.
 
 ## Inflected forms
 
@@ -161,6 +178,8 @@ Wiktionary entries on kaikki include a `forms` array listing every inflected for
 * **Visible paradigm table** — for non-verb entries, a small table of the form `{tag-abbrev}: {article} {form}` is appended to the definition. Verb entries skip the table (Greek, Romance and Slavic verbs have 50–200+ forms, which would dwarf the definition). A `forms.size() > 30` safety net also skips the table for pathological non-verb cases.
 
 Gender-equivalent cross-references (e.g. `συντρόφισσα` listed as a feminine equivalent of `σύντροφος`, or `ingénieure` listed under `ingénieur`) are filtered out of the **lookup index** by a language-agnostic post-pass: any form whose normalised text already exists as a standalone headword in the same dump is dropped from the iform list, so long-press on `συντρόφισσα` resolves to its own entry instead of being shadowed by the lemma. The **visible "Forms:" table** in each entry's HTML body is untouched — readers still see the full paradigm (e.g. `ingénieure`, `ingénieurs`) under the lemma.
+
+Where a verb's page names a separate passive lemma, as English Wiktionary does for Greek, the passive forms in its table look up that lemma: `σηκώθηκε` opens `σηκώνομαι` ("to get up"), not `σηκώνω` ("to lift"). Romanizations are listed in the table but are not lookup targets.
 
 See [`docs/form-of-folding.md`](docs/form-of-folding.md) for the full design.
 

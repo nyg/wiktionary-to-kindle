@@ -87,28 +87,55 @@ The data dir sits under Documents rather than `$XDG_DATA_HOME` on purpose: dumps
 
 A relative value in any of these variables, `HOME` included, is ignored with a warning and treated as unset, as the XDG spec requires. `AppPaths.absolutePath` is the check, and it guards the Unix branch only: `Path.isAbsolute()` answers for the filesystem the JVM runs on, and would call a Windows `C:\local` relative on the Linux CI runner.
 
-### Dictionary output format
+### Entry rendering
 
-`HtmlDefinitionRenderer` renders a `List<WiktionarySense>` into an HTML string:
+`HtmlDefinitionRenderer` takes the edition and turns one `WiktionaryEntry` into one HTML block, each part present only when the dump carries it:
 
 ```
-<ol><li><span>gloss</span><ul><li>example</li></ul></li>...</ol>
+<div><i>{part of speech}, {m. f. n. pl. …}</i> {IPA}</div>
+<ol><li><i>({labels})</i> {gloss}<ul><li>{example} — <i>{translation}</i></li></ul><ol>{sub-senses}</ol></li>…</ol>
+<div>&#160;</div>
+<div>[{etymology}]</div>
+<div>&#160;</div>
+<div>≈ {synonyms}</div><div>≠ {antonyms}</div>
+<div>&#160;</div>
+<div><i>Forms:</i></div><ul><li>{tags}: {article} {form}</li>…</ul>
 ```
 
-Gloss and example text is XML-escaped with `StringEscapeUtils.escapeXml10`, and internal newlines become `"; "`. An entry with no renderable gloss returns `Optional.empty()` and is skipped. Entries whose renderable senses all carry a `form_of` reference (Latin *suis* → "Datif pluriel de suus.") are flagged form-of-only through `RenderedEntry.formOfLemmas()`.
+The four sections are separated by `<div>&#160;</div>`: a Kindle popup ignores CSS margins and stacks one `<div>` flush against the next, so a blank line has to be a line.
+
+An entry with a single top-level sense gets a `<div>` in place of the one-item `<ol>`. An entry with no renderable gloss returns `Optional.empty()` and is skipped. Every piece of dump text goes through `HtmlText.escape`, which XML-escapes it and turns line breaks into `"; "`. The block is read in the edition's language, so captions are signs (`[…]`, `≈`, `≠`) rather than English words.
+
+Each helper in `render` exists because kaikki's data needs it:
+
+- **`SenseOutline`** — kaikki flattens a sub-sense into its own sense whose `glosses` list the parent's gloss first. The outline rebuilds the tree, keyed on gloss text; a flat rendering repeats every parent once per child.
+- **`LabelSource`** — where a sense's labels (register, region, domain) come from depends on the edition. `en` already writes them as the prefix of each `raw_glosses` text, so that text replaces the gloss. `el` repeats every normalised tag in `raw_tags`, in Greek, so only `raw_tags` is shown. Every other edition keeps in `raw_tags` only what wiktextract did not recognise, so `raw_tags`, `tags` and `topics` are joined; the normalised ones are English whatever the edition. `form-of`, `alt-of`, `no-gloss` and `error-lua-exec` are structural and never shown.
+- **`PartOfSpeech`** — `pos_title` is the edition's own name for it, minus a trailing homograph number. `en`, `el`, `ru` and `simple` carry none, so `el` and `ru` have a small table and the rest spell out kaikki's code.
+- **`Headline`** — gender and number come from the entry's `tags`. The English edition has none at entry level and repeats them on each sense, so the tags every glossed sense shares are used instead. The first IPA is shown; an edition that leaves it bare gets slashes.
+- **`Examples`** — the `MAX_PER_SENSE` shortest of a sense, in their order, since a popup is a few lines tall and some entries carry ten long quotations. `bold_text_offsets` count code points, as Python does, not UTF-16 units.
+- **`Etymology`** — `etymology_text` is one string in `en`, `el` and `simple`, and `etymology_texts` a list everywhere else; the model accepts both. The English edition prints an "Etymology tree" of short lines ahead of the prose, which is dropped. Lines are kept and joined with `<br/>`, and a wiki list marker (`*`, `#`, `:`) at the start of one becomes `•`.
+
+The English and Greek editions list rows tagged `inflection-template`, `table-tags` or `class` among an entry's `forms`. They name the inflection table's template, so they are kept out of the forms table and the lookup index.
+
+A form tagged `romanization` is shown in the forms table but kept out of the lookup index: no book prints the word in it.
+
+The model records normalise a missing list to an empty one in their compact constructors, so the renderer never null-checks a list. Each keeps a constructor with its pre-enrichment arity, and Lombok `@With` adds the newer fields one at a time in tests.
+
+Entries whose renderable senses all carry a `form_of` reference (Latin *suis* → "Datif pluriel de suus.") are flagged form-of-only through `RenderedEntry.formOfLemmas()`.
 
 ### Grouping and writing
 
-`GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then runs two post-passes before handing the map to the `DictionaryWriter`:
+`GenerateCommand` groups entries into a `TreeMap<String, List<LexiconEntry>>` in memory using `normaliseKey()`, then runs three post-passes before handing the map to the `DictionaryWriter`:
 
 1. `foldFormOfEntries()` folds form-of-only lookup keys into their lemma's inflection index. On Kindle an exact headword match shadows the `<idx:iform>` index, so this makes an inflected-form lookup resolve straight to the lemma entry (issue #56). Folding is all-or-nothing per key: the key is dropped only when every entry under it is form-of with a lemma present in the map; a homograph with its own meaning, a missing lemma or a chain keeps all its entries.
-2. `filterFormsCollidingWithHeadwords()` drops any inflection form whose normalised text still exists as a headword key.
+2. `moveFormsToCounterpartLemmas()` moves the passive forms a verb conjugates to its passive lemma, when that lemma is a headword with a meaning of its own. English Wiktionary names the lemma on a Greek verb's headline, as a form tagged `passive` alone, and lists both voices in the active verb's table: without the move σηκώθηκε opens σηκώνω ("to lift") instead of σηκώνομαι ("to get up"). `PassiveForms` picks the forms out; one that another voice spells the same stays put.
+3. `filterFormsCollidingWithHeadwords()` drops any inflection form whose normalised text still exists as a headword key.
 
-`HtmlChapterRenderer` builds one MobiPocket HTML document per chunk of at most 10 000 entries, preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and the `xmlns:mbp`/`xmlns:idx` declarations.
+`HtmlChapterRenderer` builds one MobiPocket HTML document per chunk of at most 10 000 entries, preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and the `xmlns:mbp`/`xmlns:idx` declarations. Entries sharing a key are stacked under the first one's headword, with a line of em dashes between them. The line is drawn with characters because kindling ends an entry's lookup span at the first `<hr/>` after its start: an `<hr/>` anywhere inside an entry hides everything below it from the popup. A key groups spellings that differ only in case, so an entry spelled differently from the one above it gets its own bold line.
 
-**Every output file is named from `DictionaryTitles.baseName(src, trg)`** → `w2k-dictionary-{src}-{trg}`, lowercased, the NCX and the cover included: several dictionaries share one output directory, and a fixed `toc.ncx` or `cover.jpg` would be overwritten by the next run. The `W2K` prefix (`AppInfo.DICTIONARY_PREFIX`) also leads the `<dc:title>`, the only thing Kindle shows in its dictionary settings list.
+**Every output file is named from `DictionaryTitles.baseName(src, trg)`** → `w2k-dictionary-{src}-{trg}`, lowercased, the NCX and the cover included: several dictionaries share one output directory, and a fixed `toc.ncx` or `cover.jpg` would be overwritten by the next run. The `W2K` prefix (`AppInfo.DICTIONARY_PREFIX`) also leads the `<dc:title>`, the only thing Kindle shows in its dictionary settings list. The title names each code through `LanguageCatalog.displayNameFor`, as the pickers do, so a `name.<code>` override in `kaikki-editions.properties` reaches both.
 
-`OpfDictionaryWriter` writes the `-N.html` chunks, a `-toc.ncx`, a `-cover.jpg` and the `.opf` (OPF 2.0, with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`), and returns the OPF path. `KindlingDictionaryConverter` composes it with the binary from `KindlingCliResolver.resolve()` and runs `kindling-cli build <opf> -o <mobi>`.
+`OpfDictionaryWriter` writes the `-N.html` chunks, a `-toc.ncx`, a `-cover.jpg` and the `.opf` (OPF 2.0, with `<DictionaryInLanguage>` / `<DictionaryOutLanguage>` in `<x-metadata>`), and returns the OPF path. `<DictionaryOutLanguage>` takes `Editions.languageOf(edition)`: `simple` names the Simple English site, and kindling-cli rejects it as a BCP47 code. `KindlingDictionaryConverter` composes it with the binary from `KindlingCliResolver.resolve()` and runs `kindling-cli build <opf> -o <mobi>`.
 
 **The side-artefacts go in a sub-folder, the `.mobi` does not.** `IntermediateFiles.dirFor` puts them under `dictionaries/intermediate/w2k-dictionary-{src}-{trg}/`, one directory per dictionary, which keeps two editions' runs apart and makes cleanup a single recursive delete. kindling-cli resolves the OPF's hrefs relative to the OPF, so it never sees the difference. `Preferences.deleteIntermediateFiles` (default `false`) drops the working directory once the `.mobi` exists, and `IntermediateFiles.delete` removes the `intermediate` parent too when that leaves it empty. The delete runs **only after a zero exit code** and never fails the run: after a kindling-cli failure the files are the only way to diagnose it, and after a success a cleanup error is an annoyance, not a broken result.
 

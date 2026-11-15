@@ -5,11 +5,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.text.StringEscapeUtils;
 
 import edu.self.w2k.model.WiktionaryEntry;
-import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionaryForm;
 import edu.self.w2k.model.WiktionaryFormOf;
 import edu.self.w2k.model.WiktionarySense;
@@ -22,22 +24,56 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
 
     private static final String LIST_ITEM_END = "</li>";
 
+    // A transliteration is worth reading in the forms table, but no book prints the word in it.
+    private static final String ROMANIZATION = "romanization";
+
+    // A Kindle popup ignores CSS margins, and a div stacks flush against the next: a blank line takes a line.
+    private static final String SECTION_BREAK = "<div>&#160;</div>";
+
+    // Rows the English and Greek editions list among the forms to name the table's template, not a form.
+    private static final Set<String> TEMPLATE_ROW_TAGS = Set.of("inflection-template", "table-tags", "class");
+
+    private final String edition;
+    private final LabelSource labelSource;
+
+    public HtmlDefinitionRenderer() {
+        this("");
+    }
+
+    public HtmlDefinitionRenderer(String edition) {
+        this.edition = edition == null ? "" : edition;
+        this.labelSource = LabelSource.forEdition(this.edition);
+    }
+
     @Override
     public Optional<RenderedEntry> render(WiktionaryEntry entry) {
-        StringBuilder sb = new StringBuilder();
-        boolean hasGloss = appendDefinitions(sb, entry.senses());
-        if (!hasGloss) {
+        SenseOutline senses = SenseOutline.of(entry.senses(), labelSource);
+        if (senses.isEmpty()) {
             return Optional.empty();
         }
 
         List<WiktionaryForm> filtered = filterForms(entry.forms());
         List<String> inflectionForms = collectInflectionForms(filtered);
 
-        if (shouldRenderVisibleTable(entry.pos(), filtered)) {
-            appendFormsTable(sb, filtered);
-        }
+        String html = Stream.of(
+                        section(sb -> {
+                            Headline.appendTo(sb, edition, entry);
+                            senses.appendTo(sb);
+                        }),
+                        section(sb -> Etymology.appendTo(sb, entry)),
+                        section(sb -> RelatedWords.appendTo(sb, entry)),
+                        section(sb -> appendFormsTable(sb, entry.pos(), filtered)))
+                .filter(section -> !section.isEmpty())
+                .collect(Collectors.joining(SECTION_BREAK));
 
-        return Optional.of(new RenderedEntry(sb.toString(), inflectionForms, collectFormOfLemmas(entry.senses())));
+        return Optional.of(new RenderedEntry(html, inflectionForms, collectFormOfLemmas(entry.senses()),
+                PassiveForms.byLemma(filtered)));
+    }
+
+    private static String section(Consumer<StringBuilder> content) {
+        StringBuilder sb = new StringBuilder();
+        content.accept(sb);
+        return sb.toString();
     }
 
     /**
@@ -90,57 +126,6 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         return false;
     }
 
-    private static boolean appendDefinitions(StringBuilder sb, List<WiktionarySense> senses) {
-        sb.append("<ol>");
-        boolean hasGloss = false;
-
-        for (WiktionarySense sense : senses) {
-            if (sense == null) {
-                continue;
-            }
-            List<String> glosses = sense.glosses();
-            if (glosses.isEmpty()) {
-                continue;
-            }
-
-            for (String gloss : glosses) {
-                if (gloss == null || gloss.isBlank()) {
-                    continue;
-                }
-                hasGloss = true;
-                sb.append("<li><span>");
-                sb.append(StringEscapeUtils.escapeXml10(gloss.replaceAll("[\n\r]", "; ")));
-                sb.append("</span>");
-
-                List<WiktionaryExample> examples = sense.examples();
-                boolean hasExample = false;
-                StringBuilder exSb = new StringBuilder("<ul>");
-                for (WiktionaryExample ex : examples) {
-                    if (ex == null) {
-                        continue;
-                    }
-                    String text = ex.text();
-                    if (text == null || text.isBlank()) {
-                        continue;
-                    }
-                    hasExample = true;
-                    exSb.append("<li>");
-                    exSb.append(StringEscapeUtils.escapeXml10(text.replaceAll("[\n\r]", "; ")));
-                    exSb.append(LIST_ITEM_END);
-                }
-                exSb.append("</ul>");
-                if (hasExample) {
-                    sb.append(exSb);
-                }
-
-                sb.append(LIST_ITEM_END);
-            }
-        }
-
-        sb.append("</ol>");
-        return hasGloss;
-    }
-
     private static List<WiktionaryForm> filterForms(List<WiktionaryForm> forms) {
         if (forms == null || forms.isEmpty()) {
             return List.of();
@@ -151,12 +136,20 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                 continue;
             }
             String text = form.form();
-            if (text == null || text.isBlank()) {
+            if (text == null || text.isBlank() || isTemplateRow(form)) {
                 continue;
             }
             kept.add(form);
         }
         return kept;
+    }
+
+    private static boolean isTemplateRow(WiktionaryForm form) {
+        return form.tags() != null && form.tags().stream().anyMatch(TEMPLATE_ROW_TAGS::contains);
+    }
+
+    private static boolean isRomanization(WiktionaryForm form) {
+        return form.tags() != null && form.tags().contains(ROMANIZATION);
     }
 
     private static List<String> collectInflectionForms(List<WiktionaryForm> filtered) {
@@ -166,7 +159,7 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         Set<String> seen = LinkedHashSet.newLinkedHashSet(filtered.size());
         for (WiktionaryForm form : filtered) {
             String text = form.form().strip();
-            if (isUsableLookupKey(text)) {
+            if (isUsableLookupKey(text) && !isRomanization(form)) {
                 seen.add(text);
             }
         }
@@ -200,8 +193,11 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         return filtered.size() <= VISIBLE_FORMS_THRESHOLD;
     }
 
-    private static void appendFormsTable(StringBuilder sb, List<WiktionaryForm> filtered) {
-        sb.append("<p><i>Forms:</i></p><ul>");
+    private static void appendFormsTable(StringBuilder sb, String pos, List<WiktionaryForm> filtered) {
+        if (!shouldRenderVisibleTable(pos, filtered)) {
+            return;
+        }
+        sb.append("<div><i>Forms:</i></div><ul>");
         for (WiktionaryForm form : filtered) {
             sb.append("<li>");
             String tagAbbrev = InflectionTagAbbreviator.abbreviate(form.tags());

@@ -75,7 +75,8 @@ public class GenerateCommand implements Command {
 
         try (Stream<LexiconEntry> stream = parser.parse(dumpFile, srcLang)
                 .flatMap(e -> renderer.render(e)
-                        .map(r -> new LexiconEntry(e.word(), r.html(), r.inflectionForms(), r.formOfLemmas()))
+                        .map(r -> new LexiconEntry(e.word(), r.html(), r.inflectionForms(), r.formOfLemmas(),
+                                r.counterpartForms()))
                         .stream())) {
             stream.forEach(e -> {
                 // The only cancellation point in the pipeline's longest stage: a multi-gigabyte dump
@@ -99,6 +100,7 @@ public class GenerateCommand implements Command {
 
         progress.onProgress(Stage.FOLD, 0, ProgressListener.TOTAL_UNKNOWN);
         foldFormOfEntries(grouped);
+        moveFormsToCounterpartLemmas(grouped);
         filterFormsCollidingWithHeadwords(grouped);
 
         return writer.write(grouped, srcLang, trgLang, title, outputDir);
@@ -148,6 +150,41 @@ public class GenerateCommand implements Command {
     }
 
     /**
+     * Moves the forms an entry lists on behalf of another lemma (see {@code PassiveForms}) to that
+     * lemma, when it is a headword with a meaning of its own. Otherwise they stay where they are,
+     * since the entry that lists them is then the only place a lookup can land.
+     */
+    static void moveFormsToCounterpartLemmas(TreeMap<String, List<LexiconEntry>> grouped) {
+        Set<String> realKeys = collectRealKeys(grouped);
+        Map<String, Set<String>> extraIforms = new HashMap<>();
+        long moved = 0;
+
+        for (Map.Entry<String, List<LexiconEntry>> group : grouped.entrySet()) {
+            List<LexiconEntry> entries = group.getValue();
+            for (int i = 0; i < entries.size(); i++) {
+                LexiconEntry entry = entries.get(i);
+                Set<String> leaving = new HashSet<>();
+                for (Map.Entry<String, List<String>> counterpart : entry.counterpartForms().entrySet()) {
+                    String lemmaKey = normaliseKey(counterpart.getKey());
+                    if (!lemmaKey.equals(group.getKey()) && realKeys.contains(lemmaKey)) {
+                        extraIforms.computeIfAbsent(lemmaKey, k -> new LinkedHashSet<>()).addAll(counterpart.getValue());
+                        leaving.addAll(counterpart.getValue());
+                    }
+                }
+                if (!leaving.isEmpty()) {
+                    entries.set(i, entry.withInflectionForms(
+                            entry.inflectionForms().stream().filter(form -> !leaving.contains(form)).toList()));
+                    moved += leaving.size();
+                }
+            }
+        }
+
+        mergeExtraIforms(grouped, extraIforms);
+
+        log.info("Moved {} forms to their own lemma", moved);
+    }
+
+    /**
      * Keys backed by at least one entry with an independent meaning; only these can absorb forms
      * (folding into a form-of-only group would just move the dead end around).
      */
@@ -191,7 +228,7 @@ public class GenerateCommand implements Command {
             Set<String> merged = new LinkedHashSet<>(first.inflectionForms());
             merged.addAll(extra.getValue());
             if (merged.size() != first.inflectionForms().size()) {
-                entries.set(0, new LexiconEntry(first.word(), first.definition(), List.copyOf(merged), first.formOfLemmas()));
+                entries.set(0, first.withInflectionForms(List.copyOf(merged)));
             }
         }
     }
@@ -219,7 +256,7 @@ public class GenerateCommand implements Command {
                     }
                 }
                 if (kept.size() != forms.size()) {
-                    entries.set(i, new LexiconEntry(e.word(), e.definition(), List.copyOf(kept), e.formOfLemmas()));
+                    entries.set(i, e.withInflectionForms(List.copyOf(kept)));
                 }
             }
         }

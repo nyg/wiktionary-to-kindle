@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.stream.IntStream;
 import javax.imageio.ImageIO;
 
+import edu.self.w2k.config.Editions;
 import edu.self.w2k.model.LexiconEntry;
 import edu.self.w2k.write.DictionaryTitles;
 import edu.self.w2k.write.DictionaryWriter;
@@ -147,7 +148,7 @@ public class OpfDictionaryWriter implements DictionaryWriter {
                     <manifest>
                         <item id="cover-image" href="%s" media-type="image/jpeg" properties="coverimage"/>
                         <item id="toc" href="%s" media-type="application/x-dtbncx+xml"/>
-                    """.formatted(uid, title, srcLang, srcLang, trgLang, names.cover(), names.ncx()));
+                    """.formatted(uid, title, srcLang, srcLang, Editions.languageOf(trgLang), names.cover(), names.ncx()));
 
             for (int i = 0; i < htmlFileNames.size(); i++) {
                 w.write("    <item id=\"dictionary%d\" href=\"%s\" media-type=\"application/xhtml+xml\"/>%n"

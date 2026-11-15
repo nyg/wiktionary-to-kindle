@@ -44,6 +44,22 @@ class OpfDictionaryWriterTest {
     }
 
     @Test
+    void should_declare_english_as_the_definition_language_when_edition_is_simple_english() throws Exception {
+        // Given
+        TreeMap<String, List<LexiconEntry>> defs = new TreeMap<>();
+        defs.put("apple", List.of(new LexiconEntry("apple", "<div>A round fruit.</div>", List.of(), List.of())));
+
+        // When
+        Path result = unit.write(defs, "en", "simple", "W2K English–Simple English Dictionary", tmp);
+
+        // Then
+        assertThat(result).isEqualTo(tmp.resolve("w2k-dictionary-en-simple.opf"));
+        assertThat(Files.readString(result))
+                .contains("<DictionaryInLanguage>en</DictionaryInLanguage>")
+                .contains("<DictionaryOutLanguage>en</DictionaryOutLanguage>");
+    }
+
+    @Test
     void should_name_the_ncx_and_cover_after_the_language_pair() throws Exception {
         // Given two dictionaries generated into one directory, as the app does
         TreeMap<String, List<LexiconEntry>> defs = new TreeMap<>();
