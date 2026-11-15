@@ -100,7 +100,10 @@ The **Dumps** page lists what has been downloaded, with the Wiktionary edition, 
 Once the `.mobi` is on the device, set it as the default dictionary for its language, and tap-to-define uses it everywhere you read. Titles are prefixed `W2K`, so the dictionaries this app builds group together in that list and stay apart from Amazon's own.
 
 ![Choosing your new default dictionary](https://i.imgur.com/aXAbTbx.jpg)
-![Proof that it works](https://i.imgur.com/q3Tdxjo.jpg)
+<p align="center">
+  <img src="assets/screenshots/kindle-lookup-inflected.jpg" width="45%" alt="Kindle popup for ήλθε, an inflected form: the entry for έρχομαι, with its part of speech, pronunciation and two translated examples">
+  <img src="assets/screenshots/kindle-lookup-entry.jpg" width="45%" alt="Kindle popup for λαιμός: part of speech and gender, pronunciation, a labelled sense, then the etymology">
+</p>
 
 ### Where files go
 
