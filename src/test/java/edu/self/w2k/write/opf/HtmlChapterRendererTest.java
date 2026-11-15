@@ -36,7 +36,7 @@ class HtmlChapterRendererTest {
     }
 
     @Test
-    void should_stack_definitions_when_multiple_entries_share_key() {
+    void should_draw_a_dash_rule_between_definitions_when_multiple_entries_share_key() {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("word", List.of(
@@ -50,7 +50,9 @@ class HtmlChapterRendererTest {
         String html = new String(bytes, StandardCharsets.UTF_8);
 
         // Then
-        assertThat(html).contains("def1def2");
+        assertThat(html)
+                .contains("def1<div>———————————</div>def2")
+                .doesNotContain("<hr");
     }
 
     @Test
@@ -70,7 +72,7 @@ class HtmlChapterRendererTest {
         String html = new String(bytes, StandardCharsets.UTF_8);
 
         // Then
-        assertThat(html).contains("shine<div><b>Polish</b></div>of Polandthe language<div><b>polish</b></div>to rub");
+        assertThat(html).contains("shine<div>———————————</div><div><b>Polish</b></div>of Poland<div>———————————</div>the language<div>———————————</div><div><b>polish</b></div>to rub");
     }
 
     @Test

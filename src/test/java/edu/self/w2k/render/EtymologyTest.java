@@ -40,16 +40,16 @@ class EtymologyTest {
     }
 
     @Test
-    void should_join_the_parts_when_the_edition_lists_several() {
+    void should_keep_each_part_on_its_own_line_when_the_edition_lists_several() {
         // Given
         WiktionaryEntry entry = new WiktionaryEntry("chat", "fro", "noun", List.of(), List.of())
                 .withEtymologyTexts(List.of("(Nom 1) Du latin cattus.", "(Nom 2) À rapprocher de chaffaut."));
 
         // When
-        String result = Etymology.textOf(entry);
+        List<String> result = Etymology.linesOf(entry);
 
         // Then
-        assertThat(result).isEqualTo("(Nom 1) Du latin cattus. (Nom 2) À rapprocher de chaffaut.");
+        assertThat(result).containsExactly("(Nom 1) Du latin cattus.", "(Nom 2) À rapprocher de chaffaut.");
     }
 
     @Test
@@ -65,11 +65,31 @@ class EtymologyTest {
                         From Middle English dixionare, a learned borrowing from Medieval Latin dictiōnārium.""");
 
         // When
-        String result = Etymology.textOf(entry);
+        List<String> result = Etymology.linesOf(entry);
 
         // Then
         assertThat(result)
-                .isEqualTo("From Middle English dixionare, a learned borrowing from Medieval Latin dictiōnārium.");
+                .containsExactly("From Middle English dixionare, a learned borrowing from Medieval Latin dictiōnārium.");
+    }
+
+    @Test
+    void should_break_the_line_and_draw_a_bullet_when_the_text_carries_wiki_list_items() {
+        // Given
+        WiktionaryEntry entry = new WiktionaryEntry("είναι", "el", "verb", List.of(), List.of())
+                .withEtymologyText("""
+                        From Ancient Greek εἶναι.
+                        * (For the noun): Semantic loan from German Sein.
+                        *
+                        ** (For the verb) From Medieval Greek ἔναι.""");
+        StringBuilder html = new StringBuilder();
+
+        // When
+        Etymology.appendTo(html, entry);
+
+        // Then
+        assertThat(html).hasToString("<div>[From Ancient Greek εἶναι."
+                + "<br/>• (For the noun): Semantic loan from German Sein."
+                + "<br/>• (For the verb) From Medieval Greek ἔναι.]</div>");
     }
 
     @Test
@@ -79,10 +99,10 @@ class EtymologyTest {
                 .withEtymologyTexts(List.of("Substantiv zu dem Verb ordiri ^(→ la)\n__NOEDITSECTION__"));
 
         // When
-        String result = Etymology.textOf(entry);
+        List<String> result = Etymology.linesOf(entry);
 
         // Then
-        assertThat(result).isEqualTo("Substantiv zu dem Verb ordiri");
+        assertThat(result).containsExactly("Substantiv zu dem Verb ordiri");
     }
 
     @Test
@@ -93,9 +113,9 @@ class EtymologyTest {
                 .withEtymologyText(history);
 
         // When
-        String result = Etymology.textOf(entry);
+        List<String> result = Etymology.linesOf(entry);
 
         // Then
-        assertThat(result).isEqualTo(history);
+        assertThat(result).containsExactly(history);
     }
 }

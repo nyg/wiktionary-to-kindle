@@ -5,6 +5,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.text.StringEscapeUtils;
 
@@ -20,6 +23,9 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
     private static final int VISIBLE_FORMS_THRESHOLD = 30;
 
     private static final String LIST_ITEM_END = "</li>";
+
+    // A Kindle popup ignores CSS margins, and a div stacks flush against the next: a blank line takes a line.
+    private static final String SECTION_BREAK = "<div>&#160;</div>";
 
     // Rows the English and Greek editions list among the forms to name the table's template, not a form.
     private static final Set<String> TEMPLATE_ROW_TAGS = Set.of("inflection-template", "table-tags", "class");
@@ -43,20 +49,27 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
             return Optional.empty();
         }
 
-        StringBuilder sb = new StringBuilder();
-        Headline.appendTo(sb, edition, entry);
-        senses.appendTo(sb);
-        Etymology.appendTo(sb, entry);
-        RelatedWords.appendTo(sb, entry);
-
         List<WiktionaryForm> filtered = filterForms(entry.forms());
         List<String> inflectionForms = collectInflectionForms(filtered);
 
-        if (shouldRenderVisibleTable(entry.pos(), filtered)) {
-            appendFormsTable(sb, filtered);
-        }
+        String html = Stream.of(
+                        section(sb -> {
+                            Headline.appendTo(sb, edition, entry);
+                            senses.appendTo(sb);
+                        }),
+                        section(sb -> Etymology.appendTo(sb, entry)),
+                        section(sb -> RelatedWords.appendTo(sb, entry)),
+                        section(sb -> appendFormsTable(sb, entry.pos(), filtered)))
+                .filter(section -> !section.isEmpty())
+                .collect(Collectors.joining(SECTION_BREAK));
 
-        return Optional.of(new RenderedEntry(sb.toString(), inflectionForms, collectFormOfLemmas(entry.senses())));
+        return Optional.of(new RenderedEntry(html, inflectionForms, collectFormOfLemmas(entry.senses())));
+    }
+
+    private static String section(Consumer<StringBuilder> content) {
+        StringBuilder sb = new StringBuilder();
+        content.accept(sb);
+        return sb.toString();
     }
 
     /**
@@ -172,8 +185,11 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         return filtered.size() <= VISIBLE_FORMS_THRESHOLD;
     }
 
-    private static void appendFormsTable(StringBuilder sb, List<WiktionaryForm> filtered) {
-        sb.append("<p><i>Forms:</i></p><ul>");
+    private static void appendFormsTable(StringBuilder sb, String pos, List<WiktionaryForm> filtered) {
+        if (!shouldRenderVisibleTable(pos, filtered)) {
+            return;
+        }
+        sb.append("<div><i>Forms:</i></div><ul>");
         for (WiktionaryForm form : filtered) {
             sb.append("<li>");
             String tagAbbrev = InflectionTagAbbreviator.abbreviate(form.tags());

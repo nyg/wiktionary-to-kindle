@@ -40,7 +40,7 @@ class HtmlDefinitionRendererTest {
     }
 
     @Test
-    void should_render_headline_senses_etymology_related_words_and_forms_in_that_order_when_entry_has_them_all() {
+    void should_put_a_blank_line_between_senses_etymology_related_words_and_forms_when_entry_has_them_all() {
         // Given
         WiktionarySense ceremony = new WiktionarySense(List.of("Cérémonie de bienvenue."), List.of(), List.of());
         WiktionarySense lodging = new WiktionarySense(List.of("Fait d’héberger."), List.of(), List.of())
@@ -61,9 +61,12 @@ class HtmlDefinitionRendererTest {
         assertThat(result).isPresent();
         assertThat(result.get().html()).isEqualTo("<div><i>Nom commun, m.</i> \\a.kœj\\</div>"
                 + "<ol><li>Cérémonie de bienvenue.</li><li><i>(dated)</i> Fait d’héberger.</li></ol>"
+                + "<div>&#160;</div>"
                 + "<div>[Déverbal de accueillir.]</div>"
+                + "<div>&#160;</div>"
                 + "<div>≈ réception</div>"
-                + "<p><i>Forms:</i></p><ul><li>pl.: accueils</li></ul>");
+                + "<div>&#160;</div>"
+                + "<div><i>Forms:</i></div><ul><li>pl.: accueils</li></ul>");
     }
 
     @Test
@@ -134,7 +137,7 @@ class HtmlDefinitionRendererTest {
         assertThat(result).isPresent();
         String html = result.get().html();
         assertThat(html)
-                .contains("<p><i>Forms:</i></p>")
+                .contains("<div><i>Forms:</i></div>")
                 .contains("<li>pl. nom.: οι σύντροφοι</li>")
                 .contains("<li>sg. gen.: του συντρόφου</li>");
         assertThat(result.get().inflectionForms())

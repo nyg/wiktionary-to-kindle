@@ -15,6 +15,10 @@ class HtmlChapterRenderer {
     static final String KINDLE_NS = "https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf";
     static final int ENTRIES_PER_CHAPTER = 10_000;
 
+    // Drawn with dashes because kindling ends an entry's lookup span at the first <hr/> after its start:
+    // a real one inside an entry hides everything below it from the popup.
+    private static final String RULE = "<div>———————————</div>";
+
     private HtmlChapterRenderer() {}
 
     static byte[] render(List<Map.Entry<String, List<LexiconEntry>>> entries) {
@@ -54,6 +58,9 @@ class HtmlChapterRenderer {
         StringBuilder combinedDef = new StringBuilder();
         String shownWord = lexiconEntries.getFirst().word();
         for (LexiconEntry entry : lexiconEntries) {
+            if (!combinedDef.isEmpty()) {
+                combinedDef.append(RULE);
+            }
             // A key groups spellings that differ only in case, and only the first is the headword.
             if (!entry.word().equals(shownWord)) {
                 shownWord = entry.word();

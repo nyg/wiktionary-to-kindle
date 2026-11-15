@@ -94,10 +94,15 @@ A relative value in any of these variables, `HOME` included, is ignored with a w
 ```
 <div><i>{part of speech}, {m. f. n. pl. …}</i> {IPA}</div>
 <ol><li><i>({labels})</i> {gloss}<ul><li>{example} — <i>{translation}</i></li></ul><ol>{sub-senses}</ol></li>…</ol>
+<div>&#160;</div>
 <div>[{etymology}]</div>
+<div>&#160;</div>
 <div>≈ {synonyms}</div><div>≠ {antonyms}</div>
-<p><i>Forms:</i></p><ul><li>{tags}: {article} {form}</li>…</ul>
+<div>&#160;</div>
+<div><i>Forms:</i></div><ul><li>{tags}: {article} {form}</li>…</ul>
 ```
+
+The four sections are separated by `<div>&#160;</div>`: a Kindle popup ignores CSS margins and stacks one `<div>` flush against the next, so a blank line has to be a line.
 
 An entry with a single top-level sense gets a `<div>` in place of the one-item `<ol>`. An entry with no renderable gloss returns `Optional.empty()` and is skipped. Every piece of dump text goes through `HtmlText.escape`, which XML-escapes it and turns line breaks into `"; "`. The block is read in the edition's language, so captions are signs (`[…]`, `≈`, `≠`) rather than English words.
 
@@ -108,7 +113,7 @@ Each helper in `render` exists because kaikki's data needs it:
 - **`PartOfSpeech`** — `pos_title` is the edition's own name for it, minus a trailing homograph number. `en`, `el`, `ru` and `simple` carry none, so `el` and `ru` have a small table and the rest spell out kaikki's code.
 - **`Headline`** — gender and number come from the entry's `tags`. The English edition has none at entry level and repeats them on each sense, so the tags every glossed sense shares are used instead. The first IPA is shown; an edition that leaves it bare gets slashes.
 - **`Examples`** — the `MAX_PER_SENSE` shortest of a sense, in their order, since a popup is a few lines tall and some entries carry ten long quotations. `bold_text_offsets` count code points, as Python does, not UTF-16 units.
-- **`Etymology`** — `etymology_text` is one string in `en`, `el` and `simple`, and `etymology_texts` a list everywhere else; the model accepts both. The English edition prints an "Etymology tree" of short lines ahead of the prose, which is dropped.
+- **`Etymology`** — `etymology_text` is one string in `en`, `el` and `simple`, and `etymology_texts` a list everywhere else; the model accepts both. The English edition prints an "Etymology tree" of short lines ahead of the prose, which is dropped. Lines are kept and joined with `<br/>`, and a wiki list marker (`*`, `#`, `:`) at the start of one becomes `•`.
 
 The English and Greek editions list rows tagged `inflection-template`, `table-tags` or `class` among an entry's `forms`. They name the inflection table's template, so they are kept out of the forms table and the lookup index.
 
@@ -123,7 +128,7 @@ Entries whose renderable senses all carry a `form_of` reference (Latin *suis* �
 1. `foldFormOfEntries()` folds form-of-only lookup keys into their lemma's inflection index. On Kindle an exact headword match shadows the `<idx:iform>` index, so this makes an inflected-form lookup resolve straight to the lemma entry (issue #56). Folding is all-or-nothing per key: the key is dropped only when every entry under it is form-of with a lemma present in the map; a homograph with its own meaning, a missing lemma or a chain keeps all its entries.
 2. `filterFormsCollidingWithHeadwords()` drops any inflection form whose normalised text still exists as a headword key.
 
-`HtmlChapterRenderer` builds one MobiPocket HTML document per chunk of at most 10 000 entries, preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and the `xmlns:mbp`/`xmlns:idx` declarations. Entries sharing a key are stacked under the first one's headword. A key groups spellings that differ only in case, so an entry spelled differently from the one above it gets its own bold line.
+`HtmlChapterRenderer` builds one MobiPocket HTML document per chunk of at most 10 000 entries, preserving Amazon's `<idx:entry>`/`<idx:orth>` markup and the `xmlns:mbp`/`xmlns:idx` declarations. Entries sharing a key are stacked under the first one's headword, with a line of em dashes between them. The line is drawn with characters because kindling ends an entry's lookup span at the first `<hr/>` after its start: an `<hr/>` anywhere inside an entry hides everything below it from the popup. A key groups spellings that differ only in case, so an entry spelled differently from the one above it gets its own bold line.
 
 **Every output file is named from `DictionaryTitles.baseName(src, trg)`** → `w2k-dictionary-{src}-{trg}`, lowercased, the NCX and the cover included: several dictionaries share one output directory, and a fixed `toc.ncx` or `cover.jpg` would be overwritten by the next run. The `W2K` prefix (`AppInfo.DICTIONARY_PREFIX`) also leads the `<dc:title>`, the only thing Kindle shows in its dictionary settings list. The title names each code through `LanguageCatalog.displayNameFor`, as the pickers do, so a `name.<code>` override in `kaikki-editions.properties` reaches both.
 
