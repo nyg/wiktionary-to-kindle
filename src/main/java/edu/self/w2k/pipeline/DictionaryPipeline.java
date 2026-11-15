@@ -106,7 +106,7 @@ public class DictionaryPipeline {
 
         return new GenerateCommand(
                 new JsonlDictionaryParser(progress),
-                new HtmlDefinitionRenderer(),
+                new HtmlDefinitionRenderer(editionLang),
                 writer,
                 dumpFile,
                 prefs.dictionariesDir(),

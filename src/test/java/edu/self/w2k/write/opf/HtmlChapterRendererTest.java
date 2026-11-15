@@ -36,7 +36,7 @@ class HtmlChapterRendererTest {
     }
 
     @Test
-    void should_combine_definitions_with_semicolons_when_multiple_entries_share_key() {
+    void should_stack_definitions_when_multiple_entries_share_key() {
         // Given
         List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
                 Map.entry("word", List.of(
@@ -50,7 +50,27 @@ class HtmlChapterRendererTest {
         String html = new String(bytes, StandardCharsets.UTF_8);
 
         // Then
-        assertThat(html).contains("def1; def2");
+        assertThat(html).contains("def1def2");
+    }
+
+    @Test
+    void should_show_each_spelling_above_its_definition_when_entries_under_a_key_differ_in_case() {
+        // Given
+        List<Map.Entry<String, List<LexiconEntry>>> entries = List.of(
+                Map.entry("polish", List.of(
+                        new LexiconEntry("polish", "shine", List.of(), List.of()),
+                        new LexiconEntry("Polish", "of Poland", List.of(), List.of()),
+                        new LexiconEntry("Polish", "the language", List.of(), List.of()),
+                        new LexiconEntry("polish", "to rub", List.of(), List.of())
+                ))
+        );
+
+        // When
+        byte[] bytes = HtmlChapterRenderer.render(entries);
+        String html = new String(bytes, StandardCharsets.UTF_8);
+
+        // Then
+        assertThat(html).contains("shine<div><b>Polish</b></div>of Polandthe language<div><b>polish</b></div>to rub");
     }
 
     @Test

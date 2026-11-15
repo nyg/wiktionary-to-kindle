@@ -20,6 +20,7 @@ The app follows each desktop's own conventions: the title bar, menus, button ord
   - [Where files go](#where-files-go)
 - [Command line](#command-line)
 - [How it works](#how-it-works)
+- [What an entry shows](#what-an-entry-shows)
 - [Inflected forms](#inflected-forms)
 - [Building from source](#building-from-source)
 
@@ -146,12 +147,25 @@ Up to and including 2.0.3 the CLI resolved `dumps/` and `dictionaries/` relative
 ## How it works
 
 1. A [kaikki.org](https://kaikki.org) pre-extracted Wiktionary JSONL dump is downloaded for the chosen edition. Dumps are produced weekly by [wiktextract](https://github.com/tatuylonen/wiktextract) and include all languages with Lua templates fully expanded.
-2. The compressed JSONL is streamed and filtered by language. Each entry's senses are rendered into an HTML definition, its inflected forms are collected as Kindle lookup targets, and the result is grouped in memory by normalised key.
+2. The compressed JSONL is streamed and filtered by language. Each entry is rendered into an HTML definition (see [What an entry shows](#what-an-entry-shows)), its inflected forms are collected as Kindle lookup targets, and the result is grouped in memory by normalised key.
 3. Chunked MobiPocket HTML files, an NCX navigation map and an OPF manifest are written.
 4. On first run, [kindling-cli](https://github.com/ciscoriordan/kindling) is downloaded and cached, verified against a pinned SHA-256.
 5. `kindling-cli build` converts the OPF into a `.mobi` Kindle dictionary.
 
 [`docs/program-flow.md`](docs/program-flow.md) has sequence diagrams for each stage.
+
+## What an entry shows
+
+Whatever the dump carries for a word, in this order:
+
+* **Part of speech, gender and pronunciation** — `Nom commun, m. \a.kœj\`. The part of speech is in the edition's own words where kaikki provides them. The Greek and Russian dumps do not, so the app names it for them.
+* **Senses**, numbered when there are several, with sub-senses nested under their parent. Register, region and domain labels lead each one in italics: *(figuratively)*, *(Québec)*.
+* **Examples** — the three shortest of each sense, with the headword in bold, and the translation after a dash when Wiktionary gives one.
+* **Etymology**, in square brackets.
+* **Synonyms and antonyms**, after `≈` and `≠`, six of each at most.
+* **Inflected forms**, described below.
+
+The labels wiktextract recognises are stored in English whatever the edition, so a French definition can carry *(dated)*. The Greek edition keeps its labels in Greek.
 
 ## Inflected forms
 

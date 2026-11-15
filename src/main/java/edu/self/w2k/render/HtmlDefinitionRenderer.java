@@ -9,7 +9,6 @@ import java.util.Set;
 import org.apache.commons.text.StringEscapeUtils;
 
 import edu.self.w2k.model.WiktionaryEntry;
-import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionaryForm;
 import edu.self.w2k.model.WiktionaryFormOf;
 import edu.self.w2k.model.WiktionarySense;
@@ -22,13 +21,33 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
 
     private static final String LIST_ITEM_END = "</li>";
 
+    // Rows the English and Greek editions list among the forms to name the table's template, not a form.
+    private static final Set<String> TEMPLATE_ROW_TAGS = Set.of("inflection-template", "table-tags", "class");
+
+    private final String edition;
+    private final LabelSource labelSource;
+
+    public HtmlDefinitionRenderer() {
+        this("");
+    }
+
+    public HtmlDefinitionRenderer(String edition) {
+        this.edition = edition == null ? "" : edition;
+        this.labelSource = LabelSource.forEdition(this.edition);
+    }
+
     @Override
     public Optional<RenderedEntry> render(WiktionaryEntry entry) {
-        StringBuilder sb = new StringBuilder();
-        boolean hasGloss = appendDefinitions(sb, entry.senses());
-        if (!hasGloss) {
+        SenseOutline senses = SenseOutline.of(entry.senses(), labelSource);
+        if (senses.isEmpty()) {
             return Optional.empty();
         }
+
+        StringBuilder sb = new StringBuilder();
+        Headline.appendTo(sb, edition, entry);
+        senses.appendTo(sb);
+        Etymology.appendTo(sb, entry);
+        RelatedWords.appendTo(sb, entry);
 
         List<WiktionaryForm> filtered = filterForms(entry.forms());
         List<String> inflectionForms = collectInflectionForms(filtered);
@@ -90,57 +109,6 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
         return false;
     }
 
-    private static boolean appendDefinitions(StringBuilder sb, List<WiktionarySense> senses) {
-        sb.append("<ol>");
-        boolean hasGloss = false;
-
-        for (WiktionarySense sense : senses) {
-            if (sense == null) {
-                continue;
-            }
-            List<String> glosses = sense.glosses();
-            if (glosses.isEmpty()) {
-                continue;
-            }
-
-            for (String gloss : glosses) {
-                if (gloss == null || gloss.isBlank()) {
-                    continue;
-                }
-                hasGloss = true;
-                sb.append("<li><span>");
-                sb.append(StringEscapeUtils.escapeXml10(gloss.replaceAll("[\n\r]", "; ")));
-                sb.append("</span>");
-
-                List<WiktionaryExample> examples = sense.examples();
-                boolean hasExample = false;
-                StringBuilder exSb = new StringBuilder("<ul>");
-                for (WiktionaryExample ex : examples) {
-                    if (ex == null) {
-                        continue;
-                    }
-                    String text = ex.text();
-                    if (text == null || text.isBlank()) {
-                        continue;
-                    }
-                    hasExample = true;
-                    exSb.append("<li>");
-                    exSb.append(StringEscapeUtils.escapeXml10(text.replaceAll("[\n\r]", "; ")));
-                    exSb.append(LIST_ITEM_END);
-                }
-                exSb.append("</ul>");
-                if (hasExample) {
-                    sb.append(exSb);
-                }
-
-                sb.append(LIST_ITEM_END);
-            }
-        }
-
-        sb.append("</ol>");
-        return hasGloss;
-    }
-
     private static List<WiktionaryForm> filterForms(List<WiktionaryForm> forms) {
         if (forms == null || forms.isEmpty()) {
             return List.of();
@@ -151,12 +119,16 @@ public class HtmlDefinitionRenderer implements DefinitionRenderer {
                 continue;
             }
             String text = form.form();
-            if (text == null || text.isBlank()) {
+            if (text == null || text.isBlank() || isTemplateRow(form)) {
                 continue;
             }
             kept.add(form);
         }
         return kept;
+    }
+
+    private static boolean isTemplateRow(WiktionaryForm form) {
+        return form.tags() != null && form.tags().stream().anyMatch(TEMPLATE_ROW_TAGS::contains);
     }
 
     private static List<String> collectInflectionForms(List<WiktionaryForm> filtered) {

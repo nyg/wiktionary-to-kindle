@@ -18,9 +18,12 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import edu.self.w2k.model.WiktionaryEntry;
+import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionaryForm;
 import edu.self.w2k.model.WiktionaryFormOf;
+import edu.self.w2k.model.WiktionaryLinkage;
 import edu.self.w2k.model.WiktionarySense;
+import edu.self.w2k.model.WiktionarySound;
 
 @ExtendWith(MockitoExtension.class)
 class JsonlDictionaryParserTest {
@@ -125,6 +128,71 @@ class JsonlDictionaryParserTest {
                 .allSatisfy(sense -> assertThat(sense.formOf())
                         .extracting(WiktionaryFormOf::word)
                         .containsExactly("suus"));
+    }
+
+    @Test
+    void should_deserialise_headline_etymology_labels_and_examples_when_an_edition_carries_them() throws Exception {
+        // Given
+        String jsonl = """
+                {"word":"chat","lang_code":"en","pos":"noun","pos_title":"Nom commun","tags":["masculine"],\
+                "sounds":[{"ipa":"\\\\ˈtʃæt\\\\","audio":"En-us-chat.ogg"}],"etymology_texts":["Apocope de chatter."],\
+                "synonyms":[{"word":"talk","sense":"discussion"}],"antonyms":[{"word":"silence"}],\
+                "senses":[{"glosses":["Clavardage, tchat."],"tags":["familiar"],"raw_tags":["Internet"],\
+                "topics":["computing"],"examples":[{"text":"Save your chat.","bold_text_offsets":[[10,14]],\
+                "translation":"Sauvegardez votre tchat.","ref":"Manual"}]}]}
+                """;
+        Path dump = writeGzippedJsonl(jsonl);
+
+        // When
+        List<WiktionaryEntry> result;
+        try (Stream<WiktionaryEntry> stream = unit.parse(dump, "en")) {
+            result = stream.toList();
+        }
+
+        // Then
+        assertThat(result).hasSize(1);
+        WiktionaryEntry entry = result.getFirst();
+        assertThat(entry.posTitle()).isEqualTo("Nom commun");
+        assertThat(entry.tags()).containsExactly("masculine");
+        assertThat(entry.sounds()).extracting(WiktionarySound::ipa).containsExactly("\\ˈtʃæt\\");
+        assertThat(entry.etymologyTexts()).containsExactly("Apocope de chatter.");
+        assertThat(entry.synonyms()).extracting(WiktionaryLinkage::word).containsExactly("talk");
+        assertThat(entry.antonyms()).extracting(WiktionaryLinkage::word).containsExactly("silence");
+        WiktionarySense sense = entry.senses().getFirst();
+        assertThat(sense.tags()).containsExactly("familiar");
+        assertThat(sense.rawTags()).containsExactly("Internet");
+        assertThat(sense.topics()).containsExactly("computing");
+        WiktionaryExample example = sense.examples().getFirst();
+        assertThat(example.translation()).isEqualTo("Sauvegardez votre tchat.");
+        assertThat(example.boldTextOffsets()).containsExactly(List.of(10, 14));
+    }
+
+    @Test
+    void should_deserialise_single_etymology_text_and_raw_glosses_when_the_english_edition_carries_them() throws Exception {
+        // Given
+        String jsonl = """
+                {"word":"free","lang_code":"en","pos":"noun","etymology_text":"From Middle English free.",\
+                "senses":[{"glosses":["A free transfer."],"raw_glosses":["(soccer) A free transfer."],\
+                "synonyms":[{"word":"bosman"}],"examples":[{"text":"Left on a free.","english":"Sans indemnité."}]}]}
+                """;
+        Path dump = writeGzippedJsonl(jsonl);
+
+        // When
+        List<WiktionaryEntry> result;
+        try (Stream<WiktionaryEntry> stream = unit.parse(dump, "en")) {
+            result = stream.toList();
+        }
+
+        // Then
+        assertThat(result).hasSize(1);
+        WiktionaryEntry entry = result.getFirst();
+        assertThat(entry.etymologyText()).isEqualTo("From Middle English free.");
+        assertThat(entry.etymologyTexts()).isEmpty();
+        assertThat(entry.sounds()).isEmpty();
+        WiktionarySense sense = entry.senses().getFirst();
+        assertThat(sense.rawGlosses()).containsExactly("(soccer) A free transfer.");
+        assertThat(sense.synonyms()).extracting(WiktionaryLinkage::word).containsExactly("bosman");
+        assertThat(sense.examples().getFirst().english()).isEqualTo("Sans indemnité.");
     }
 
     @Test

@@ -185,7 +185,7 @@ public class CLI implements Callable<Integer> {
 
             new GenerateCommand(
                     new JsonlDictionaryParser(),
-                    new HtmlDefinitionRenderer(),
+                    new HtmlDefinitionRenderer(dumpLang),
                     writer,
                     dumpFile.get(),
                     dictionaries,

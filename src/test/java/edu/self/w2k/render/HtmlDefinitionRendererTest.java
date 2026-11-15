@@ -8,7 +8,9 @@ import edu.self.w2k.model.WiktionaryEntry;
 import edu.self.w2k.model.WiktionaryExample;
 import edu.self.w2k.model.WiktionaryForm;
 import edu.self.w2k.model.WiktionaryFormOf;
+import edu.self.w2k.model.WiktionaryLinkage;
 import edu.self.w2k.model.WiktionarySense;
+import edu.self.w2k.model.WiktionarySound;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,14 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(MockitoExtension.class)
 class HtmlDefinitionRendererTest {
 
-    private final HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
-
     @Test
     void should_render_html_with_glosses_and_examples_when_senses_have_content() {
         // Given
         WiktionaryExample example = new WiktionaryExample("The apple fell from the tree.");
         WiktionarySense sense = new WiktionarySense(List.of("A round fruit"), List.of(example), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("apple", "en", "noun", List.of(sense), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -33,13 +34,53 @@ class HtmlDefinitionRendererTest {
         // Then
         assertThat(result).isPresent();
         String html = result.get().html();
-        assertThat(html)
-                .startsWith("<ol>")
-                .contains("<li><span>")
-                .contains("A round fruit")
-                .contains("<ul>")
-                .contains("<li>The apple fell from the tree.</li>");
+        assertThat(html).isEqualTo("<div><i>noun</i></div>"
+                + "<div>A round fruit<ul><li>The apple fell from the tree.</li></ul></div>");
         assertThat(result.get().inflectionForms()).isEmpty();
+    }
+
+    @Test
+    void should_render_headline_senses_etymology_related_words_and_forms_in_that_order_when_entry_has_them_all() {
+        // Given
+        WiktionarySense ceremony = new WiktionarySense(List.of("Cérémonie de bienvenue."), List.of(), List.of());
+        WiktionarySense lodging = new WiktionarySense(List.of("Fait d’héberger."), List.of(), List.of())
+                .withTags(List.of("dated"));
+        WiktionaryForm plural = new WiktionaryForm("accueils", List.of("plural"), null, null);
+        WiktionaryEntry entry = new WiktionaryEntry("accueil", "fr", "noun", List.of(ceremony, lodging), List.of(plural))
+                .withPosTitle("Nom commun")
+                .withTags(List.of("masculine"))
+                .withSounds(List.of(new WiktionarySound("\\a.kœj\\")))
+                .withEtymologyTexts(List.of("Déverbal de accueillir."))
+                .withSynonyms(List.of(new WiktionaryLinkage("réception")));
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().html()).isEqualTo("<div><i>Nom commun, m.</i> \\a.kœj\\</div>"
+                + "<ol><li>Cérémonie de bienvenue.</li><li><i>(dated)</i> Fait d’héberger.</li></ol>"
+                + "<div>[Déverbal de accueillir.]</div>"
+                + "<div>≈ réception</div>"
+                + "<p><i>Forms:</i></p><ul><li>pl.: accueils</li></ul>");
+    }
+
+    @Test
+    void should_take_sense_labels_from_raw_glosses_when_edition_is_english() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("A free transfer."), List.of(), List.of())
+                .withRawGlosses(List.of("(soccer) A free transfer."))
+                .withTopics(List.of("sports"));
+        WiktionaryEntry entry = new WiktionaryEntry("free", "en", "noun", List.of(sense), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer("en");
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().html()).isEqualTo("<div><i>noun</i></div><div>(soccer) A free transfer.</div>");
     }
 
     @Test
@@ -48,6 +89,7 @@ class HtmlDefinitionRendererTest {
         WiktionarySense emptyGloss = new WiktionarySense(List.of("", "  "), List.of(), List.of());
         WiktionarySense nullGloss = new WiktionarySense(List.of(), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(emptyGloss, nullGloss), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -61,6 +103,7 @@ class HtmlDefinitionRendererTest {
         // Given
         WiktionarySense sense = new WiktionarySense(List.of("A & B\nC"), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -82,6 +125,7 @@ class HtmlDefinitionRendererTest {
         WiktionaryForm singularGen = new WiktionaryForm("συντρόφου", List.of("singular", "genitive"), "του", null);
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun",
                 List.of(sense), List.of(pluralNom, singularGen));
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -103,6 +147,7 @@ class HtmlDefinitionRendererTest {
         WiktionarySense sense = new WiktionarySense(List.of("Avoir."), List.of(), List.of());
         WiktionaryForm form = new WiktionaryForm("είχα", List.of("singular", "first-person"), null, null);
         WiktionaryEntry entry = new WiktionaryEntry("έχω", "el", "verb", List.of(sense), List.of(form));
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -124,6 +169,7 @@ class HtmlDefinitionRendererTest {
         }
         WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "el", "noun", List.of(sense), manyForms);
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -145,6 +191,7 @@ class HtmlDefinitionRendererTest {
                 null, "form line template 'équiv-pour'");
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun",
                 List.of(sense), List.of(trueInflection, equivPour));
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -161,6 +208,7 @@ class HtmlDefinitionRendererTest {
         // Given
         WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -178,6 +226,7 @@ class HtmlDefinitionRendererTest {
         WiktionaryForm a = new WiktionaryForm("σύντροφοι", List.of("plural", "nominative"), "οι", null);
         WiktionaryForm b = new WiktionaryForm("σύντροφοι", List.of("plural", "vocative"), null, null);
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(sense), List.of(a, b));
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -206,6 +255,7 @@ class HtmlDefinitionRendererTest {
                 new WiktionaryForm("-", List.of("placeholder"), null, null),
                 new WiktionaryForm("σύντροφες", List.of("plural", "nominative"), null, null));
         WiktionaryEntry entry = new WiktionaryEntry("σύντροφος", "el", "noun", List.of(sense), forms);
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -217,6 +267,29 @@ class HtmlDefinitionRendererTest {
     }
 
     @Test
+    void should_drop_template_rows_from_table_and_lookup_index_when_edition_lists_them_as_forms() {
+        // Given
+        WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
+        List<WiktionaryForm> forms = List.of(
+                new WiktionaryForm("el-κλίση-'λύση'", List.of("inflection-template"), null, "declension"),
+                new WiktionaryForm("no-table-tags", List.of("table-tags"), null, null),
+                new WiktionaryForm("I", List.of("class"), null, null),
+                new WiktionaryForm("λέξεις", List.of("nominative", "plural"), null, "declension"));
+        WiktionaryEntry entry = new WiktionaryEntry("λέξη", "el", "noun", List.of(sense), forms);
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
+
+        // When
+        Optional<RenderedEntry> result = unit.render(entry);
+
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().inflectionForms()).containsExactly("λέξεις");
+        assertThat(result.get().html())
+                .contains("<li>nom. pl.: λέξεις</li>")
+                .doesNotContain("κλίση", "no-table-tags", "class");
+    }
+
+    @Test
     void should_collect_form_of_lemmas_when_all_senses_are_form_of() {
         // Given
         WiktionarySense dative = new WiktionarySense(List.of("Datif pluriel de suus."), List.of(),
@@ -224,6 +297,7 @@ class HtmlDefinitionRendererTest {
         WiktionarySense ablative = new WiktionarySense(List.of("Ablatif pluriel de suus."), List.of(),
                 List.of(new WiktionaryFormOf("suus")));
         WiktionaryEntry entry = new WiktionaryEntry("suis", "la", "adj", List.of(dative, ablative), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -240,6 +314,7 @@ class HtmlDefinitionRendererTest {
                 List.of(new WiktionaryFormOf("rarus")));
         WiktionarySense independent = new WiktionarySense(List.of("Rare, peu commun."), List.of(), List.of());
         WiktionaryEntry entry = new WiktionaryEntry("rare", "la", "adj", List.of(formOf, independent), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -258,6 +333,7 @@ class HtmlDefinitionRendererTest {
         WiktionarySense second = new WiktionarySense(List.of("Deuxième personne de cano."), List.of(),
                 List.of(new WiktionaryFormOf(" cano "), new WiktionaryFormOf("canis")));
         WiktionaryEntry entry = new WiktionaryEntry("canis", "la", "verb", List.of(first, second), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -273,6 +349,7 @@ class HtmlDefinitionRendererTest {
         WiktionarySense sense = new WiktionarySense(List.of("Some form gloss."), List.of(),
                 List.of(new WiktionaryFormOf(""), new WiktionaryFormOf(null)));
         WiktionaryEntry entry = new WiktionaryEntry("x", "la", "noun", List.of(sense), List.of());
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
@@ -288,6 +365,7 @@ class HtmlDefinitionRendererTest {
         WiktionarySense sense = new WiktionarySense(List.of("Definition."), List.of(), List.of());
         WiktionaryForm form = new WiktionaryForm("a&b", List.of("custom<tag>"), "<art>", null);
         WiktionaryEntry entry = new WiktionaryEntry("x", "en", "noun", List.of(sense), List.of(form));
+        HtmlDefinitionRenderer unit = new HtmlDefinitionRenderer();
 
         // When
         Optional<RenderedEntry> result = unit.render(entry);
