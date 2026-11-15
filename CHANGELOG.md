@@ -1,6 +1,41 @@
 # Changelog
 
 
+## [2.3.0](https://github.com/nyg/wiktionary-to-kindle/compare/v2.2.0..v2.3.0) - 2026-11-15
+
+### ⛰️  Features
+
+- [`4006b43`](https://github.com/nyg/wiktionary-to-kindle/commit/4006b43696fa54253b54b36c02213cd890608a4e) *(render)* Show part of speech, pronunciation, labels and etymology in entries ([#116](https://github.com/nyg/wiktionary-to-kindle/issues/116))
+- [`c2bb3b9`](https://github.com/nyg/wiktionary-to-kindle/commit/c2bb3b90cbb44aad0b2c728b5c4fc10f32b29980) *(gui)* Restyle Cupertino to AppKit's macOS 27 controls ([#113](https://github.com/nyg/wiktionary-to-kindle/issues/113))
+- [`bae6c9e`](https://github.com/nyg/wiktionary-to-kindle/commit/bae6c9edf3f0fe937120b533cae77238a3165dbf) *(gui)* Follow Windows, GNOME and KDE window conventions ([#111](https://github.com/nyg/wiktionary-to-kindle/issues/111))
+- [`1fdd17a`](https://github.com/nyg/wiktionary-to-kindle/commit/1fdd17a9be214d5ee5ee82c9020701430aa30770) *(gui)* Follow macOS window conventions ([#110](https://github.com/nyg/wiktionary-to-kindle/issues/110))
+
+### 🐛 Bug Fixes
+
+- [`ff6e8f8`](https://github.com/nyg/wiktionary-to-kindle/commit/ff6e8f8bf5859132fd18ad87b575f0071a332214) *(gui)* Fix header dragging and ⌘, and move the macOS version to About ([#112](https://github.com/nyg/wiktionary-to-kindle/issues/112))
+- [`6360ce6`](https://github.com/nyg/wiktionary-to-kindle/commit/6360ce6c17f5c61438ced436cc0089481f060fce) *(deps)* Update all stable non-major dependencies ([#106](https://github.com/nyg/wiktionary-to-kindle/issues/106))
+- [`40eb592`](https://github.com/nyg/wiktionary-to-kindle/commit/40eb592b640af7a084fea545644ff7671985d40e) *(deps)* Update all stable non-major dependencies ([#105](https://github.com/nyg/wiktionary-to-kindle/issues/105))
+- [`dd0f197`](https://github.com/nyg/wiktionary-to-kindle/commit/dd0f1973cbf7b07fdcf052df2a50e96f9f131597) *(deps)* Update atlantafx-base to v3.0.0 ([#104](https://github.com/nyg/wiktionary-to-kindle/issues/104))
+- [`9a9ff5a`](https://github.com/nyg/wiktionary-to-kindle/commit/9a9ff5aec8dc6bffba08bdd1b9f6477d74079d5a) *(deps)* Update javafx monorepo to v27 ([#101](https://github.com/nyg/wiktionary-to-kindle/issues/101))
+- [`b3fd22a`](https://github.com/nyg/wiktionary-to-kindle/commit/b3fd22ac6fcbe8d0db79d70e95ee6b854e27ad5b) *(deps)* Update all stable non-major dependencies ([#99](https://github.com/nyg/wiktionary-to-kindle/issues/99))
+- [`b8b0277`](https://github.com/nyg/wiktionary-to-kindle/commit/b8b027720149b467243da1883dcffbfdfdee36f5) *(dumps)* Stop warning about the dumps folder on first start ([#96](https://github.com/nyg/wiktionary-to-kindle/issues/96))
+
+### 📚 Documentation
+
+- [`c3b6b59`](https://github.com/nyg/wiktionary-to-kindle/commit/c3b6b59ea8ef1789044ef61dae5f2e154f20ca61) Trim AGENTS.md and remove stale docs ([#115](https://github.com/nyg/wiktionary-to-kindle/issues/115))
+- [`2313707`](https://github.com/nyg/wiktionary-to-kindle/commit/2313707cdf54cd13a35c65150240044028fa2914) Move Copilot instructions to AGENTS.md ([#108](https://github.com/nyg/wiktionary-to-kindle/issues/108))
+
+### ⚙️ Miscellaneous
+
+- [`989d9d9`](https://github.com/nyg/wiktionary-to-kindle/commit/989d9d9f853897cbceb1c0924b93d8b61f2c7496) *(deps)* Update kindling-cli to v0.46.2 ([#109](https://github.com/nyg/wiktionary-to-kindle/issues/109))
+- [`c210ff1`](https://github.com/nyg/wiktionary-to-kindle/commit/c210ff1acd082fb4eedcf63e988d74fd6b0e267b) *(deps)* Update kindling-cli to v0.46.0 ([#107](https://github.com/nyg/wiktionary-to-kindle/issues/107))
+- [`8b9edaa`](https://github.com/nyg/wiktionary-to-kindle/commit/8b9edaa0e15f1fbc6f0f56a7bf46110469c96062) *(deps)* Pin dependency java-jdk to 25.0.4+7.0.lts ([#103](https://github.com/nyg/wiktionary-to-kindle/issues/103))
+- [`eeaa324`](https://github.com/nyg/wiktionary-to-kindle/commit/eeaa324ef413b26ff7747a9e65f68285ef001b84) *(deps)* Update kindling-cli to v0.45.6 ([#102](https://github.com/nyg/wiktionary-to-kindle/issues/102))
+- [`719a9b8`](https://github.com/nyg/wiktionary-to-kindle/commit/719a9b868c5874431dec2cd79776170d710789dc) *(deps)* Update kindling-cli to v0.45.1 ([#100](https://github.com/nyg/wiktionary-to-kindle/issues/100))
+- [`9051d99`](https://github.com/nyg/wiktionary-to-kindle/commit/9051d999777edb704ae976e1b80b82845161d302) *(deps)* Update actions/setup-java action to v6 ([#98](https://github.com/nyg/wiktionary-to-kindle/issues/98))
+- [`24da835`](https://github.com/nyg/wiktionary-to-kindle/commit/24da8350b1a7a495c66ce2f985478eba46ad5fdd) *(deps)* Update kindling-cli to v0.38.0 ([#97](https://github.com/nyg/wiktionary-to-kindle/issues/97))
+- [`97b9810`](https://github.com/nyg/wiktionary-to-kindle/commit/97b98102262c36d6ced7d6fe4a79bee79fd9e2fd) *(deps)* Update kindling-cli to v0.36.0 ([#95](https://github.com/nyg/wiktionary-to-kindle/issues/95))
+
 ## [2.2.0](https://github.com/nyg/wiktionary-to-kindle/compare/v2.1.0..v2.2.0) - 2026-08-16
 
 ### ⛰️  Features
