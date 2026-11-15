@@ -3,6 +3,7 @@ package edu.self.w2k.write;
 import java.util.Locale;
 
 import edu.self.w2k.config.AppInfo;
+import edu.self.w2k.config.LanguageCatalog;
 
 public final class DictionaryTitles {
 
@@ -17,7 +18,7 @@ public final class DictionaryTitles {
      */
     public static String autoTitle(String srcLang, String trgLang) {
         return AppInfo.DICTIONARY_PREFIX + " "
-                + displayName(srcLang) + "–" + displayName(trgLang) + " Dictionary";
+                + LanguageCatalog.displayNameFor(srcLang) + "–" + LanguageCatalog.displayNameFor(trgLang) + " Dictionary";
     }
 
     /**

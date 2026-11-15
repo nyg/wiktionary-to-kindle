@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import edu.self.w2k.config.Editions;
 import edu.self.w2k.config.LanguageCatalog.Language;
 import lombok.extern.slf4j.Slf4j;
 
@@ -96,7 +97,7 @@ public final class LanguageCodeResolver {
 
     private static Map<String, String> cldrIndex(String edition) {
         return CLDR_INDEXES.computeIfAbsent(edition, key -> {
-            Locale locale = Locale.forLanguageTag("simple".equals(key) ? "en" : key);
+            Locale locale = Locale.forLanguageTag(Editions.languageOf(key));
             Map<String, String> index = new HashMap<>();
             for (String code : Locale.getISOLanguages()) {
                 String name = Locale.forLanguageTag(code).getDisplayLanguage(locale);

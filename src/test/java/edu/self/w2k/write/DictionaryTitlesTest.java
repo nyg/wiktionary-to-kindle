@@ -23,6 +23,15 @@ class DictionaryTitlesTest {
     }
 
     @Test
+    void should_name_the_edition_as_the_picker_does_when_its_code_is_not_a_language() {
+        // When
+        String result = DictionaryTitles.autoTitle("en", "simple");
+
+        // Then
+        assertThat(result).isEqualTo("W2K English–Simple English Dictionary");
+    }
+
+    @Test
     void should_uppercase_when_lang_code_is_unknown() {
         // When
         String result = DictionaryTitles.autoTitle("xx", "yy");
