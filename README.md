@@ -10,12 +10,8 @@ Turns Wiktionary into a MOBI dictionary your Kindle can use for tap-to-define â€
 Available as a desktop app that bundles its own Java runtime, or as a command-line tool.
 
 <p align="center">
-  <img src="assets/screenshots/macos.png" width="32%" align="top" title="macOS" alt="The app on macOS: a unified title bar with the app's name and a Build/Dumps switcher">
-  <img src="assets/screenshots/windows.png" width="32%" align="top" title="Windows" alt="The app on Windows: the native title bar, a File and Help menu bar and underlined tabs">
-  <img src="assets/screenshots/linux-gnome.png" width="32%" align="top" title="Linux (GNOME)" alt="The app on GNOME: a header bar with a view switcher, a menu button and the form as a rounded list">
+  <img src="assets/screenshots/macos.png" width="70%" alt="The app on macOS: the Wiktionary edition and word language pickers, the dictionary title they produce, and the Build Dictionary button">
 </p>
-
-Shown above on macOS, Windows and GNOME, the app follows each desktop's own conventions: the title bar, menus, button order and wording all change with it, and KDE gets its own variant too. On macOS the app opens with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino theme and elsewhere with its Primer theme, both following the system's light or dark appearance; Settings can switch to either, or to the plain JavaFX look.
 
 ## Contents
 
