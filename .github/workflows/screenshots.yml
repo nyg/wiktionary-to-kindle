@@ -28,8 +28,7 @@ jobs:
 
       - name: Build and resolve the classpath
         run: |
-          mvn --no-transfer-progress -q -DskipTests test-compile
-          mvn --no-transfer-progress -q dependency:build-classpath -Dmdep.includeScope=test -Dmdep.outputFile=cp.txt
+          mvn --no-transfer-progress -q test-compile dependency:build-classpath -Dmdep.includeScope=test -Dmdep.outputFile=cp.txt
           mkdir -p screenshots
 
       - name: Capture
