@@ -96,7 +96,7 @@ So *edition: Greek, word language: English* gives you an English–Greek diction
 
 The first build for an edition downloads its dump, which is 100 MB to several GB. Progress and a live log are shown throughout, and **Cancel** stops the run cleanly at any stage. Subsequent builds reuse the downloaded dump.
 
-When it finishes, **Show in Finder** reveals the `.mobi` (*Open file location* on Windows, *Show in Files* on GNOME, *Open Containing Folder* on KDE) — `w2k-dictionary-en-el.mobi` for the example above. Copy it to your Kindle over USB, or send it to your device's Kindle email address.
+When it finishes, **Show in Finder** reveals the `.mobi` (*Open file location* on Windows, *Show in Files* on GNOME, *Open Containing Folder* on KDE) — `w2k-dictionary-en-el.mobi` for the example above. Copy it to your Kindle over USB: Send to Kindle, by email or app, stopped accepting `.mobi` files in 2023.
 
 The **Dumps** page lists what has been downloaded, with the Wiktionary edition, generation date and size, and lets you delete dumps you no longer need — worth checking, since they are the largest thing this app puts on your disk.
 
