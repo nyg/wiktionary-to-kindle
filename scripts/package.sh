@@ -264,7 +264,7 @@ platform_arguments() {
     *)
       local linux_args="--linux-shortcut --linux-package-name wiktionary-to-kindle --linux-menu-group Utility"
       if [[ "$type" == "rpm" ]]; then
-        linux_args="$linux_args --linux-rpm-license-type MIT"
+        linux_args="$linux_args --linux-rpm-license-type BSD-3-Clause"
       fi
       echo "$linux_args"
       ;;
