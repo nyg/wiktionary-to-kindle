@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Gives the screenshots workflow's captures matching drop shadows and lays them out side by side.
+# Gives the screenshots workflow's captures matching drop shadows.
 # Usage: scripts/compose-screenshots.sh <dir with macos.png windows.png linux-gnome.png> <output dir>
 # Written against ImageMagick 6, which is what Ubuntu ships, so it runs under 7 as well.
 set -euo pipefail
 
 in="$1"
 out="$2"
-font="${FONT:-DejaVu-Sans}"
 mkdir -p "$out"
 
 width() { identify -format '%w\n' "$1"; }
@@ -34,15 +33,3 @@ convert "$in/windows.png" -alpha set -shave 1x1 -bordercolor '#c6c6c6' -border 1
 shadow "$out/windows.png" "$out/windows.png"
 shadow "$in/linux-gnome.png" "$out/linux-gnome.png"
 cp "$in/macos.png" "$out/macos.png"
-
-# Equal heights put the three captions on one baseline.
-tallest=$(for image in macos windows linux-gnome; do height "$out/$image.png"; done | sort -n | tail -1)
-tiles=$(mktemp -d)
-for image in macos windows linux-gnome; do
-  convert "$out/$image.png" -background none -gravity north -extent "$(width "$out/$image.png")x$tallest" \
-    "$tiles/$image.png"
-done
-montage -background none -fill '#8b949e' -font "$font" -pointsize 40 \
-  -label macOS "$tiles/macos.png" -label Windows "$tiles/windows.png" -label 'Linux (GNOME)' "$tiles/linux-gnome.png" \
-  -tile 3x1 -geometry +8+0 "$out/desktops.png"
-rm -r "$tiles"

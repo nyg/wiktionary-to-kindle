@@ -2,11 +2,20 @@
 
 Turns Wiktionary into a MOBI dictionary your Kindle can use for tap-to-define — in any of a hundred-odd languages, for any Wiktionary edition [kaikki.org](https://kaikki.org) publishes.
 
+<p align="center">
+  <img src="assets/screenshots/kindle-lookup-inflected.webp" width="48%" alt="Kindle popup for ήλθε, an inflected form: the entry for έρχομαι, with its part of speech, pronunciation and two translated examples">
+  <img src="assets/screenshots/kindle-lookup-entry.webp" width="48%" alt="Kindle popup for λαιμός: part of speech and gender, pronunciation, a labelled sense, then the etymology">
+</p>
+
 Available as a desktop app that bundles its own Java runtime, or as a command-line tool.
 
-![The app on macOS, Windows and GNOME: a unified title bar with the app's name and a Build/Dumps switcher on macOS; the native title bar, a File and Help menu bar and underlined tabs on Windows; a header bar with a view switcher, a menu button and the form as a rounded list on GNOME](assets/screenshots/desktops.png)
+<p align="center">
+  <img src="assets/screenshots/macos.png" width="32%" align="top" title="macOS" alt="The app on macOS: a unified title bar with the app's name and a Build/Dumps switcher">
+  <img src="assets/screenshots/windows.png" width="32%" align="top" title="Windows" alt="The app on Windows: the native title bar, a File and Help menu bar and underlined tabs">
+  <img src="assets/screenshots/linux-gnome.png" width="32%" align="top" title="Linux (GNOME)" alt="The app on GNOME: a header bar with a view switcher, a menu button and the form as a rounded list">
+</p>
 
-The app follows each desktop's own conventions: the title bar, menus, button order and wording all change with it, and KDE gets its own variant too. On macOS the app opens with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino theme and elsewhere with its Primer theme, both following the system's light or dark appearance; Settings can switch to either, or to the plain JavaFX look.
+Shown above on macOS, Windows and GNOME, the app follows each desktop's own conventions: the title bar, menus, button order and wording all change with it, and KDE gets its own variant too. On macOS the app opens with [AtlantaFX](https://github.com/mkpaz/atlantafx)'s Cupertino theme and elsewhere with its Primer theme, both following the system's light or dark appearance; Settings can switch to either, or to the plain JavaFX look.
 
 ## Contents
 
@@ -99,10 +108,8 @@ The **Dumps** page lists what has been downloaded, with the Wiktionary edition, 
 
 Once the `.mobi` is on the device, set it as the default dictionary for its language, and tap-to-define uses it everywhere you read. Titles are prefixed `W2K`, so the dictionaries this app builds group together in that list and stay apart from Amazon's own.
 
-![Choosing your new default dictionary](https://i.imgur.com/aXAbTbx.jpg)
 <p align="center">
-  <img src="assets/screenshots/kindle-lookup-inflected.jpg" width="45%" alt="Kindle popup for ήλθε, an inflected form: the entry for έρχομαι, with its part of speech, pronunciation and two translated examples">
-  <img src="assets/screenshots/kindle-lookup-entry.jpg" width="45%" alt="Kindle popup for λαιμός: part of speech and gender, pronunciation, a labelled sense, then the etymology">
+  <img src="assets/screenshots/kindle-default-dictionary.webp" width="48%" alt="Kindle's Greek Dictionaries setting, with W2K Greek–English Dictionary chosen over Lemma Greek Dictionary">
 </p>
 
 ### Where files go
