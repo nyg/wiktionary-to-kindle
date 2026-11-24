@@ -18,6 +18,7 @@
 ## CI
 
 - **`java-ci.yaml`** — `build` runs `mvn verify` under `xvfb-run` on Ubuntu. `package` runs jlink and jpackage on macOS (`dmg`) and Windows (`app-image`). `exe`, `deb` and `rpm` are release-only: a WiX, `fakeroot` or `rpmbuild` breakage surfaces when a release is cut, not in a PR.
+- **Every workflow that sets up Java pins the same `java-version`**, which Renovate bumps in all of them at once. `release.yml` must keep that pin: jlink builds the shipped runtime from the build JDK, so a floating `25` would ship a runtime the `package` job never probed.
 - **`screenshots.yml`** — captures the real main window on macOS for the README's `assets/screenshots/macos.png`. It runs `ScreenshotLauncher`, a test-sources `main` that opens the window through `App.showMainWindow` with English and Greek already picked and prints `SCREENSHOT READY` once kaikki's language list has arrived, then grabs that one window with `screencapture -l`, which keeps the shadow macOS draws around it. The workflow runs by hand and on PRs that touch it or the launcher. Nothing commits its output: after a UI change, run it and copy the `screenshots` artifact into `assets/screenshots/`.
 
 ## Release
@@ -26,6 +27,6 @@
 
 - **The `linux` matrix leg** produces the deb, the rpm **and** the cross-platform JAR, which just needs some runner. It `apt-get install`s `fakeroot` and `rpm` rather than trusting the image inventory.
 - **Asset names** are `wiktionary-to-kindle-<version>-<os>-<arch>.<ext>`: `…-macos-arm64.dmg`, `…-windows-x64.exe`, `…-windows-x64-scoop.zip`, `…-linux-x64.deb`, `…-linux-x64.rpm`, and the plain `wiktionary-to-kindle-<version>.jar`. jpackage's own names differ on every platform (`wiktionary-to-kindle_X.Y.Z_amd64.deb`, `Wiktionary to Kindle-X.Y.Z.exe`), so each build step renames by extension glob.
-- **Every reference interpolates `VERSION`** from a step-level `env`: the rename steps, the 7z output, `gh release create`, both `sha256sum` inputs and the Scoop manifest url. Only the DMG and the Scoop ZIP are hashed; nothing downstream consumes the others.
+- **Every reference interpolates `VERSION`** from a step-level `env`: the rename steps, the JAR copy, the 7z output, `gh release create`, both `sha256sum` inputs and the Scoop manifest url. Only the DMG and the Scoop ZIP are hashed; nothing downstream consumes the others.
 - **Renaming an asset** means updating the Homebrew cask in `nyg/homebrew-tap` too, and only **after** a release has published under the new name. The Scoop bucket regenerates itself.
 - **The release notes are generated, then appended to.** `git-cliff` writes the changelog, and the `Append install guidance` step adds the Installing section as a heredoc. Filenames in it are written with a literal `VERSION` and rewritten by one `sed` on `wiktionary-to-kindle-VERSION`; a filename that does not start that way needs its own substitution.

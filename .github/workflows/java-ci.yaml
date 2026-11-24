@@ -13,10 +13,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      statuses: write
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
@@ -40,8 +36,6 @@ jobs:
 
       - run: mvn --no-transfer-progress sonar:sonar
         if: env.SONAR_TOKEN != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Exercises jlink + jpackage on both release platforms. Without this, a broken module list or a
   # packaging regression would stay hidden until someone cut a release — and the failures it catches
@@ -74,7 +68,3 @@ jobs:
       - name: Package
         shell: bash
         run: scripts/package.sh ${{ matrix.type }}
-
-      - name: Show output
-        shell: bash
-        run: ls -la target/dist

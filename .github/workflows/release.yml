@@ -12,9 +12,6 @@ on:
           - minor
           - major
 
-env:
-  JAVA_VERSION: '25'
-
 concurrency:
   group: release
   cancel-in-progress: false
@@ -43,10 +40,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
-          java-version: ${{ env.JAVA_VERSION }}
+          java-version: 25.0.4+7.0.LTS
           distribution: temurin
           cache: maven
 
@@ -139,10 +136,10 @@ jobs:
         with:
           ref: v${{ needs.prepare.outputs.release_version }}
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
-          java-version: ${{ env.JAVA_VERSION }}
+          java-version: 25.0.4+7.0.LTS
           distribution: temurin
           cache: maven
 
@@ -214,7 +211,7 @@ jobs:
 
       # jpackage names these wiktionary-to-kindle_X.Y.Z_amd64.deb and
       # wiktionary-to-kindle-X.Y.Z-1.x86_64.rpm, so they are matched by extension.
-      - name: Package Linux deb and rpm
+      - name: Package Linux deb, rpm and portable JAR
         if: matrix.artifact == 'linux'
         shell: bash
         env:
@@ -225,14 +222,7 @@ jobs:
           mkdir -p artifacts
           mv "target/dist/"*.deb "artifacts/wiktionary-to-kindle-${VERSION}-linux-x64.deb"
           mv "target/dist/"*.rpm "artifacts/wiktionary-to-kindle-${VERSION}-linux-x64.rpm"
-
-      - name: Collect portable JAR
-        if: matrix.artifact == 'linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts
-          cp "target/wiktionary-to-kindle-${{ needs.prepare.outputs.release_version }}.jar" artifacts/
+          cp "target/wiktionary-to-kindle-${VERSION}.jar" artifacts/
 
       - name: Upload artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
